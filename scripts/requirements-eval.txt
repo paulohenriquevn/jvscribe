@@ -1,6 +1,10 @@
-# Deps de avaliação de M1 (auditadas em knowledge-base/audits/m1-measurement-harness-deps-audit-2026-07-24.md)
+# Deps de avaliação de M1 (auditadas: knowledge-base/audits/m1-measurement-harness-deps-audit-2026-07-24.md)
+# WER + normalização (Fase 3)
 jiwer>=3.0,<4.0
 soundfile>=0.12,<1.0
 numpy>=1.24,<3.0
-# Baseline (Fase 4) — instalar sob demanda; pesado (~3GB c/ torch)
-# openai-whisper>=20231117
+# Baseline real (Fase 4): faster-whisper (ASR, sem torch) + leitura direta de
+# parquet do HF (evita datasets>=5.0, que exige torchcodec/torch para decodar áudio)
+faster-whisper>=1.0,<2.0
+huggingface_hub>=0.20
+pyarrow>=14.0

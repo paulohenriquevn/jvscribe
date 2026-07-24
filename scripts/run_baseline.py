@@ -128,13 +128,13 @@ def render_report(results: list[BaselineResult], *, corpus_note: str) -> str:
         raise BaselineError("nenhum resultado para renderizar")
 
     lines = [
-        "# M1 — Baseline Report (test set 8 kHz proxy)",
+        "# M1 — Baseline Report (test set 8 kHz)",
         "",
         f"**Corpus:** {corpus_note}",
         "",
-        "> Test set é PROXY de canal telefônico sobre corpus público PT-BR com "
-        "transcrição humana (blueprint ADR D2). NÃO é áudio real de call center "
-        "(LGPD, fora de escopo). Números `[MEDIDO]`.",
+        "> Transcrição humana (NUNCA pseudo-label — `PRD.md` § 7.3). Números "
+        "`[MEDIDO]`; WER sempre com IC 95% via bootstrap por-utterance (blueprint "
+        "ADR D3), nunca ponto isolado.",
         "",
         "| Modelo | WER | IC 95% | n (utterances) |",
         "|---|---|---|---|",
