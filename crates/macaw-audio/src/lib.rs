@@ -10,6 +10,7 @@
 
 pub mod capture;
 pub mod features;
+pub mod harness;
 pub mod metrics;
 pub mod vad;
 

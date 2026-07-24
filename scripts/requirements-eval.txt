@@ -1,0 +1,6 @@
+# Deps de avaliação de M1 (auditadas em knowledge-base/audits/m1-measurement-harness-deps-audit-2026-07-24.md)
+jiwer>=3.0,<4.0
+soundfile>=0.12,<1.0
+numpy>=1.24,<3.0
+# Baseline (Fase 4) — instalar sob demanda; pesado (~3GB c/ torch)
+# openai-whisper>=20231117
