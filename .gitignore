@@ -13,6 +13,8 @@ ralph-loop.local.md
 data/
 datasets/
 *.wav
+# Fixtures determinísticas SÃO versionadas (T0.1) — o CI não pode depender de rede.
+!tests/fixtures/*.wav
 *.flac
 *.mp3
 *.onnx
@@ -35,3 +37,10 @@ target/
 # --- Editors / OS ---
 .DS_Store
 *.swp
+
+# ONNX Runtime nativo (baixado por scripts/setup_onnxruntime.sh)
+vendor/
+
+# Modelo emprestado de M0 (artefato de terceiro, grande) — baixado por scripts/setup_model.sh
+models/
+*.onnx.data

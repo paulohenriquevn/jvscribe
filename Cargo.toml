@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = ["crates/macaw-audio", "crates/macaw-asr", "crates/macaw-cli"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Captura de áudio — decidido em ADR D2 do plano m0-walking-skeleton.
+# libpulse permite especificar a source POR STREAM, o que cpal não permite
+# (ver knowledge-base/discoveries/m0-capture-probe-evidence.md, experimento 6).
+libpulse-binding = "2.28"
+libpulse-simple-binding = "2.28"
+
+# FFT real — mesmo crate usado por parakeet-rs.
+realfft = "3"
+
+# I/O de WAV para fixtures de teste.
+hound = "3.5"
+
+# Inferência ONNX — encanamento apenas; macaw-asr é descartável por M2.
+# `load-dynamic`: o runtime ONNX é carregado via dlopen em tempo de execução, e não
+# linkado estaticamente. Necessário porque o binário que `download-binaries` obtém é
+# compilado contra glibc >= 2.38 (usa __isoc23_strtoll) e este ambiente tem glibc
+# 2.35 (Ubuntu 22.04) — o link falha com "undefined symbol".
+# A lib usada é o build manylinux oficial, em vendor/, compatível com glibc 2.17+.
+# O caminho é apontado por ORT_DYLIB_PATH em .cargo/config.toml.
+# `api-23` casa com a ABI do ONNX Runtime 1.23 em vendor/ (o build manylinux
+# compatível com glibc 2.35). Pedir `api-24` a um dylib 1.23 causa hang no
+# `commit_from_file` por mismatch de versão de ABI — `[MEDIDO]` 2026-07-24.
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "api-23", "load-dynamic"] }
+ndarray = "0.17"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,9 @@
+# ONNX Runtime carregado dinamicamente (ver comentário em Cargo.toml).
+# O build que `ort` baixaria exige glibc >= 2.38; este ambiente tem 2.35.
+#
+# `relative = true` resolve o caminho a partir do diretório deste config
+# (a raiz do workspace), NÃO do cwd — assim o build é reprodutível em qualquer
+# checkout, não amarrado à máquina de um dev. `scripts/setup_onnxruntime.sh`
+# baixa o binário para exatamente este caminho.
+[env]
+ORT_DYLIB_PATH = { value = "vendor/onnxruntime-linux-x64-1.23.0/lib/libonnxruntime.so", relative = true }

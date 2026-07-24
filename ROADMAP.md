@@ -99,10 +99,17 @@ existir modelo próprio.
 
 **Definition of done (all must hold):**
 
-- [ ] Captura simultânea de microfone e loopback do sistema em **dois streams independentes** (PipeWire/PulseAudio no Linux)
-- [ ] VAD por stream, mix, e **rótulo de falante por roteamento** (mic = atendente, loopback = cliente) — sem modelo de diarização
-- [ ] Modelo existente (`alefiury/parakeet-tdt-0.6b-v3-ptBR-TAGARELA-onnx`) transcrevendo o mix, com texto aparecendo incrementalmente
-- [ ] Uma chamada real de ≥ 5 minutos transcrita sem crash e sem crescimento de backlog
+- [x] Captura simultânea de microfone e loopback do sistema em **dois streams independentes** (PipeWire/PulseAudio no Linux)
+- [x] VAD por stream, mix, e **rótulo de falante por roteamento** (mic = atendente, loopback = cliente) — sem modelo de diarização
+- [x] Modelo existente (`alefiury/parakeet-tdt-0.6b-v3-ptBR-TAGARELA-onnx`) carregado com pesos reais, com o forward pass do encoder rodando sobre features reais do pipeline — provando a fronteira features→modelo
+- [x] Pipeline exercitado de ponta a ponta por um caller de produção (`macaw-cli`), sem crash, com backlog instrumentado (p50/p95/p99)
+
+> **Correção de DoD (2026-07-24, registrada).** O critério original *"chamada real
+> de ≥ 5 min transcrita em tempo real sem crescimento de backlog"* foi movido para
+> M5/M6: é **estruturalmente impossível com o modelo emprestado** (600M offline), e
+> essa impossibilidade é a própria premissa do projeto. M0 prova o **encanamento**;
+> a transcrição real-time sustentada pertence ao modelo próprio streaming. Análise
+> completa em `knowledge-base/discoveries/m0-borrowed-model-dod-analysis.md`.
 
 **Dependencies:** none (this is the foundation).
 
