@@ -25,6 +25,14 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.2.1] - 2026-07-24
+
+### Added
+
+- Soak sustentado de M1 (RNF-04/05) medido de verdade (`scripts/bench.sh 3000 --load`, ~15 min sob carga concorrente de 10 cores, encoder preso aos P-cores): **RTFx sob carga 11,32×** (RNF-07 ✅), **latência p99 907ms** (RNF-02 ❌ — o encoder emprestado de 600M não sustenta a cauda sob carga, esperado), **razão térmica 2,09** (sem throttling em 15 min). A régua captou honestamente que o modelo emprestado viola RNF-02 sob carga (`knowledge-base/measurements/m1-harness-measurement.md`)
+
+- Baseline de M1 completado para **3 modelos sobre pt-BR real** (`scripts/baseline_fleurs_ptbr.py`): FLEURS pt_br (português brasileiro, transcrição humana) degradado 16k→8k pela cadeia `telephone_augment.sh` (augmentação ponta-a-ponta), medido com faster-whisper base/small/medium — WER **21,3% / 9,6% / 4,5%** [IC95] (`knowledge-base/measurements/m1-baseline-report.md`). Resolve os achados de review CV-1 (1→3 modelos), CV-2 (augmentação exercitada no baseline) e CV-3 (pt-PT→pt-BR)
+
 ## [0.2.0] - 2026-07-24
 
 ### Added

@@ -122,7 +122,7 @@ existir modelo próprio.
 
 ---
 
-### M1 — [ ] Instrumentação e régua de medição
+### M1 — [x] Instrumentação e régua de medição
 
 **Objective:** Poder medir qualquer candidato de forma comparável, honesta e
 reprodutível — antes de escolher qualquer arquitetura.

@@ -1,14 +1,14 @@
 # M1 — Baseline Report (test set 8 kHz)
 
-**Corpus:** minds14 pt-PT (PolyAI, CC-BY-4.0) — fala telefônica bancária REAL 8 kHz nativa, 15 utterances, transcrição humana. Medido no canal nativo (sem augmentação sintética — a cadeia a-law é validada à parte por T2.1). Caveats honestos (falácia § 3 #6): (a) pt-PT europeu, NÃO pt-BR — o test set pt-BR definitivo depende de corpus consentido (LGPD, fora de escopo); (b) minds14 tem code-switching (algumas refs em inglês), o que infla o WER de um modelo transcrevendo com language=pt; (c) faster-whisper-base é fraco — é piso, não teto (large-v3 faria muito melhor).
+**Corpus:** FLEURS pt_br (Google, CC-BY) — português BRASILEIRO, fala lida com transcrição humana, 12 utterances. **16 kHz limpo degradado para 8 kHz pela cadeia `telephone_augment.sh`** (resample + banda 300-3400 + G.711 a-law round-trip) — test set 8 kHz proxy, exercita a Fase 2 ponta-a-ponta. Caveat (falácia § 3 #6): fala LIDA (não conversa de call center 1:1 com crosstalk); o domínio real espontâneo depende de corpus consentido (LGPD, fora de escopo).
 
 > Transcrição humana (NUNCA pseudo-label — `PRD.md` § 7.3). Números `[MEDIDO]`; WER sempre com IC 95% via bootstrap por-utterance (blueprint ADR D3), nunca ponto isolado.
 
-**Proveniência `[MEDIDO]`:** comando `python3 scripts/baseline_minds14.py 15 base`; modelo faster-whisper-base int8 CPU cpu_threads=1 beam_size=1; dataset PolyAI/minds14 pt-PT (parquet refs/convert/parquet); bootstrap seed=2026, n_boot=2000; hardware = máquina de referência do dev (NÃO o piso da frota BYOD, Q-01).
+**Proveniência `[MEDIDO]`:** comando `python3 scripts/baseline_fleurs_ptbr.py 12 base,small,medium`; faster-whisper int8 CPU cpu_threads=1 beam_size=1 language=pt; dataset google/fleurs pt_br test (parquet); augmentação telephone_augment.sh; bootstrap seed=2026, n_boot=2000; hardware = máquina de referência do dev (NÃO o piso da frota BYOD, Q-01).
 
 | Modelo | WER | IC 95% | n (utterances) |
 |---|---|---|---|
-| faster-whisper-base (int8, CPU) | WER = 73.0% | [IC95: 49.8%–104.6%] | 15 | `[MEDIDO]`
-
-> **IC largo por poder estatístico, não defeito da régua.** Com n < 50 o IC de ~50 p.p. não decide entre candidatos — é o **risco 1 do ROADMAP** (`ROADMAP.md` § M1). Um test set maior é pré-requisito para M4 comparar finalistas.
+| faster-whisper-base (int8, CPU) | WER = 21.3% | [IC95: 13.4%–30.8%] | 12 | `[MEDIDO]`
+| faster-whisper-small (int8, CPU) | WER = 9.6% | [IC95: 5.0%–14.9%] | 12 | `[MEDIDO]`
+| faster-whisper-medium (int8, CPU) | WER = 4.5% | [IC95: 2.1%–7.5%] | 12 | `[MEDIDO]`
 
