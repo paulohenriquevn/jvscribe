@@ -120,7 +120,6 @@ impl Vocab {
 /// ganho no desenho de M0 (um consumidor por pipeline).
 #[derive(Debug)]
 pub struct AsrEngine {
-    vocab: Option<Vocab>,
     model_path: String,
     session: Option<ort::session::Session>,
 }
@@ -162,7 +161,6 @@ impl AsrEngine {
             .map_err(|e| session_err(e.to_string()))?;
 
         Ok(Self {
-            vocab: None,
             model_path: model_path.display().to_string(),
             session: Some(session),
         })
@@ -236,22 +234,9 @@ impl AsrEngine {
         Ok(shape.to_vec())
     }
 
-    /// Associa um vocabulário ao motor.
-    #[must_use]
-    pub fn with_vocab(mut self, vocab: Vocab) -> Self {
-        self.vocab = Some(vocab);
-        self
-    }
-
     /// Caminho do modelo carregado.
     #[must_use]
     pub fn model_path(&self) -> &str {
         &self.model_path
-    }
-
-    /// Número de tokens do vocabulário associado, quando houver.
-    #[must_use]
-    pub fn vocab_len(&self) -> Option<usize> {
-        self.vocab.as_ref().map(Vocab::len)
     }
 }

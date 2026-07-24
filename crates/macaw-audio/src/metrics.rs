@@ -188,9 +188,4 @@ impl DriftMeter {
             Err(poisoned) => poisoned.into_inner().clone(),
         }
     }
-
-    /// Última deriva registrada, ou `0.0` se nenhuma leitura foi feita ainda.
-    pub fn latest_drift_ms(&self) -> f64 {
-        self.history().last().map(|s| s.drift_ms).unwrap_or(0.0)
-    }
 }
