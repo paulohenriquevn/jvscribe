@@ -17,6 +17,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - App web local de teste (`macaw-cli serve` + `scripts/app.sh`): dashboard no navegador que mostra ao vivo o roteamento de falante (você/cliente), saúde do sink, backlog e deriva, com botão para rodar o forward pass do encoder — servidor HTTP mínimo em `std::net`, sem dependência nova (`crates/macaw-cli/src/app.rs`, `dashboard.html`)
 - Teste de regressão do servidor do app: sobe o servidor numa thread e prova que um endpoint lento (`/fixture`) não bloqueia os polls de `/metrics` (`crates/macaw-cli/tests/server_concurrency_test.rs`)
+- Detecção de microfone mudo/baixo no app e no CLI: `check_source_health` + `evaluate_source_health` avisam quando a source padrão está muda ou com volume abaixo de 20% (medido: fala a volume baixo → RMS ≈ 0,0002, indistinguível de silêncio), a falha que o usuário viveu no teste — mic sem volume capta silêncio e a voz do atendente some sem erro visível. Aviso surge como banner no dashboard e na linha "Microfone (você)" (`crates/macaw-audio/src/capture.rs`, `crates/macaw-cli/src/app.rs`, `dashboard.html`)
 
 ### Fixed
 

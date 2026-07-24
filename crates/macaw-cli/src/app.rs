@@ -17,8 +17,8 @@ use std::time::{Duration, Instant};
 
 use macaw_asr::AsrEngine;
 use macaw_audio::capture::{
-    active_capture_threads, check_sink_health, evaluate_health, list_sources, spawn_capture,
-    CaptureConfig, Warning,
+    active_capture_threads, check_sink_health, check_source_health, evaluate_sink_health,
+    evaluate_source_health, list_sources, spawn_capture, CaptureConfig, Warning,
 };
 use macaw_audio::features::{FeatureCache, StreamState};
 use macaw_audio::metrics::{BacklogCounter, DriftMeter};
@@ -40,6 +40,8 @@ struct Snapshot {
     drift_ms: f64,
     sink_muted: bool,
     sink_note: String,
+    mic_muted: bool,
+    mic_note: String,
 }
 
 impl Snapshot {
@@ -56,6 +58,8 @@ impl Snapshot {
             drift_ms: 0.0,
             sink_muted: false,
             sink_note: String::new(),
+            mic_muted: false,
+            mic_note: String::new(),
         }
     }
 
@@ -64,7 +68,8 @@ impl Snapshot {
         format!(
             "{{\"running\":{},\"threads_alive\":{},\"speaker\":\"{}\",\"mic_active\":{},\
              \"loop_active\":{},\"backlog_p50\":{},\"backlog_p95\":{},\"backlog_p99\":{},\
-             \"drift_ms\":{:.1},\"sink_muted\":{},\"sink_note\":\"{}\"}}",
+             \"drift_ms\":{:.1},\"sink_muted\":{},\"sink_note\":\"{}\",\
+             \"mic_muted\":{},\"mic_note\":\"{}\"}}",
             self.running,
             self.threads_alive,
             self.speaker,
@@ -76,6 +81,8 @@ impl Snapshot {
             self.drift_ms,
             self.sink_muted,
             self.sink_note.replace('"', "'"),
+            self.mic_muted,
+            self.mic_note.replace('"', "'"),
         )
     }
 }
@@ -156,13 +163,13 @@ fn pipeline_loop(state: &Arc<Mutex<Snapshot>>, running: &Arc<AtomicBool>) {
         .ok()
         .and_then(|s| s.into_iter().find(|d| d.is_monitor).map(|d| d.name));
 
-    // Saúde do sink cujo monitor capturamos.
+    // Saúde do sink cujo monitor capturamos (lado do cliente / loopback).
     let (sink_muted, sink_note) = match &monitor_name {
         Some(mon) => {
             let sink = mon.strip_suffix(".monitor").unwrap_or(mon);
             match check_sink_health(sink) {
                 Ok(h) => {
-                    let muted = matches!(evaluate_health(&h), Some(Warning::SinkMuted));
+                    let muted = matches!(evaluate_sink_health(&h), Some(Warning::SinkMuted));
                     let note = if muted {
                         format!("Sink '{sink}' mudo/volume 0 — o cliente não será captado")
                     } else {
@@ -174,6 +181,25 @@ fn pipeline_loop(state: &Arc<Mutex<Snapshot>>, running: &Arc<AtomicBool>) {
             }
         }
         None => (false, "nenhum monitor de sistema encontrado".to_string()),
+    };
+
+    // Saúde da source padrão (lado do atendente / microfone). Um mic mudo ou com
+    // volume baixo demais capta silêncio e a voz do atendente não é transcrita,
+    // sem erro visível — a falha que o próprio usuário viveu no teste.
+    let (mic_muted, mic_note) = match check_source_health("@DEFAULT_SOURCE@") {
+        Ok(h) => {
+            let low = matches!(evaluate_source_health(&h), Some(Warning::SourceMuted));
+            let note = if low {
+                format!(
+                    "Microfone mudo/volume baixo ({}%) — sua voz não será captada",
+                    h.volume_pct
+                )
+            } else {
+                format!("Microfone ok (vol {}%)", h.volume_pct)
+            };
+            (low, note)
+        }
+        Err(_) => (false, "não foi possível checar a saúde do microfone".to_string()),
     };
 
     let loopback = monitor_name.and_then(|name| {
@@ -190,6 +216,8 @@ fn pipeline_loop(state: &Arc<Mutex<Snapshot>>, running: &Arc<AtomicBool>) {
         snap.running = true;
         snap.sink_muted = sink_muted;
         snap.sink_note = sink_note;
+        snap.mic_muted = mic_muted;
+        snap.mic_note = mic_note;
     }
 
     let backlog = BacklogCounter::new();

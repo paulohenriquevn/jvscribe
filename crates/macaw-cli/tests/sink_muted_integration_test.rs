@@ -1,6 +1,6 @@
 //! Prova de wiring end-to-end de T2.3 (review B2): a detecção de sink mudo é de
 //! fato exercitada pelo caminho de produção — `check_sink_health` +
-//! `evaluate_health` — e não só definida.
+//! `evaluate_sink_health` — e não só definida.
 //!
 //! O review pré-merge apontou que esses símbolos não tinham caller. `run_live` em
 //! `macaw-cli` agora os chama; este teste prova que, sobre um sink comprovadamente
@@ -9,7 +9,7 @@
 
 use std::process::Command;
 
-use macaw_audio::capture::{check_sink_health, evaluate_health, Warning};
+use macaw_audio::capture::{check_sink_health, evaluate_sink_health, Warning};
 
 fn pactl_ok() -> bool {
     Command::new("which")
@@ -62,7 +62,7 @@ fn test_muted_sink_produces_sinkmuted_warning_end_to_end() {
     let health = check_sink_health(&sink).expect("check_sink_health deve ler o sink de teste");
     assert!(health.muted, "o sink de teste foi mutado — health.muted deve ser true");
 
-    let warning = evaluate_health(&health);
+    let warning = evaluate_sink_health(&health);
     assert_eq!(
         warning,
         Some(Warning::SinkMuted),

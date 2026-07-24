@@ -296,33 +296,44 @@ pub fn list_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     Ok(collected)
 }
 
-/// Estado de saúde de um sink — mute e volume.
+/// Estado de saúde de um dispositivo de áudio — mute e volume. Serve tanto para
+/// um sink (saída/loopback) quanto para uma source (microfone): os dois têm a
+/// mesma forma (mudo + volume).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SinkHealth {
-    /// `true` quando o sink está mudo.
+pub struct DeviceHealth {
+    /// `true` quando o dispositivo está mudo.
     pub muted: bool,
     /// Volume médio, em porcentagem (100 == `Volume::NORMAL`).
     pub volume_pct: u8,
 }
 
+/// Piso de volume abaixo do qual um microfone é considerado baixo demais para
+/// captar fala de forma utilizável. `[MEDIDO]` 2026-07-24: uma fala normal num
+/// mic com volume muito baixo mediu RMS ≈ 0,0002 (silêncio efetivo). Heurística
+/// de M0 — não há dado de campo para calibrar com precisão ainda.
+const MIN_USABLE_SOURCE_VOLUME_PCT: u8 = 20;
+
 /// Avisos derivados do estado de saúde de captura.
 ///
-/// Existe porque um sink mudo faz o loopback capturar silêncio legítimo — o
-/// cliente deixa de ser transcrito **sem nenhum erro visível**. Falha
-/// silenciosa é o pior modo de falha aqui (`m0-capture-probe-evidence.md` §
-/// Experimento 2; `.claude/rules/error-handling.md` § 1).
+/// Existem porque um dispositivo mudo/baixo faz a captura render silêncio
+/// legítimo — o falante deixa de ser transcrito **sem nenhum erro visível**.
+/// Falha silenciosa é o pior modo de falha aqui (`m0-capture-probe-evidence.md`
+/// § Experimento 2; `.claude/rules/error-handling.md` § 1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Warning {
     /// O sink de saída está mudo ou com volume zero — o loopback não vai
     /// capturar o áudio do cliente.
     SinkMuted,
+    /// A source de entrada (microfone) está muda ou com volume baixo demais — a
+    /// voz do atendente não será captada.
+    SourceMuted,
 }
 
 /// Consulta o estado de mute/volume de um sink pelo nome.
-pub fn check_sink_health(sink_name: &str) -> Result<SinkHealth, CaptureError> {
+pub fn check_sink_health(sink_name: &str) -> Result<DeviceHealth, CaptureError> {
     let (mut mainloop, context) = connect_ready_context(sink_name)?;
 
-    let result: Rc<RefCell<Option<SinkHealth>>> = Rc::new(RefCell::new(None));
+    let result: Rc<RefCell<Option<DeviceHealth>>> = Rc::new(RefCell::new(None));
     let done = Rc::new(RefCell::new(false));
 
     {
@@ -335,7 +346,7 @@ pub fn check_sink_health(sink_name: &str) -> Result<SinkHealth, CaptureError> {
                     let pct = (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64 * 100.0)
                         .round()
                         .clamp(0.0, 255.0) as u8;
-                    *result_cb.borrow_mut() = Some(SinkHealth {
+                    *result_cb.borrow_mut() = Some(DeviceHealth {
                         muted: info.mute,
                         volume_pct: pct,
                     });
@@ -356,13 +367,68 @@ pub fn check_sink_health(sink_name: &str) -> Result<SinkHealth, CaptureError> {
     }
 }
 
-/// Deriva um aviso a partir do estado de saúde do sink.
+/// Consulta o estado de mute/volume de uma source (microfone) pelo nome.
 ///
-/// Mudo OU volume zero — as duas condições produzem o mesmo `Warning::SinkMuted`,
-/// porque o efeito prático (loopback capturando silêncio) é idêntico.
-pub fn evaluate_health(health: &SinkHealth) -> Option<Warning> {
+/// Espelha [`check_sink_health`], mas para o lado da entrada. `@DEFAULT_SOURCE@`
+/// é aceito para a source padrão.
+pub fn check_source_health(source_name: &str) -> Result<DeviceHealth, CaptureError> {
+    let (mut mainloop, context) = connect_ready_context(source_name)?;
+
+    let result: Rc<RefCell<Option<DeviceHealth>>> = Rc::new(RefCell::new(None));
+    let done = Rc::new(RefCell::new(false));
+
+    {
+        let result_cb = Rc::clone(&result);
+        let done_cb = Rc::clone(&done);
+        let _op = context
+            .introspect()
+            .get_source_info_by_name(source_name, move |item| match item {
+                ListResult::Item(info) => {
+                    let pct = (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64 * 100.0)
+                        .round()
+                        .clamp(0.0, 255.0) as u8;
+                    *result_cb.borrow_mut() = Some(DeviceHealth {
+                        muted: info.mute,
+                        volume_pct: pct,
+                    });
+                }
+                ListResult::End | ListResult::Error => *done_cb.borrow_mut() = true,
+            });
+
+        drive_mainloop_until(&mut mainloop, &done, source_name)?;
+    }
+
+    let outcome = *result.borrow();
+    match outcome {
+        Some(health) => Ok(health),
+        None => Err(CaptureError::ConnectionFailed {
+            context: source_name.to_string(),
+            reason: "source não encontrada no servidor de áudio".to_string(),
+        }),
+    }
+}
+
+/// Deriva um aviso da saúde de um **sink**.
+///
+/// Mudo OU volume zero → `Warning::SinkMuted`: o efeito prático (loopback
+/// capturando silêncio) é o mesmo nos dois casos.
+pub fn evaluate_sink_health(health: &DeviceHealth) -> Option<Warning> {
     if health.muted || health.volume_pct == 0 {
         Some(Warning::SinkMuted)
+    } else {
+        None
+    }
+}
+
+/// Deriva um aviso da saúde de uma **source** (microfone).
+///
+/// Mudo OU volume abaixo de [`MIN_USABLE_SOURCE_VOLUME_PCT`] →
+/// `Warning::SourceMuted`. Diferente do sink, um mic com volume baixo mas
+/// não-zero ainda produz silêncio efetivo (foi o caso que motivou esta checagem),
+/// por isso o piso é um percentual, não apenas zero.
+pub fn evaluate_source_health(health: &DeviceHealth) -> Option<Warning> {
+    if health.muted || health.volume_pct < MIN_USABLE_SOURCE_VOLUME_PCT {
+        Some(Warning::SourceMuted)
     } else {
         None
     }

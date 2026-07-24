@@ -17,8 +17,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use macaw_audio::capture::{
-    active_capture_threads, check_sink_health, evaluate_health, list_sources, spawn_capture,
-    CaptureConfig, CaptureError, SinkHealth, Warning,
+    active_capture_threads, check_sink_health, evaluate_sink_health, evaluate_source_health,
+    list_sources, spawn_capture,
+    CaptureConfig, CaptureError, DeviceHealth, Warning,
 };
 
 /// Serializa os testes que tocam o servidor de áudio real.
@@ -411,10 +412,27 @@ fn test_sink_health_reports_muted_state() {
 
 #[test]
 fn test_warning_emitted_when_sink_is_silent() {
-    let health = SinkHealth {
+    let health = DeviceHealth {
         muted: true,
         volume_pct: 0,
     };
 
-    assert_eq!(evaluate_health(&health), Some(Warning::SinkMuted));
+    assert_eq!(evaluate_sink_health(&health), Some(Warning::SinkMuted));
+}
+
+#[test]
+fn test_source_health_warns_on_mute_and_low_volume() {
+    // Mic mudo → aviso.
+    let muted = DeviceHealth { muted: true, volume_pct: 100 };
+    assert_eq!(evaluate_source_health(&muted), Some(Warning::SourceMuted));
+
+    // Mic com volume baixo (não-zero, mas abaixo do piso utilizável) → aviso.
+    // É exatamente o caso que motivou a checagem: volume baixo produz silêncio
+    // efetivo sem estar tecnicamente mudo.
+    let low = DeviceHealth { muted: false, volume_pct: 8 };
+    assert_eq!(evaluate_source_health(&low), Some(Warning::SourceMuted));
+
+    // Mic com volume normal → sem aviso.
+    let ok = DeviceHealth { muted: false, volume_pct: 80 };
+    assert_eq!(evaluate_source_health(&ok), None);
 }

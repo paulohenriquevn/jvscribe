@@ -76,6 +76,7 @@
   </header>
 
   <div class="grid">
+    <div id="micBanner" class="banner bad"></div>
     <div id="sinkBanner" class="banner bad"></div>
 
     <div class="card speaker-card">
@@ -92,7 +93,8 @@
       <h2>Pipeline</h2>
       <div class="metric"><span class="k">Estado</span><span id="running" class="v">—</span></div>
       <div class="metric"><span class="k">Threads de captura</span><span id="threads" class="v">—</span></div>
-      <div class="metric"><span class="k">Saúde do sink</span><span id="sink" class="v">—</span></div>
+      <div class="metric"><span class="k">Microfone (você)</span><span id="mic" class="v">—</span></div>
+      <div class="metric"><span class="k">Sistema (cliente)</span><span id="sink" class="v">—</span></div>
     </div>
 
     <div class="card">
@@ -131,6 +133,19 @@
         ? '<span class="pill ok">rodando</span>'
         : '<span class="pill warn">iniciando</span>';
       document.getElementById('threads').textContent = m.threads_alive;
+
+      const mic = document.getElementById('mic');
+      mic.innerHTML = m.mic_muted
+        ? '<span class="pill bad">volume baixo</span>'
+        : '<span class="pill ok">ok</span>';
+
+      const micBanner = document.getElementById('micBanner');
+      if (m.mic_muted) {
+        micBanner.textContent = '⚠ ' + m.mic_note;
+        micBanner.classList.add('show');
+      } else {
+        micBanner.classList.remove('show');
+      }
 
       const sink = document.getElementById('sink');
       sink.innerHTML = m.sink_muted

@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 
 use macaw_asr::AsrEngine;
 use macaw_audio::capture::{
-    active_capture_threads, check_sink_health, evaluate_health, list_sources, spawn_capture,
+    active_capture_threads, check_sink_health, evaluate_sink_health, list_sources, spawn_capture,
     CaptureConfig, Warning,
 };
 use macaw_audio::features::{FeatureCache, StreamState};
@@ -156,7 +156,7 @@ fn run_live() -> Result<(), Box<dyn std::error::Error>> {
         let sink = mon.strip_suffix(".monitor").unwrap_or(mon);
         match check_sink_health(sink) {
             Ok(health) => {
-                if let Some(Warning::SinkMuted) = evaluate_health(&health) {
+                if let Some(Warning::SinkMuted) = evaluate_sink_health(&health) {
                     eprintln!(
                         "AVISO SinkMuted: sink '{sink}' está mudo/volume 0 (muted={}, vol={}%) \
                          — o loopback NÃO vai capturar o áudio do cliente",
