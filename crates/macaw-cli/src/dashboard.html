@@ -108,6 +108,21 @@
       <button id="fixtureBtn" onclick="runFixture()">▶ Rodar forward pass sobre a fixture</button>
       <div id="fixtureResult" class="result"></div>
     </div>
+
+    <div class="card" style="grid-column:1/-1">
+      <h2>Régua de medição (M1)</h2>
+      <div class="sub" style="margin-bottom:14px">A régua que mede se um modelo é real-time. Os números do encoder emprestado de 600M são <code>[MEDIDO — encanamento]</code> — provam que a régua funciona, não que o modelo é bom.</div>
+
+      <button id="benchBtn" onclick="runBench()">▶ Rodar benchmark rápido (RTFx + latência p99)</button>
+      <div id="benchResult" class="result"></div>
+      <div id="benchNums" class="grid" style="margin-top:14px; display:none">
+        <div class="metric"><span class="k">RTFx (áudio ÷ parede)</span><span id="bRtfx" class="v">—</span></div>
+        <div class="metric"><span class="k">Latência p50 / p95 / p99</span><span id="bLat" class="v">—</span></div>
+      </div>
+
+      <h2 style="margin-top:22px">Baseline de WER (pt-BR, já medido)</h2>
+      <pre id="m1Baseline" style="white-space:pre-wrap; font-size:13px; color:var(--dim); background:#0d1117; border:1px solid var(--border); border-radius:8px; padding:12px; overflow-x:auto">carregando…</pre>
+    </div>
   </div>
 
   <div class="foot">
@@ -188,8 +203,48 @@
     }
   }
 
+  async function runBench() {
+    const btn = document.getElementById('benchBtn');
+    const out = document.getElementById('benchResult');
+    const nums = document.getElementById('benchNums');
+    btn.disabled = true;
+    out.className = 'result';
+    out.textContent = 'Rodando o benchmark (10 iterações do encoder)… (alguns segundos)';
+    try {
+      const r = await fetch('/bench');
+      const j = await r.json();
+      out.className = 'result ' + (j.ok ? 'ok' : 'bad');
+      out.textContent = (j.ok ? '✓ ' : '✗ ') + j.msg;
+      if (j.ok) {
+        nums.style.display = 'grid';
+        document.getElementById('bRtfx').innerHTML = j.rtfx.toFixed(1) + '× '
+          + (j.rtfx >= 6 ? '<span class="pill ok">≥6×</span>' : '<span class="pill warn">&lt;6×</span>');
+        document.getElementById('bLat').innerHTML = j.p50 + ' / ' + j.p95 + ' / ' + j.p99 + ' ms '
+          + (j.p99 <= 500 ? '<span class="pill ok">p99≤500</span>' : '<span class="pill bad">p99&gt;500</span>');
+      }
+    } catch (e) {
+      out.className = 'result bad';
+      out.textContent = '✗ falha ao chamar o servidor';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadM1() {
+    try {
+      const r = await fetch('/m1');
+      const j = await r.json();
+      const el = document.getElementById('m1Baseline');
+      // mostra só a tabela de WER + a nota do corpus (o mais interessante)
+      el.textContent = (j.baseline || '(relatório de baseline ainda não gerado)').trim();
+    } catch (e) {
+      document.getElementById('m1Baseline').textContent = '(não foi possível carregar os relatórios)';
+    }
+  }
+
   poll();
   setInterval(poll, 300);
+  loadM1();
 </script>
 </body>
 </html>

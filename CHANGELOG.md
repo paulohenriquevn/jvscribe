@@ -15,6 +15,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- Painel "Régua de medição (M1)" no dashboard de teste (`macaw-cli serve`): mostra a tabela de WER do baseline pt-BR (lida do relatório real) e um botão "Rodar benchmark rápido" que roda 10 iterações do encoder ao vivo e reporta RTFx + latência p50/p95/p99 com selo de aprovação/reprovação vs os alvos (RNF-07 ≥6×, RNF-02 p99 ≤500ms). Endpoints `/m1` e `/bench` em `std::net`, sem dependência nova (`crates/macaw-cli/src/app.rs`, `dashboard.html`)
+
 ### Changed
 
 ### Deprecated

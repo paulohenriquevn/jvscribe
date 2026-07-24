@@ -21,6 +21,7 @@ use macaw_audio::capture::{
     evaluate_source_health, list_sources, spawn_capture, CaptureConfig, Warning,
 };
 use macaw_audio::features::{FeatureCache, StreamState};
+use macaw_audio::harness::{LatencyHistogram, RtfxMeter};
 use macaw_audio::metrics::{BacklogCounter, DriftMeter};
 use macaw_audio::vad::{route_speaker, EnergyZcrVad, SpeechDetector, Speaker, SpeechState, VadConfig};
 use macaw_audio::{MEL_BINS, SAMPLE_RATE, VAD_WINDOW};
@@ -328,6 +329,21 @@ fn handle(
             fixture_busy.store(false, Ordering::SeqCst);
             respond(&mut stream, "200 OK", "application/json", &body)
         }
+        "/m1" => {
+            // Números já medidos de M1, lidos dos relatórios em disco (evidência real).
+            respond(&mut stream, "200 OK", "application/json", &m1_measurements_json())
+        }
+        "/bench" => {
+            // Benchmark rápido ao vivo (10 iterações, sem carga) — reusa o
+            // single-flight do encoder de 2,3 GB.
+            if fixture_busy.swap(true, Ordering::SeqCst) {
+                let busy = "{\"ok\":false,\"msg\":\"Um teste já está rodando — aguarde.\"}";
+                return respond(&mut stream, "200 OK", "application/json", busy);
+            }
+            let body = run_bench_test(engine);
+            fixture_busy.store(false, Ordering::SeqCst);
+            respond(&mut stream, "200 OK", "application/json", &body)
+        }
         _ => respond(&mut stream, "404 Not Found", "text/plain", "não encontrado"),
     }
 }
@@ -352,48 +368,14 @@ fn respond(
 /// O engine é cacheado no `Arc<Mutex<Option<_>>>` — a primeira chamada carrega, as
 /// seguintes reusam.
 fn run_fixture_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
-    let encoder = model_dir().join("encoder-model.onnx");
-    if !encoder.exists() || !model_dir().join("encoder-model.onnx.data").exists() {
-        return "{\"ok\":false,\"msg\":\"Modelo emprestado ausente. Rode scripts/setup_model.sh\"}"
-            .to_string();
-    }
-    let reader = match hound::WavReader::open(fixture_path()) {
-        Ok(r) => r,
-        Err(e) => return format!("{{\"ok\":false,\"msg\":\"fixture: {e}\"}}"),
+    let (flat, n) = match fixture_flat_features() {
+        Ok(v) => v,
+        Err(e) => return e,
     };
-    let samples: Vec<i16> = match reader.into_samples::<i16>().collect() {
-        Ok(s) => s,
-        Err(e) => return format!("{{\"ok\":false,\"msg\":\"leitura: {e}\"}}"),
+    let mut guard = match load_engine(engine_cache) {
+        Ok(g) => g,
+        Err(e) => return e,
     };
-
-    let cache = FeatureCache::new();
-    let mut st = StreamState::new(&cache);
-    let mut frames = Vec::new();
-    let mut n = 0usize;
-    for w in samples.chunks_exact(VAD_WINDOW) {
-        match st.extract(&cache, w) {
-            Ok(mel) => {
-                frames.extend_from_slice(mel);
-                n += 1;
-            }
-            Err(e) => return format!("{{\"ok\":false,\"msg\":\"features: {e}\"}}"),
-        }
-    }
-    let mut flat = vec![0.0f32; MEL_BINS * n];
-    for t in 0..n {
-        for m in 0..MEL_BINS {
-            flat[m * n + t] = frames[t * MEL_BINS + m];
-        }
-    }
-
-    // Carrega o encoder na primeira vez e cacheia; reusa nas seguintes.
-    let mut guard = engine_cache.lock().unwrap_or_else(|e| e.into_inner());
-    if guard.is_none() {
-        match AsrEngine::load(&encoder) {
-            Ok(e) => *guard = Some(e),
-            Err(e) => return format!("{{\"ok\":false,\"msg\":\"encoder: {e}\"}}"),
-        }
-    }
     let engine = guard.as_mut().expect("engine acabou de ser carregado");
     let t = Instant::now();
     match engine.encode(&flat, MEL_BINS, n) {
@@ -410,6 +392,125 @@ fn run_fixture_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
         }
         Err(e) => format!("{{\"ok\":false,\"msg\":\"forward pass: {e}\"}}"),
     }
+}
+
+/// Lê a fixture e extrai as features log-mel no layout do encoder. Ponto único
+/// da extração para `/fixture` e `/bench` (DRY). Erro já vem como JSON pronto.
+fn fixture_flat_features() -> Result<(Vec<f32>, usize), String> {
+    let encoder = model_dir().join("encoder-model.onnx");
+    if !encoder.exists() || !model_dir().join("encoder-model.onnx.data").exists() {
+        return Err("{\"ok\":false,\"msg\":\"Modelo emprestado ausente. Rode scripts/setup_model.sh\"}"
+            .to_string());
+    }
+    let reader = hound::WavReader::open(fixture_path())
+        .map_err(|e| format!("{{\"ok\":false,\"msg\":\"fixture: {e}\"}}"))?;
+    let samples: Vec<i16> = reader
+        .into_samples()
+        .collect::<Result<_, _>>()
+        .map_err(|e| format!("{{\"ok\":false,\"msg\":\"leitura: {e}\"}}"))?;
+    let cache = FeatureCache::new();
+    let mut st = StreamState::new(&cache);
+    let mut frames = Vec::new();
+    let mut n = 0usize;
+    for w in samples.chunks_exact(VAD_WINDOW) {
+        let mel = st
+            .extract(&cache, w)
+            .map_err(|e| format!("{{\"ok\":false,\"msg\":\"features: {e}\"}}"))?;
+        frames.extend_from_slice(mel);
+        n += 1;
+    }
+    let mut flat = vec![0.0f32; MEL_BINS * n];
+    for t in 0..n {
+        for m in 0..MEL_BINS {
+            flat[m * n + t] = frames[t * MEL_BINS + m];
+        }
+    }
+    Ok((flat, n))
+}
+
+/// Carrega o encoder no cache (primeira vez) e devolve o guard travado.
+fn load_engine(
+    engine_cache: &Arc<Mutex<Option<AsrEngine>>>,
+) -> Result<std::sync::MutexGuard<'_, Option<AsrEngine>>, String> {
+    let encoder = model_dir().join("encoder-model.onnx");
+    let mut guard = engine_cache.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.is_none() {
+        match AsrEngine::load(&encoder) {
+            Ok(e) => *guard = Some(e),
+            Err(e) => return Err(format!("{{\"ok\":false,\"msg\":\"encoder: {e}\"}}")),
+        }
+    }
+    Ok(guard)
+}
+
+/// Benchmark rápido ao vivo — 10 iterações (2 de warmup) do encoder sobre a
+/// fixture, reportando RTFx e latência p50/p95/p99 via o harness de M1. É o mesmo
+/// mecanismo de `scripts/bench.sh`, numa janela curta e sem carga (seguro para a
+/// UI). O soak completo RNF-04/05 continua sendo o `bench.sh 3000 --load`.
+fn run_bench_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
+    let (flat, n) = match fixture_flat_features() {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let audio_secs = n as f64 * VAD_WINDOW as f64 / SAMPLE_RATE as f64;
+    let mut guard = match load_engine(engine_cache) {
+        Ok(g) => g,
+        Err(e) => return e,
+    };
+    let engine = guard.as_mut().expect("engine carregado");
+
+    let total_iters = 10usize;
+    let warmup = 2usize;
+    let mut times = Vec::with_capacity(total_iters);
+    let mut latency = LatencyHistogram::new();
+    for _ in 0..total_iters {
+        let t = Instant::now();
+        if let Err(e) = engine.encode(&flat, MEL_BINS, n) {
+            return format!("{{\"ok\":false,\"msg\":\"forward pass: {e}\"}}");
+        }
+        let dt = t.elapsed();
+        times.push(dt);
+        latency.record(dt);
+    }
+    let rtfx = match RtfxMeter::new(warmup).rtfx(audio_secs, &times) {
+        Ok(r) => r,
+        Err(e) => return format!("{{\"ok\":false,\"msg\":\"harness: {e}\"}}"),
+    };
+    let (p50, p95, p99) = latency
+        .percentiles()
+        .map(|(a, b, c)| (a as f64 / 1000.0, b as f64 / 1000.0, c as f64 / 1000.0))
+        .unwrap_or((0.0, 0.0, 0.0));
+    format!(
+        "{{\"ok\":true,\"rtfx\":{rtfx:.1},\"p50\":{p50:.0},\"p95\":{p95:.0},\"p99\":{p99:.0},\
+         \"msg\":\"RTFx {rtfx:.1}× · p99 {p99:.0} ms (janela curta, {total_iters} iterações, sem carga)\"}}"
+    )
+}
+
+/// Lê os relatórios de medição de M1 do disco e os devolve como JSON (evidência
+/// real, não hardcoded). Se um arquivo faltar, devolve string vazia para ele.
+fn m1_measurements_json() -> String {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge-base/measurements");
+    let read = |name: &str| std::fs::read_to_string(root.join(name)).unwrap_or_default();
+    let baseline = json_escape(&read("m1-baseline-report.md"));
+    let harness = json_escape(&read("m1-harness-measurement.md"));
+    format!("{{\"baseline\":\"{baseline}\",\"harness\":\"{harness}\"}}")
+}
+
+/// Escapa uma string para inserção segura num literal JSON.
+fn json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 16);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => {}
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// Dashboard — HTML/CSS/JS embutido, self-contained (sem CDN, sem assets externos).
