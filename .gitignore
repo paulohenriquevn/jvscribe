@@ -1,0 +1,37 @@
+# --- Reference peers: cloned study material, never versioned here ---
+# Each folder under references/ is an independent shallow clone with its own .git.
+# The catalog (_catalog.md) IS versioned — it is our own bookkeeping.
+knowledge-base/references/*
+!knowledge-base/references/_catalog.md
+
+# --- Runtime checkpoints written by the implement halt-loop ---
+knowledge-base/implementations/.progress-*.json
+.compaction-snapshots/
+ralph-loop.local.md
+
+# --- Datasets, models, audio: large binaries live outside git ---
+data/
+datasets/
+*.wav
+*.flac
+*.mp3
+*.onnx
+*.ort
+*.pt
+*.ckpt
+*.bin
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- Rust ---
+target/
+
+# --- Editors / OS ---
+.DS_Store
+*.swp
