@@ -14,3 +14,4 @@ hound = { workspace = true }
 
 [dev-dependencies]
 hound = { workspace = true }
+stats_alloc = "0.1.10"

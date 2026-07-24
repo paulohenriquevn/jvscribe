@@ -1,0 +1,4 @@
+# ONNX Runtime carregado dinamicamente (ver comentário em Cargo.toml).
+# O build que `ort` baixaria exige glibc >= 2.38; este ambiente tem 2.35.
+[env]
+ORT_DYLIB_PATH = "/home/paulo/Projetos/jvscribe/vendor/onnxruntime-linux-x64-1.23.0/lib/libonnxruntime.so"

@@ -9,3 +9,7 @@ description = "Adapter de inferência ONNX — descartável por construção (M2
 [dependencies]
 ort = { workspace = true }
 ndarray = { workspace = true }
+
+[dev-dependencies]
+macaw-audio = { path = "../macaw-audio" }
+hound = { workspace = true }
