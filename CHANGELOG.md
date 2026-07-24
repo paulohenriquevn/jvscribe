@@ -15,6 +15,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- Baseline de M1 completado para **3 modelos sobre pt-BR real** (`scripts/baseline_fleurs_ptbr.py`): FLEURS pt_br (português brasileiro, transcrição humana) degradado 16k→8k pela cadeia `telephone_augment.sh` (augmentação ponta-a-ponta), medido com faster-whisper base/small/medium — WER **21,3% / 9,6% / 4,5%** [IC95] (`knowledge-base/measurements/m1-baseline-report.md`). Resolve os achados de review CV-1 (1→3 modelos), CV-2 (augmentação exercitada no baseline) e CV-3 (pt-PT→pt-BR)
+
 ### Changed
 
 ### Deprecated
