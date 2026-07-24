@@ -42,15 +42,31 @@ hardware.
 
 ### Consequência para RF-05 (roteamento de falante)
 
-**Benigno.** Um offset fixo de partida:
+**Benigno na janela medida — com um limite importante de validade.**
 
-1. Não acumula — não degrada ao longo de uma chamada de horas.
-2. É calibrável — pode ser alinhado no início da captura.
-3. Em produção, ambos os streams iniciam juntos no começo da chamada; o offset é
-   um alinhamento único, não um erro crescente.
+O que a evidência sustenta, restrito ao que foi medido (≤ 16 s, mic de hardware vs
+monitor de **null-sink de software**):
 
-**R1 do plano é resolvido:** não há necessidade de âncora temporal contínua. Basta,
-se necessário, descartar a janela de warmup no início.
+1. O offset de partida é constante (~1,44 s) e não cresce entre 4 s, 8 s e 16 s.
+2. É calibrável — pode ser alinhado descartando a janela de warmup inicial.
+
+**O que a evidência NÃO sustenta** — e a análise anterior extrapolou
+indevidamente:
+
+- A afirmação de que o offset "não degrada ao longo de uma chamada de horas" era
+  **extrapolação de 16 s para horas** — a falácia #4 (benchmark curto). Deriva de
+  crystal é ppm: indetectável em 16 s, acumulável em horas.
+- Pior: o arranjo **estruturalmente não pode** medir deriva entre dois relógios de
+  hardware. O monitor de um null-sink **não tem crystal independente** — é dirigido
+  pelo mesmo timer do servidor que serve o mic. O experimento mede a **consistência
+  de resample do servidor**, não o caso de produção (loopback de um dispositivo de
+  playback real, com seu próprio clock).
+
+**Deriva de hardware entre mic e loopback numa chamada longa é `[DESCONHECIDO]`** e
+precisa ser medida em M1 (harness sustentado ≥ 10 min) contra dois clocks reais.
+
+**R1 do plano é parcialmente endereçado:** o offset de *partida* está caracterizado
+e é benigno; a deriva de *hardware em regime prolongado* segue aberta.
 
 ### Consequência para o teste de integração
 

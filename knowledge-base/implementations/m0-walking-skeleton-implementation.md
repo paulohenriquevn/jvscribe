@@ -17,6 +17,14 @@ encoder 600M: saída [1, 1024, 12] em 126ms para 2.98s de áudio (RTF 0.04 — [
 pipeline completo: captura → VAD → features → encoder ✓
 ```
 
+> **Sobre o RTF 0,04:** é `[MEDIDO — n=1, sem warmup, grafo não-otimizado —
+> encanamento apenas]`. Mede **só o encoder** (não o decode, bloqueado por M2), numa
+> única passagem que inclui paginação do mmap de 2,3 GB e alocação de arena do ORT,
+> com otimização de grafo desabilitada. **Não é número de produto e não sustenta a
+> tese do projeto** — ver `knowledge-base/discoveries/m0-borrowed-model-dod-analysis.md`.
+> A viabilidade real-time do modelo completo é `[DESCONHECIDO]` até M2 desbloquear o
+> decode.
+
 ## Tasks e wiring triad
 
 | Task | Entrega | Caller de produção | Teste de integração | Métrica de runtime |
