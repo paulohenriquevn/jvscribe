@@ -1,1 +1,13 @@
-rust
+# Code-quality language enablement — per-project.
+#
+# Format (one entry per line, read by skills/code-quality/scripts/_shared.py):
+#   LANGUAGE | MANIFEST-MARKER | STATUS | NOTES
+#
+# STATUS ∈ {ENABLED, DISABLED, DEFER}. Lines starting with `#` are skipped.
+#
+# Só Rust é habilitado: os crates (macaw-audio, macaw-asr, macaw-cli) são o código
+# de produção. Os scripts Python de M1 (eval/baseline) têm sua própria suíte pytest
+# e não têm manifesto de pacote — DEFER até um detector Python valer a pena.
+
+rust | Cargo.toml | ENABLED | workspace de 3 crates
+python | pyproject.toml | DEFER | scripts de avaliação cobertos por pytest, sem manifesto

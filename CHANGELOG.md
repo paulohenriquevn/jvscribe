@@ -13,6 +13,38 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.2.0] - 2026-07-24
+
+### Added
+
+- Harness de medição de M1 (`crates/macaw-audio/src/harness.rs`): `RtfxMeter` (RTFx sustentado com descarte de warmup), `LatencyHistogram` (p50/p95/p99 reusando o percentil de `metrics.rs`, janela limitada), `ThermalRatio` (RNF-04) e `SampleCounter` atômico — todos com erro tipado (`HarnessError`), sem panic. Modo `macaw-cli bench` como caller de produção + `scripts/bench.sh` que fixa os P-cores via `taskset` e gera carga concorrente sem `stress-ng` (medido: encoder emprestado 600M dá RTFx 17,81× sustentado vs 1,5× frio — o warmup importa; `knowledge-base/measurements/m1-harness-measurement.md`)
+- Cadeia de augmentação telefônica 8 kHz em `sox` (`scripts/telephone_augment.sh`): 16k→8k + banda 300-3400 Hz + G.711 a-law round-trip, com teste determinístico de tolerância (8 kHz mono, atenuação > 3400 Hz, fail-fast em input inválido)
+- Cálculo de WER com IC 95% via bootstrap por-utterance (`scripts/eval_wer.py`) reusando `jiwer` + normalizador PT-BR próprio (`scripts/text_normalize_ptbr.py`) — reporta sempre `WER [IC95: …]`, nunca ponto isolado (ataca o risco 1 de M1)
+- Baseline sobre test set 8 kHz (`scripts/run_baseline.py` + `scripts/baseline_minds14.py`): orquestra o test set + WER, rejeita pseudo-label (invariante `PRD.md` § 7.3), emite relatório com rótulo `[MEDIDO]`. Medição real sobre minds14 pt-PT (fala telefônica bancária real 8 kHz nativa, transcrição humana): **WER = 73,0% [IC95: 49,8%–104,6%]** para faster-whisper-base, com bloco de proveniência (comando/hardware/seed/n_boot) e caveats honestos (pt-PT vs pt-BR, code-switching, modelo fraco = piso não teto, IC largo = risco 1) — `knowledge-base/measurements/m1-baseline-report.md`
+- App web local de teste (`macaw-cli serve` + `scripts/app.sh`): dashboard no navegador que mostra ao vivo o roteamento de falante (você/cliente), saúde do sink, backlog e deriva, com botão para rodar o forward pass do encoder — servidor HTTP mínimo em `std::net`, sem dependência nova (`crates/macaw-cli/src/app.rs`, `dashboard.html`)
+- Teste de regressão do servidor do app: sobe o servidor numa thread e prova que um endpoint lento (`/fixture`) não bloqueia os polls de `/metrics` (`crates/macaw-cli/tests/server_concurrency_test.rs`)
+- Detecção de microfone mudo/baixo no app e no CLI: `check_source_health` + `evaluate_source_health` avisam quando a source padrão está muda ou com volume abaixo de 20% (medido: fala a volume baixo → RMS ≈ 0,0002, indistinguível de silêncio), a falha que o usuário viveu no teste — mic sem volume capta silêncio e a voz do atendente some sem erro visível. Aviso surge como banner no dashboard e na linha "Microfone (você)" (`crates/macaw-audio/src/capture.rs`, `crates/macaw-cli/src/app.rs`, `dashboard.html`)
+
+
+### Fixed
+
+- Gate `/discover-plan-confidence` dava INVALID para qualquer plano de descoberta: o arquivo `.claude/rules/discover-plan-thresholds.txt` (gerado pelo `roadmap-init`) declarava as bandas de verdict no formato `chave = valor`, mas o parser `_parse_thresholds` lê `TOKEN | valor` (split em `|`) — resultado: dicionário de bandas vazio e verdict INVALID mesmo com score 100/100. Corrigido o formato do arquivo para pipe, preservando os floors originais (90/70/50) e os tokens canônicos do `discover-plan-golden-rule.md`; nenhum hard cap foi afrouxado (`.claude/rules/discover-plan-thresholds.txt`)
+- Gate `/code-quality` abortava com "languages.txt malformed line": o `.claude/rules/code-quality-languages.txt` (gerado pelo `roadmap-init`) tinha só `rust` bare, mas o parser espera `LANGUAGE | MANIFEST | STATUS | NOTES`. Corrigido o formato (`rust | Cargo.toml | ENABLED`), com `python` marcado `DEFER` (scripts cobertos por pytest, sem manifesto de pacote) (`.claude/rules/code-quality-languages.txt`)
+- VAD de energia não disparava em áudio real de sistema: o ganho estava calibrado para o tom sintético da fixture (RMS ≈ 0,35) e exigia RMS ≈ 0,25, mas áudio real via loopback fica muito mais baixo (medido: vídeo do YouTube pelo monitor do sink → RMS ≈ 0,065), então era classificado como silêncio e o roteamento de falante não acendia o "Sistema". Ganho recalibrado de 2,0 para 15,0 (dispara em RMS ≈ 0,033) — heurística de M0, robustez real vem do Silero em M1 (`crates/macaw-audio/src/vad.rs`)
+- App de teste congelava ao rodar o forward pass do encoder: o servidor HTTP era single-threaded e bloqueante, então carregar o encoder de 2,3 GB travava os polls de métricas e a UI inteira. Corrigido com thread por conexão, guard de single-flight no teste do modelo e cache do engine carregado (`crates/macaw-cli/src/app.rs`)
+
 ## [0.1.0] - 2026-07-24
 
 ### Added

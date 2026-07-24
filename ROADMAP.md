@@ -91,7 +91,7 @@ de saúde acompanhante.
 > Todos operam sob `.claude/rules/asr-evidence-discipline.md` — número sem rótulo de
 > proveniência não conta como evidência.
 
-### M0 — [ ] Walking skeleton
+### M0 — [x] Walking skeleton
 
 **Objective:** Transcrever uma chamada real de ponta a ponta no notebook de
 referência, usando um modelo emprestado, provando o pipeline de runtime antes de

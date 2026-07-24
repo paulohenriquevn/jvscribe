@@ -34,7 +34,7 @@ fn push_bounded(history: &mut VecDeque<u64>, value: u64) {
 ///
 /// `pct` em `[0.0, 100.0]`. Retorna `0` para slice vazio — não há amostra
 /// para reportar, e `0` é o valor neutro de backlog.
-fn nearest_rank_percentile(sorted: &[u64], pct: f64) -> u64 {
+pub(crate) fn nearest_rank_percentile(sorted: &[u64], pct: f64) -> u64 {
     if sorted.is_empty() {
         return 0;
     }

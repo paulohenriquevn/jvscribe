@@ -13,6 +13,8 @@
 //! - `macaw-cli live` — captura mic + loopback do sistema em tempo real e imprime
 //!   rótulo de falante + backlog enquanto roda. Precisa de servidor de áudio.
 
+use macaw_cli::app;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
@@ -20,10 +22,11 @@ use std::time::{Duration, Instant};
 
 use macaw_asr::AsrEngine;
 use macaw_audio::capture::{
-    active_capture_threads, check_sink_health, evaluate_health, list_sources, spawn_capture,
+    active_capture_threads, check_sink_health, evaluate_sink_health, list_sources, spawn_capture,
     CaptureConfig, Warning,
 };
 use macaw_audio::features::{FeatureCache, StreamState};
+use macaw_audio::harness::{LatencyHistogram, RtfxMeter, ThermalRatio};
 use macaw_audio::metrics::{BacklogCounter, DriftMeter};
 use macaw_audio::vad::{route_speaker, EnergyZcrVad, SpeechDetector, SpeechState, VadConfig};
 use macaw_audio::{MEL_BINS, SAMPLE_RATE, VAD_WINDOW};
@@ -40,9 +43,17 @@ fn main() -> ExitCode {
     let mode = std::env::args().nth(1).unwrap_or_else(|| "fixture".to_string());
     let result = match mode.as_str() {
         "fixture" => run_fixture(),
+        "bench" => run_bench(),
         "live" => run_live(),
+        "serve" => {
+            let port = std::env::args()
+                .nth(2)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(7070);
+            app::run(port)
+        }
         other => {
-            eprintln!("modo desconhecido: {other:?} (use 'fixture' ou 'live')");
+            eprintln!("modo desconhecido: {other:?} (use 'fixture', 'bench', 'live' ou 'serve')");
             return ExitCode::from(2);
         }
     };
@@ -68,31 +79,21 @@ fn run_fixture() -> Result<(), Box<dyn std::error::Error>> {
         SAMPLE_RATE
     );
 
-    // VAD + features por janela.
+    // VAD (estatística informativa deste modo) por janela.
     let mut vad = EnergyZcrVad::new(VadConfig::default());
-    let cache = FeatureCache::new();
-    let mut state = StreamState::new(&cache);
-    let mut frames: Vec<f32> = Vec::new();
-    let mut n_frames = 0usize;
     let mut speech_windows = 0usize;
-
+    let mut n_windows = 0usize;
     for window in samples.chunks_exact(VAD_WINDOW) {
         if vad.process_window(window)? == SpeechState::Speech {
             speech_windows += 1;
         }
-        let mel = state.extract(&cache, window)?;
-        frames.extend_from_slice(mel);
-        n_frames += 1;
+        n_windows += 1;
     }
-    println!("VAD: {speech_windows}/{n_frames} janelas com fala");
+    println!("VAD: {speech_windows}/{n_windows} janelas com fala");
 
-    // Reordena de [frame][mel] (acumulado) para [mel * n_frames] (layout do encoder).
-    let mut flat = vec![0.0f32; MEL_BINS * n_frames];
-    for t in 0..n_frames {
-        for m in 0..MEL_BINS {
-            flat[m * n_frames + t] = frames[t * MEL_BINS + m];
-        }
-    }
+    // Features log-mel no layout do encoder — mesma reordenação que o modo bench
+    // (helper compartilhado, sem duplicar a lógica).
+    let (flat, n_frames) = mel_features_from_samples(&samples)?;
 
     // Forward pass do encoder, se o modelo emprestado estiver presente.
     let encoder = model_dir().join("encoder-model.onnx");
@@ -117,6 +118,129 @@ fn run_fixture() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("pipeline completo: captura → VAD → features → encoder ✓");
     Ok(())
+}
+
+/// Extrai as features log-mel de `samples` no layout do encoder `[mel * n_frames]`.
+///
+/// Ponto único da reordenação `[frame][mel] → [mel*n_frames]` — usado por
+/// `run_fixture` (modo fixture) e por `extract_fixture_features` (modo bench),
+/// para não duplicar a lógica (DRY, review F3).
+fn mel_features_from_samples(samples: &[i16]) -> Result<(Vec<f32>, usize), Box<dyn std::error::Error>> {
+    let cache = FeatureCache::new();
+    let mut state = StreamState::new(&cache);
+    let mut frames: Vec<f32> = Vec::new();
+    let mut n_frames = 0usize;
+    for window in samples.chunks_exact(VAD_WINDOW) {
+        let mel = state.extract(&cache, window)?;
+        frames.extend_from_slice(mel);
+        n_frames += 1;
+    }
+    let mut flat = vec![0.0f32; MEL_BINS * n_frames];
+    for t in 0..n_frames {
+        for m in 0..MEL_BINS {
+            flat[m * n_frames + t] = frames[t * MEL_BINS + m];
+        }
+    }
+    Ok((flat, n_frames))
+}
+
+/// Lê a fixture e extrai as features (caminho do modo bench).
+fn extract_fixture_features() -> Result<(Vec<f32>, usize), Box<dyn std::error::Error>> {
+    let reader = hound::WavReader::open(fixture_path())?;
+    let samples: Vec<i16> = reader.into_samples::<i16>().collect::<Result<_, _>>()?;
+    mel_features_from_samples(&samples)
+}
+
+/// Modo `bench` — harness de medição de M1 (T1.3). Roda o encoder emprestado em
+/// laço, descarta warmup e reporta RTFx sustentado, latência p50/p95/p99 e a
+/// razão térmica (RTFx da 2ª metade ÷ 1ª metade do soak — proxy de min30/min1).
+///
+/// Uso: `macaw-cli bench [iterações]` (default 30). Para a medição sob os RNFs
+/// completos (P-cores + carga concorrente), use `scripts/bench.sh`, que prende o
+/// processo aos P-cores com `taskset` (RNF-05/06).
+///
+/// Este é o **caller de produção** do harness (wiring triad): exercita
+/// `RtfxMeter`/`LatencyHistogram`/`ThermalRatio` de `macaw-audio` sobre o
+/// `AsrEngine` real de `macaw-asr`.
+fn run_bench() -> Result<(), Box<dyn std::error::Error>> {
+    println!("macaw-cli bench — harness de medição (M1)");
+    let total_iters: usize = std::env::args()
+        .nth(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(30);
+    let warmup_iters = (total_iters / 5).max(1); // 20% de warmup, mínimo 1.
+
+    let encoder = model_dir().join("encoder-model.onnx");
+    if !(encoder.exists() && model_dir().join("encoder-model.onnx.data").exists()) {
+        println!("encoder ausente — rode scripts/setup_model.sh para o bench");
+        return Ok(());
+    }
+
+    let (flat, n_frames) = extract_fixture_features()?;
+    let audio_secs = n_frames as f64 * VAD_WINDOW as f64 / SAMPLE_RATE as f64;
+    let mut engine = AsrEngine::load(&encoder)?;
+
+    println!(
+        "medindo {total_iters} iterações ({warmup_iters} de warmup) sobre {audio_secs:.2}s de áudio…"
+    );
+
+    // Coleta o tempo de parede por iteração (cronometragem real com Instant).
+    let mut iter_times = Vec::with_capacity(total_iters);
+    let mut latency = LatencyHistogram::new();
+    for _ in 0..total_iters {
+        let t = Instant::now();
+        let _ = engine.encode(&flat, MEL_BINS, n_frames)?;
+        let dt = t.elapsed();
+        iter_times.push(dt);
+        latency.record(dt);
+    }
+
+    // RTFx sustentado (descarta warmup) — terminologia RTFx = áudio/parede.
+    let meter = RtfxMeter::new(warmup_iters);
+    let rtfx = meter.rtfx(audio_secs, &iter_times)?;
+
+    // Razão térmica: RTFx da 2ª metade ÷ 1ª metade das iterações medidas (proxy
+    // curto de min30/min1; o soak de 10 min real é `scripts/bench.sh`).
+    let measured = &iter_times[warmup_iters..];
+    let half = measured.len() / 2;
+    let thermal = if half > 0 {
+        let first = meter_rtfx_window(audio_secs, &measured[..half]);
+        let second = meter_rtfx_window(audio_secs, &measured[half..]);
+        match ThermalRatio::ratio(first, second) {
+            Ok(r) => format!("{r:.2}"),
+            Err(_) => "[DESCONHECIDO]".to_string(),
+        }
+    } else {
+        "[DESCONHECIDO — iterações insuficientes]".to_string()
+    };
+
+    let (p50, p95, p99) = latency
+        .percentiles()
+        .map(|(a, b, c)| {
+            (
+                a as f64 / 1000.0,
+                b as f64 / 1000.0,
+                c as f64 / 1000.0,
+            )
+        })
+        .unwrap_or((0.0, 0.0, 0.0));
+
+    // Números rotulados [MEDIDO — encanamento apenas]: são do encoder emprestado
+    // de 600M, NÃO números de produto (o modelo próprio vem em M5/M6).
+    println!("--- relatório do harness [MEDIDO — encanamento apenas] ---");
+    println!("RTFx sustentado (áudio/parede): {rtfx:.2}× (alvo RNF-07 ≥ 6×)");
+    println!("latência p50/p95/p99: {p50:.1}/{p95:.1}/{p99:.1} ms (alvo RNF-02 p99 ≤ 500 ms)");
+    println!("razão térmica (2ª½ ÷ 1ª½): {thermal} (alvo RNF-04 ≥ 0,80 no soak de 10 min)");
+    println!(
+        "backlog: harness offline não gera backlog (RNF-03 medido no modo live com captura real)"
+    );
+    Ok(())
+}
+
+/// RTFx de uma janela de tempos (sem warmup) — helper local do bench para a
+/// razão térmica. Usa `RtfxMeter` com warmup 0 sobre a janela já sem warmup.
+fn meter_rtfx_window(audio_secs: f64, times: &[std::time::Duration]) -> f64 {
+    RtfxMeter::new(0).rtfx(audio_secs, times).unwrap_or(0.0)
 }
 
 /// Modo ao vivo: captura mic + loopback e imprime rótulo de falante + backlog.
@@ -147,7 +271,7 @@ fn run_live() -> Result<(), Box<dyn std::error::Error>> {
         let sink = mon.strip_suffix(".monitor").unwrap_or(mon);
         match check_sink_health(sink) {
             Ok(health) => {
-                if let Some(Warning::SinkMuted) = evaluate_health(&health) {
+                if let Some(Warning::SinkMuted) = evaluate_sink_health(&health) {
                     eprintln!(
                         "AVISO SinkMuted: sink '{sink}' está mudo/volume 0 (muted={}, vol={}%) \
                          — o loopback NÃO vai capturar o áudio do cliente",

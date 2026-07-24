@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Macaw Voice — Teste do Walking Skeleton</title>
+<style>
+  :root {
+    --bg: #0d1117; --card: #161b22; --border: #30363d;
+    --fg: #e6edf3; --dim: #8b949e;
+    --ok: #3fb950; --warn: #d29922; --bad: #f85149; --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 24px; max-width: 900px; margin: 0 auto;
+  }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 22px; font-weight: 650; }
+  .sub { color: var(--dim); font-size: 14px; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card h2 { font-size: 13px; font-weight: 600; color: var(--dim);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 14px; }
+  .speaker-card { grid-column: 1 / -1; text-align: center; padding: 32px 20px; }
+  .speaker-name { font-size: 48px; font-weight: 700; letter-spacing: -.02em;
+    transition: color .15s; }
+  .speaker-hint { color: var(--dim); margin-top: 8px; font-size: 14px; }
+  .vad-row { display: flex; gap: 12px; justify-content: center; margin-top: 18px; }
+  .vad {
+    display: flex; align-items: center; gap: 8px;
+    background: #0d1117; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 999px; font-size: 14px; color: var(--dim);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #30363d;
+    transition: background .15s, box-shadow .15s; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .metric { display: flex; justify-content: space-between; align-items: baseline;
+    padding: 6px 0; border-bottom: 1px solid #21262d; }
+  .metric:last-child { border-bottom: none; }
+  .metric .k { color: var(--dim); font-size: 14px; }
+  .metric .v { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 16px; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; }
+  .pill.ok { background: rgba(63,185,80,.15); color: var(--ok); }
+  .pill.bad { background: rgba(248,81,73,.15); color: var(--bad); }
+  .pill.warn { background: rgba(210,153,34,.15); color: var(--warn); }
+  .banner { grid-column: 1/-1; border-radius: 10px; padding: 12px 16px;
+    font-size: 14px; display: none; }
+  .banner.show { display: block; }
+  .banner.bad { background: rgba(248,81,73,.12); border: 1px solid var(--bad);
+    color: #ffb4ae; }
+  button {
+    background: var(--accent); color: #0d1117; border: none;
+    padding: 12px 20px; border-radius: 8px; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s; width: 100%;
+  }
+  button:hover { opacity: .9; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .result { margin-top: 12px; font-size: 14px; color: var(--dim);
+    min-height: 20px; line-height: 1.4; }
+  .result.ok { color: var(--ok); }
+  .result.bad { color: var(--bad); }
+  .foot { color: var(--dim); font-size: 13px; margin-top: 20px; text-align: center; }
+  .foot code { background: #161b22; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🦜 Macaw Voice — Teste do Walking Skeleton</h1>
+    <div class="sub">Fale ao microfone ou toque um áudio no sistema e veja o roteamento de falante ao vivo.</div>
+  </header>
+
+  <div class="grid">
+    <div id="micBanner" class="banner bad"></div>
+    <div id="sinkBanner" class="banner bad"></div>
+
+    <div class="card speaker-card">
+      <h2>Quem está falando</h2>
+      <div id="speaker" class="speaker-name" style="color:var(--dim)">—</div>
+      <div class="speaker-hint">mic = você (atendente) · áudio do sistema = cliente</div>
+      <div class="vad-row">
+        <div class="vad"><span id="micDot" class="dot"></span> Microfone</div>
+        <div class="vad"><span id="loopDot" class="dot"></span> Sistema</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pipeline</h2>
+      <div class="metric"><span class="k">Estado</span><span id="running" class="v">—</span></div>
+      <div class="metric"><span class="k">Threads de captura</span><span id="threads" class="v">—</span></div>
+      <div class="metric"><span class="k">Microfone (você)</span><span id="mic" class="v">—</span></div>
+      <div class="metric"><span class="k">Sistema (cliente)</span><span id="sink" class="v">—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Métricas ao vivo</h2>
+      <div class="metric"><span class="k">Backlog p50 / p95 / p99</span><span id="backlog" class="v">—</span></div>
+      <div class="metric"><span class="k">Deriva entre streams</span><span id="drift" class="v">—</span></div>
+    </div>
+
+    <div class="card" style="grid-column:1/-1">
+      <h2>Teste do modelo (encoder de 600M)</h2>
+      <button id="fixtureBtn" onclick="runFixture()">▶ Rodar forward pass sobre a fixture</button>
+      <div id="fixtureResult" class="result"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Atualiza a cada 300&nbsp;ms · encerre com <code>Ctrl+C</code> no terminal
+  </div>
+
+<script>
+  async function poll() {
+    try {
+      const r = await fetch('/metrics');
+      const m = await r.json();
+
+      const sp = document.getElementById('speaker');
+      sp.textContent = m.speaker;
+      const colors = { 'Você':'var(--accent)', 'Cliente':'var(--ok)',
+                       'Ambos':'var(--warn)', 'Ninguém':'var(--dim)' };
+      sp.style.color = colors[m.speaker] || 'var(--dim)';
+
+      document.getElementById('micDot').className = 'dot' + (m.mic_active ? ' on' : '');
+      document.getElementById('loopDot').className = 'dot' + (m.loop_active ? ' on' : '');
+
+      document.getElementById('running').innerHTML = m.running
+        ? '<span class="pill ok">rodando</span>'
+        : '<span class="pill warn">iniciando</span>';
+      document.getElementById('threads').textContent = m.threads_alive;
+
+      const mic = document.getElementById('mic');
+      mic.innerHTML = m.mic_muted
+        ? '<span class="pill bad">volume baixo</span>'
+        : '<span class="pill ok">ok</span>';
+
+      const micBanner = document.getElementById('micBanner');
+      if (m.mic_muted) {
+        micBanner.textContent = '⚠ ' + m.mic_note;
+        micBanner.classList.add('show');
+      } else {
+        micBanner.classList.remove('show');
+      }
+
+      const sink = document.getElementById('sink');
+      sink.innerHTML = m.sink_muted
+        ? '<span class="pill bad">mudo</span>'
+        : '<span class="pill ok">ok</span>';
+
+      const banner = document.getElementById('sinkBanner');
+      if (m.sink_muted) {
+        banner.textContent = '⚠ ' + m.sink_note;
+        banner.classList.add('show');
+      } else {
+        banner.classList.remove('show');
+      }
+
+      document.getElementById('backlog').textContent =
+        m.backlog_p50 + ' / ' + m.backlog_p95 + ' / ' + m.backlog_p99;
+      document.getElementById('drift').textContent = m.drift_ms.toFixed(1) + ' ms';
+    } catch (e) {
+      document.getElementById('running').innerHTML =
+        '<span class="pill bad">offline</span>';
+    }
+  }
+
+  async function runFixture() {
+    const btn = document.getElementById('fixtureBtn');
+    const out = document.getElementById('fixtureResult');
+    btn.disabled = true;
+    out.className = 'result';
+    out.textContent = 'Rodando o encoder de 600M… (pode levar alguns segundos)';
+    try {
+      const r = await fetch('/fixture');
+      const j = await r.json();
+      out.className = 'result ' + (j.ok ? 'ok' : 'bad');
+      out.textContent = (j.ok ? '✓ ' : '✗ ') + j.msg;
+    } catch (e) {
+      out.className = 'result bad';
+      out.textContent = '✗ falha ao chamar o servidor';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  poll();
+  setInterval(poll, 300);
+</script>
+</body>
+</html>

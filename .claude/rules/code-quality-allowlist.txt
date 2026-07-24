@@ -32,3 +32,6 @@
 
 # Example (commented):
 # dead_code_unallowlisted_python | src/legacy/migrator.py:128 | 2026-09-01 | Legacy migration helper retained for v0.9 rollback path; remove after v1.0 release.
+
+# --- M1 (2026-07-24) ---
+auditor_unavailable_cargo-udeps | Cargo.toml:1 | 2026-10-22 | cargo-udeps não instalado no ambiente; cobertura de código morto garantida por clippy (lint dead_code limpo) + cargo-machete (sem deps não usadas). Sunset quando cargo-udeps for instalado no CI.
