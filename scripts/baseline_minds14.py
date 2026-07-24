@@ -1,11 +1,12 @@
 """Baseline real de M1 sobre minds14 pt-PT (fala telefônica 8 kHz real) — T4.1.
 
 minds14 (PolyAI, CC-BY-4.0) é **fala telefônica bancária real 8 kHz** com
-transcrição HUMANA (NÃO pseudo-label; PRD § 7.3 respeitado). É o domínio exato do
-produto (call center telefônico). Caveat honesto (blueprint ADR D2, falácia § 3
-#6): é **pt-PT** (português europeu), não pt-BR — mede a régua sobre fala
-telefônica real, com o gap de variedade linguística explícito; o test set pt-BR
-definitivo depende de corpus consentido (fora de escopo LGPD).
+transcrição HUMANA (NÃO pseudo-label; PRD § 7.3 respeitado). É um domínio
+**próximo** do produto — telefonia bancária 8 kHz — com dois gaps explícitos
+(review EVID-04): (a) é **pt-PT** europeu, não pt-BR; (b) são consultas de locutor
+único, não call center 1:1 com crosstalk/AGC. Caveat honesto (blueprint ADR D2,
+falácia § 3 #6). O test set pt-BR definitivo depende de corpus consentido (fora de
+escopo LGPD).
 
 Robustez: baixa o parquet auto-convertido do HF direto (evita o `datasets` 5.0,
 que exige `torchcodec`) e roda faster-whisper single-thread (`cpu_threads=1`,
@@ -81,12 +82,13 @@ def main() -> int:
         print("ERRO: nenhuma utterance obtida do minds14", file=sys.stderr)
         return 1
 
+    seed, n_boot = 2026, 2000
     result = measure_baseline(
         manifest,
         transcribe_fn=lambda p: hyp_by_path[p],
         model_name=f"faster-whisper-{model_size} (int8, CPU)",
-        seed=2026,
-        n_boot=2000,
+        seed=seed,
+        n_boot=n_boot,
     )
     report = render_report(
         [result],
@@ -99,6 +101,13 @@ def main() -> int:
             f"(b) minds14 tem code-switching (algumas refs em inglês), o que infla o WER "
             f"de um modelo transcrevendo com language=pt; (c) faster-whisper-base é fraco "
             f"— é piso, não teto (large-v3 faria muito melhor)."
+        ),
+        provenance=(
+            f"comando `python3 scripts/baseline_minds14.py {n} {model_size}`; "
+            f"modelo faster-whisper-{model_size} int8 CPU cpu_threads=1 beam_size=1; "
+            f"dataset PolyAI/minds14 pt-PT (parquet refs/convert/parquet); "
+            f"bootstrap seed={seed}, n_boot={n_boot}; hardware = máquina de referência "
+            f"do dev (NÃO o piso da frota BYOD, Q-01)."
         ),
     )
     out_path = os.path.join(REPO, "knowledge-base", "measurements", "m1-baseline-report.md")

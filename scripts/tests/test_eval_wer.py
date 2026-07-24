@@ -89,10 +89,26 @@ def test_bootstrap_seed_is_reproducible():
 # ---------------------------------------------------------------------
 
 def test_wer_empty_list_is_error():
-    with pytest.raises(WerError):
+    # Negative (testing.md § 4.1): match= fixa a condição específica, não só a classe.
+    with pytest.raises(WerError, match="nenhuma utterance"):
         wer_with_ci([], seed=1)
 
 
 def test_wer_empty_reference_is_error():
-    with pytest.raises(WerError):
+    with pytest.raises(WerError, match="referência vazia"):
         wer_with_ci([("", "")], seed=1, normalize=False)
+
+
+def test_bootstrap_ci_wider_for_smaller_n():
+    # TEST-M1-04: o IC deve ser mais largo para N pequeno (mesma taxa de erro).
+    # Padrão: 1 erro a cada 4 palavras. Repetimos a mesma utterance para variar N.
+    base = ("um dois tres quatro", "um dois tres erro")  # WER 25%
+    small = [base] * 4
+    large = [base] * 40
+    w_small = wer_with_ci(small, seed=5, n_boot=1000)
+    w_large = wer_with_ci(large, seed=5, n_boot=1000)
+    width_small = w_small.ci_high - w_small.ci_low
+    width_large = w_large.ci_high - w_large.ci_low
+    assert width_small >= width_large, (
+        f"IC de N pequeno ({width_small}) deveria ser ≥ IC de N grande ({width_large})"
+    )

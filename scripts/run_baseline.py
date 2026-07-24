@@ -95,15 +95,15 @@ def measure_baseline(
     Raises:
         BaselineError: manifesto vazio, pseudo-label, ou zero utterances válidas.
     """
+    # load_manifest já falha em manifesto vazio (EC-5: "0 utterances"), então
+    # após ele `utts` tem ≥ 1 entrada e `pairs` também — não há branch morto de
+    # "0 após transcrição" (review TEST-M1-02).
     utts = load_manifest(manifest)
 
     pairs: list[tuple[str, str]] = []
     for u in utts:
         hyp = transcribe_fn(u.audio_path)
         pairs.append((u.reference, hyp))
-
-    if not pairs:
-        raise BaselineError("0 utterances mensuráveis após transcrição")
 
     try:
         r = wer_with_ci(pairs, seed=seed, n_boot=n_boot)
@@ -119,10 +119,18 @@ def measure_baseline(
     )
 
 
-def render_report(results: list[BaselineResult], *, corpus_note: str) -> str:
+def render_report(
+    results: list[BaselineResult],
+    *,
+    corpus_note: str,
+    provenance: str | None = None,
+) -> str:
     """Renderiza o relatório Markdown com rótulos de proveniência [MEDIDO].
 
     Cada linha de WER carrega o IC 95% e o rótulo — nunca um ponto sem incerteza.
+    `provenance` (comando/hardware/seed/n_boot) é o bloco que `[MEDIDO]` exige
+    (`asr-evidence-discipline.md` § 1) para o número ser reproduzível a partir do
+    próprio relatório (review EVID-01).
     """
     if not results:
         raise BaselineError("nenhum resultado para renderizar")
@@ -136,6 +144,10 @@ def render_report(results: list[BaselineResult], *, corpus_note: str) -> str:
         "`[MEDIDO]`; WER sempre com IC 95% via bootstrap por-utterance (blueprint "
         "ADR D3), nunca ponto isolado.",
         "",
+    ]
+    if provenance:
+        lines += [f"**Proveniência `[MEDIDO]`:** {provenance}", ""]
+    lines += [
         "| Modelo | WER | IC 95% | n (utterances) |",
         "|---|---|---|---|",
     ]
@@ -145,5 +157,17 @@ def render_report(results: list[BaselineResult], *, corpus_note: str) -> str:
             f"| [IC95: {r.ci_low*100:.1f}%–{r.ci_high*100:.1f}%] "
             f"| {r.n} | `[MEDIDO]`"
         )
+    # Enquadramento do IC largo como o risco 1 do ROADMAP, não defeito da régua
+    # (review EVID-05).
+    wide = any((r.ci_high - r.ci_low) > 0.20 for r in results)
+    small_n = any(r.n < 50 for r in results)
+    if wide and small_n:
+        lines += [
+            "",
+            "> **IC largo por poder estatístico, não defeito da régua.** Com n < 50 "
+            "o IC de ~50 p.p. não decide entre candidatos — é o **risco 1 do "
+            "ROADMAP** (`ROADMAP.md` § M1). Um test set maior é pré-requisito para "
+            "M4 comparar finalistas.",
+        ]
     lines.append("")
     return "\n".join(lines)

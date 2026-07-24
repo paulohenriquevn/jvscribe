@@ -51,8 +51,9 @@ def test_testset_rejects_pseudolabel():
 
 
 def test_baseline_empty_manifest_is_error():
-    # EC-5: manifesto vazio → erro claro, sem divisão por zero.
-    with pytest.raises(BaselineError):
+    # EC-5: manifesto vazio (= 0 utterances mensuráveis) → erro claro, sem divisão
+    # por zero. match= fixa a condição específica (testing.md § 4.1).
+    with pytest.raises(BaselineError, match="manifesto vazio"):
         measure_baseline([], transcribe_fn=lambda p: "", model_name="m", seed=1)
 
 

@@ -79,31 +79,21 @@ fn run_fixture() -> Result<(), Box<dyn std::error::Error>> {
         SAMPLE_RATE
     );
 
-    // VAD + features por janela.
+    // VAD (estatística informativa deste modo) por janela.
     let mut vad = EnergyZcrVad::new(VadConfig::default());
-    let cache = FeatureCache::new();
-    let mut state = StreamState::new(&cache);
-    let mut frames: Vec<f32> = Vec::new();
-    let mut n_frames = 0usize;
     let mut speech_windows = 0usize;
-
+    let mut n_windows = 0usize;
     for window in samples.chunks_exact(VAD_WINDOW) {
         if vad.process_window(window)? == SpeechState::Speech {
             speech_windows += 1;
         }
-        let mel = state.extract(&cache, window)?;
-        frames.extend_from_slice(mel);
-        n_frames += 1;
+        n_windows += 1;
     }
-    println!("VAD: {speech_windows}/{n_frames} janelas com fala");
+    println!("VAD: {speech_windows}/{n_windows} janelas com fala");
 
-    // Reordena de [frame][mel] (acumulado) para [mel * n_frames] (layout do encoder).
-    let mut flat = vec![0.0f32; MEL_BINS * n_frames];
-    for t in 0..n_frames {
-        for m in 0..MEL_BINS {
-            flat[m * n_frames + t] = frames[t * MEL_BINS + m];
-        }
-    }
+    // Features log-mel no layout do encoder — mesma reordenação que o modo bench
+    // (helper compartilhado, sem duplicar a lógica).
+    let (flat, n_frames) = mel_features_from_samples(&samples)?;
 
     // Forward pass do encoder, se o modelo emprestado estiver presente.
     let encoder = model_dir().join("encoder-model.onnx");
@@ -130,11 +120,12 @@ fn run_fixture() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Extrai as features log-mel da fixture no layout do encoder `[mel * n_frames]`.
-/// Compartilhado entre `fixture` e `bench` para não duplicar a reordenação.
-fn extract_fixture_features() -> Result<(Vec<f32>, usize), Box<dyn std::error::Error>> {
-    let reader = hound::WavReader::open(fixture_path())?;
-    let samples: Vec<i16> = reader.into_samples::<i16>().collect::<Result<_, _>>()?;
+/// Extrai as features log-mel de `samples` no layout do encoder `[mel * n_frames]`.
+///
+/// Ponto único da reordenação `[frame][mel] → [mel*n_frames]` — usado por
+/// `run_fixture` (modo fixture) e por `extract_fixture_features` (modo bench),
+/// para não duplicar a lógica (DRY, review F3).
+fn mel_features_from_samples(samples: &[i16]) -> Result<(Vec<f32>, usize), Box<dyn std::error::Error>> {
     let cache = FeatureCache::new();
     let mut state = StreamState::new(&cache);
     let mut frames: Vec<f32> = Vec::new();
@@ -151,6 +142,13 @@ fn extract_fixture_features() -> Result<(Vec<f32>, usize), Box<dyn std::error::E
         }
     }
     Ok((flat, n_frames))
+}
+
+/// Lê a fixture e extrai as features (caminho do modo bench).
+fn extract_fixture_features() -> Result<(Vec<f32>, usize), Box<dyn std::error::Error>> {
+    let reader = hound::WavReader::open(fixture_path())?;
+    let samples: Vec<i16> = reader.into_samples::<i16>().collect::<Result<_, _>>()?;
+    mel_features_from_samples(&samples)
 }
 
 /// Modo `bench` — harness de medição de M1 (T1.3). Roda o encoder emprestado em

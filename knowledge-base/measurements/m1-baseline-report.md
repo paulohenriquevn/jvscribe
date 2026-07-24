@@ -4,7 +4,11 @@
 
 > Transcrição humana (NUNCA pseudo-label — `PRD.md` § 7.3). Números `[MEDIDO]`; WER sempre com IC 95% via bootstrap por-utterance (blueprint ADR D3), nunca ponto isolado.
 
+**Proveniência `[MEDIDO]`:** comando `python3 scripts/baseline_minds14.py 15 base`; modelo faster-whisper-base int8 CPU cpu_threads=1 beam_size=1; dataset PolyAI/minds14 pt-PT (parquet refs/convert/parquet); bootstrap seed=2026, n_boot=2000; hardware = máquina de referência do dev (NÃO o piso da frota BYOD, Q-01).
+
 | Modelo | WER | IC 95% | n (utterances) |
 |---|---|---|---|
-| faster-whisper-base (int8, CPU) | WER = 68.3% | [IC95: 46.8%–96.9%] | 15 | `[MEDIDO]`
+| faster-whisper-base (int8, CPU) | WER = 73.0% | [IC95: 49.8%–104.6%] | 15 | `[MEDIDO]`
+
+> **IC largo por poder estatístico, não defeito da régua.** Com n < 50 o IC de ~50 p.p. não decide entre candidatos — é o **risco 1 do ROADMAP** (`ROADMAP.md` § M1). Um test set maior é pré-requisito para M4 comparar finalistas.
 

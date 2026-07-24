@@ -2,8 +2,13 @@
 
 O `whisper.normalizers.EnglishTextNormalizer` usado pelos peers
 (`moonshine/scripts/eval-librispeech.py:60`) não serve para PT-BR: precisamos
-tratar acentos, "R$", numerais por extenso e coloquialismos ("pra"/"para"). Este
-é o componente PRÓPRIO que o blueprint (EC-5) identificou como fronteira conhecida.
+tratar acentos, "R$" e coloquialismos ("pra"/"para"). Este é o componente PRÓPRIO
+que o blueprint (EC-5) identificou como fronteira conhecida.
+
+Escopo atual (review CV-4): caixa, moeda por extenso, remoção de pontuação/acentos
+e coloquialismos. Conversão de **numerais por extenso** ("150" ↔ "cento e
+cinquenta") NÃO está implementada — deferida (YAGNI) até haver evidência de erro
+real de WER que a justifique; os dígitos passam inalterados.
 
 Determinístico: a mesma entrada sempre produz a mesma saída, para que o WER seja
 reprodutível (`.claude/rules/testing.md` § 6).

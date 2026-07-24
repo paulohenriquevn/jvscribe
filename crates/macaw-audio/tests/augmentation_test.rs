@@ -51,15 +51,20 @@ fn soxi_field(path: &std::path::Path, flag: &str) -> String {
     String::from_utf8_lossy(&out.stdout).trim().to_string()
 }
 
+/// Caminho temporário único por processo (review TEST-M1-06) — evita colisão de
+/// filesystem entre execuções concorrentes do binário de teste.
+fn tmp_unique(name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("macaw_aug_{}_{}", std::process::id(), name))
+}
+
 #[test]
 fn test_augment_output_is_8khz_mono() {
     if !(tool_available("sox") && tool_available("soxi")) {
         eprintln!("SKIP: sox/soxi ausentes — cadeia de augmentação não pode ser exercitada");
         return;
     }
-    let dir = std::env::temp_dir();
-    let input = dir.join("macaw_aug_in_16k.wav");
-    let output = dir.join("macaw_aug_out_8k.wav");
+    let input = tmp_unique("in_16k.wav");
+    let output = tmp_unique("out_8k.wav");
     generate_tone_16k(&input, 2, 440);
 
     let status = Command::new("bash")
@@ -104,13 +109,12 @@ fn test_augment_band_attenuates_above_3400hz() {
         eprintln!("SKIP: sox/soxi ausentes");
         return;
     }
-    let dir = std::env::temp_dir();
     // Tom de 3800 Hz (acima da banda telefônica 300-3400) deve ser fortemente
     // atenuado; um tom de 1000 Hz (dentro da banda) deve passar.
-    let in_high = dir.join("macaw_aug_3800.wav");
-    let in_mid = dir.join("macaw_aug_1000.wav");
-    let out_high = dir.join("macaw_aug_3800_out.wav");
-    let out_mid = dir.join("macaw_aug_1000_out.wav");
+    let in_high = tmp_unique("3800.wav");
+    let in_mid = tmp_unique("1000.wav");
+    let out_high = tmp_unique("3800_out.wav");
+    let out_mid = tmp_unique("1000_out.wav");
     generate_tone_16k(&in_high, 2, 3800);
     generate_tone_16k(&in_mid, 2, 1000);
 
@@ -122,9 +126,10 @@ fn test_augment_band_attenuates_above_3400hz() {
         assert!(status.success());
     }
 
-    // Amplitude RMS via `sox --info`/`stat`: o tom fora da banda deve ter RMS
-    // bem menor que o dentro da banda.
-    let rms = |p: &std::path::Path| -> f64 {
+    // Amplitude RMS via `sox stat`: o tom fora da banda deve ter RMS bem menor
+    // que o dentro da banda. Retorna Option — parse-failure NÃO pode virar 0.0 e
+    // satisfazer a asserção trivialmente (review TEST-M1-01, falso-verde).
+    let rms = |p: &std::path::Path| -> Option<f64> {
         let out = Command::new("sox")
             .args([p.to_str().unwrap(), "-n", "stat"])
             .output()
@@ -134,10 +139,13 @@ fn test_augment_band_attenuates_above_3400hz() {
             .find(|l| l.contains("RMS") && l.contains("amplitude"))
             .and_then(|l| l.split_whitespace().last())
             .and_then(|v| v.parse::<f64>().ok())
-            .unwrap_or(0.0)
     };
-    let rms_high = rms(&out_high);
-    let rms_mid = rms(&out_mid);
+    let rms_high = rms(&out_high).expect("RMS do tom de 3800 Hz deve ser parseável");
+    let rms_mid = rms(&out_mid).expect("RMS do tom de 1000 Hz deve ser parseável");
+    assert!(
+        rms_high > 0.0 && rms_mid > 0.0,
+        "ambos os RMS devem ser > 0 (parse real, não falso-verde): high={rms_high}, mid={rms_mid}"
+    );
     assert!(
         rms_high < rms_mid * 0.5,
         "tom de 3800 Hz (RMS {rms_high}) deveria ser fortemente atenuado vs 1000 Hz (RMS {rms_mid})"

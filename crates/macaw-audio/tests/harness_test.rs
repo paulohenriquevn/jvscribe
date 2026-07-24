@@ -115,41 +115,9 @@ fn test_thermal_ratio_zero_baseline_is_typed_error() {
     }
 }
 
-// ---------------------------------------------------------------------
-// T1.3 — concorrência: o contador de amostras do soak não perde incrementos
-// ---------------------------------------------------------------------
-
-#[test]
-fn test_thermal_sample_count_concurrent() {
-    use std::sync::Arc;
-    use std::thread;
-
-    use macaw_audio::harness::SampleCounter;
-
-    // N threads (como as de captura de M0) incrementam o mesmo contador
-    // atômico; a contagem final deve ser exatamente N × iterações, sem perda
-    // por corrida (invariante de atomic-counter).
-    let counter = Arc::new(SampleCounter::new());
-    let n_threads = 8;
-    let per_thread = 10_000;
-
-    let handles: Vec<_> = (0..n_threads)
-        .map(|_| {
-            let c = Arc::clone(&counter);
-            thread::spawn(move || {
-                for _ in 0..per_thread {
-                    c.incr();
-                }
-            })
-        })
-        .collect();
-    for h in handles {
-        h.join().expect("thread não deve entrar em panic");
-    }
-
-    assert_eq!(
-        counter.get(),
-        (n_threads * per_thread) as u64,
-        "contador atômico não pode perder incrementos sob concorrência"
-    );
-}
+// Nota de concorrência (review W1/TEST-M1-03): o harness de M1 é usado
+// **single-threaded** — o modo `bench` roda o encoder em laço sequencial. A
+// coleta concorrente de amostras a partir das threads de captura (M0) só existe
+// no soak ao vivo, que ainda não está ligado ao harness (trabalho futuro). Um
+// contador atômico foi removido por ser export sem caller de produção (YAGNI);
+// quando o soak concorrente for cabeado, o teste de corrida volta com ele.

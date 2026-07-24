@@ -10,7 +10,6 @@
 //! tempo_de_parede** (maior = mais rápido), nunca o "RTF" inverso dos peers.
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use crate::metrics::nearest_rank_percentile;
@@ -163,30 +162,5 @@ impl ThermalRatio {
             return Err(HarnessError::ZeroThermalBaseline);
         }
         Ok(rtfx_min30 / rtfx_min1)
-    }
-}
-
-/// Contador atômico de amostras coletadas no soak — permite que threads de
-/// captura (M0) incrementem sem corrida. Invariante de atomic-counter validado
-/// sob acesso concorrente (T1.3 concurrency test).
-#[derive(Default)]
-pub struct SampleCounter {
-    count: AtomicU64,
-}
-
-impl SampleCounter {
-    /// Novo contador zerado.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Incrementa (relaxed — só a contagem final importa) e retorna o valor anterior.
-    pub fn incr(&self) -> u64 {
-        self.count.fetch_add(1, Ordering::Relaxed)
-    }
-
-    /// Leitura da contagem acumulada.
-    pub fn get(&self) -> u64 {
-        self.count.load(Ordering::Relaxed)
     }
 }

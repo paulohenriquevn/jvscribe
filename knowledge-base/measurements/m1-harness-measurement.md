@@ -8,17 +8,24 @@
 
 ## Resultado
 
+**Escopo desta medição (review EVID-02/03):** prova o **encanamento da régua** numa
+**janela curta** (~30 s de áudio, 10 iterações) e **sem carga concorrente**. NÃO é a
+medição RNF-04 (soak ≥ 10 min) nem RNF-05 (sob carga) — esses seguem `[DESCONHECIDO]`
+até rodarem de verdade (ver abaixo).
+
 | Métrica | Valor medido | Alvo (PRD § 6) | Observação |
 |---|---|---|---|
-| RTFx sustentado (áudio/parede) | **17,81×** | RNF-07 ≥ 6× (ASR isolado) | Warm; ver efeito do warmup abaixo |
-| Latência p50/p95/p99 | **154,9 / 237,8 / 237,8 ms** | RNF-02 p99 ≤ 500 ms | 8 amostras medidas (p95=p99 por nearest-rank) |
-| Razão térmica (2ª½ ÷ 1ª½) | **1,34** | RNF-04 ≥ 0,80 no soak de 10 min | > 1: ainda aquecendo no proxy curto; o soak real de 10 min via `bench.sh` mede throttling |
-| Backlog | n/a offline | RNF-03 = 0 em 99,9% | Medido no modo `live` com captura real |
+| RTFx janela curta (áudio/parede), **sem carga** | **17,81×** | RNF-07 ≥ 6× (ASR isolado) | Warm; NÃO é o RTFx sob carga concorrente (RNF-05 não exercido); ver warmup abaixo |
+| Latência p50/p95/p99 | **154,9 / 237,8 / 237,8 ms** | RNF-02 p99 ≤ 500 ms | 8 amostras (p95=p99 por nearest-rank) — amostra pequena |
+| RNF-04 (razão térmica no soak ≥ 10 min) | **`[DESCONHECIDO]`** | ≥ 0,80 | Soak de 10 min **não executado** neste ambiente; a razão 1,34 abaixo é só proxy de ~30 s, não a métrica |
+| — proxy curto (2ª½ ÷ 1ª½) | 1,34 | (referência) | > 1: 2ª metade mais quente que a 1ª; NÃO mede throttling — só o soak real mede |
+| RNF-05 (RTFx sob carga concorrente) | **`[DESCONHECIDO]`** | obrigatório | Requer `bench.sh N --load` rodado em soak; não executado aqui |
+| Backlog | n/a offline | RNF-03 = 0 em 99,9% | Medido no modo `live` com captura real, não no bench offline |
 
 ## O warmup importa (valida o ADR D2 do plano)
 
 - **1ª iteração fria** (`macaw-cli fixture`, sem warmup): 1981 ms → RTFx ≈ **1,5×**.
-- **Sustentado quente** (bench, 2 warmup descartados): ~155 ms/iter → RTFx **17,81×**.
+- **Quente, janela curta** (bench, 2 warmup descartados): ~155 ms/iter → RTFx **17,81×** (não confundir com o RTFx sustentado do soak de 10 min, que não rodou).
 
 Um benchmark que inclui o run frio na média (como `sherpa-onnx/…rtf-cxx-api.cc:120`)
 reportaria um número entre os dois e **mentiria** sobre o regime sustentado — exatamente
