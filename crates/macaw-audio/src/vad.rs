@@ -15,14 +15,19 @@
 use crate::VAD_WINDOW;
 
 /// Ganho de calibração aplicado ao RMS normalizado antes de comparar com
-/// [`VadConfig::threshold`]. `[ESTIMATIVA]` — não existe dado real de call
-/// center para calibrar isto ainda (mesma lacuna que motiva U2/U3 no plano).
-/// O valor foi escolhido para que o `threshold` default (0.5, herdado da
-/// convenção de probabilidade do Silero — blueprint § Coverage Corner 4)
-/// classifique corretamente a fixture de referência (tom a `vol 0.5`, RMS
-/// medido ≈ 0.353 — ver `scripts/make_fixtures.sh`) como fala, e o silêncio
-/// digital puro como silêncio. Hipótese a revisar com dado real em M1.
-const ENERGY_GAIN: f32 = 2.0;
+/// [`VadConfig::threshold`]. `[MEDIDO]` — recalibrado com áudio real.
+///
+/// Com o `threshold` default de 0.5, este ganho faz o VAD disparar em
+/// **RMS ≈ 0.033** (0.5 / 15). A calibração anterior (ganho 2.0) exigia RMS ≈ 0.25,
+/// que só o tom sintético da fixture atingia; áudio real de sistema via loopback
+/// fica bem mais baixo (`[MEDIDO]` 2026-07-24: vídeo do YouTube pelo monitor do
+/// sink → RMS ≈ 0.065) e era classificado como silêncio, quebrando o roteamento
+/// de falante. O novo valor cobre áudio real de fala/sistema e ainda rejeita
+/// silêncio digital e ruído de fundo fraco (RMS < ~0.03).
+///
+/// Continua uma heurística de M0 — a robustez de verdade vem do Silero em M1
+/// (blueprint § Coverage Corner 4).
+const ENERGY_GAIN: f32 = 15.0;
 
 /// Configuração do VAD de M0. Os quatro campos espelham a convenção usada
 /// pelos dois exemplos do peer sherpa-onnx (blueprint § Coverage Corner 4).
