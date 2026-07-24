@@ -9,3 +9,4 @@ description = "Binário de demonstração do walking skeleton (M0)"
 [dependencies]
 macaw-audio = { path = "../macaw-audio" }
 macaw-asr = { path = "../macaw-asr" }
+hound = { workspace = true }
