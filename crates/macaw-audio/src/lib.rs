@@ -6,12 +6,11 @@
 //!
 //! Organização conforme `.claude/rules/architecture.md`:
 //! - [`capture`] é adapter de infraestrutura (libpulse)
-//! - [`features`], [`vad`], [`ring`] e [`metrics`] são domínio puro
+//! - [`features`], [`vad`] e [`metrics`] são domínio puro
 
 pub mod capture;
 pub mod features;
 pub mod metrics;
-pub mod ring;
 pub mod vad;
 
 /// Taxa de amostragem usada em todo o pipeline de M0.

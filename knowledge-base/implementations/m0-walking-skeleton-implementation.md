@@ -27,18 +27,24 @@ pipeline completo: captura → VAD → features → encoder ✓
 
 ## Tasks e wiring triad
 
-| Task | Entrega | Caller de produção | Teste de integração | Métrica de runtime |
+| Task | Entrega | Caller de produção (arquivo:função) | Teste de integração | Métrica de runtime |
 |---|---|---|---|---|
 | T0.1 | Workspace + fixture | — | `fixture_test` | — |
-| T1.1 | Captura dual libpulse | `macaw-cli live` | `capture_test` (6) | `active_capture_threads()` |
-| T2.1 | VAD por stream | `macaw-cli` ambos modos | `vad_detection_test` (3) | — |
-| T2.2 | Roteamento de falante | `macaw-cli live` | `vad_speaker_routing_test` | — |
-| T2.3 | Detecção de sink mudo | `capture.rs` | `capture_test` | `Warning::SinkMuted` |
-| T3.1 | log-mel zero-alocação | `macaw-cli` ambos modos | `features_*` (5) | contador `stats_alloc` |
-| T4.1 | Encoder + forward pass | `macaw-cli fixture` | `forward_pass_test` | RTF `[MEDIDO]` |
-| T5.1 | Contador de backlog | `macaw-cli live` | `metrics_test` (5) | p50/p95/p99 |
-| T5.2 | Deriva entre streams | `macaw-cli`/probe | `metrics_test` | série temporal |
-| T5.3 | Custo do VAD | teste | `vad_cost_test` | 3,49 µs/janela |
+| T1.1 | Captura dual libpulse | `main.rs:run_live` (`spawn_capture`) | `capture_test` (6) | `active_capture_threads()` |
+| T2.1 | VAD por stream | `main.rs:classify_latest` | `vad_detection_test` (3) | — |
+| T2.2 | Roteamento de falante | `main.rs:run_live` (`route_speaker`) | `vad_speaker_routing_test` | — |
+| T2.3 | Detecção de sink mudo | `main.rs:run_live` (`check_sink_health`+`evaluate_health`) | `sink_muted_integration_test` | `Warning::SinkMuted` no stderr |
+| T3.1 | log-mel zero-alocação | `main.rs` ambos modos (`StreamState::extract`) | `features_*` (5) | contador `stats_alloc` |
+| T4.1 | Encoder + forward pass | `main.rs:run_fixture` (`AsrEngine::encode`) | `forward_pass_test` | RTF `[MEDIDO]` aquecido |
+| T5.1 | Contador de backlog | `main.rs:run_live` (`record_produced`/`consumed`/`backlog_percentiles`) | `metrics_test` (5) | p50/p95/p99 |
+| T5.2 | Deriva entre streams | `main.rs:run_live` (`DriftMeter::record`) | `metrics_test` | série deslizante |
+| T5.3 | Custo do VAD | teste (n=5000, aquecido) | `vad_cost_test` | 3,32 µs média / 17,94 µs max |
+
+> **Correção (review B2/H1):** a versão anterior desta tabela listava `capture.rs`
+> como "caller" de T2.3 e "`macaw-cli`/probe" de T5.2 — mas eram os locais de
+> **definição**, não de chamada. `sink_muted` e `DriftMeter` não tinham caller de
+> produção. Agora `run_live` os chama de verdade, e há teste de integração
+> exercitando o caminho integrado.
 
 ## Evidência medida (rótulos de proveniência)
 

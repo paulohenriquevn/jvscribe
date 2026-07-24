@@ -6,9 +6,29 @@
 //! (`.claude/rules/asr-evidence-discipline.md` § 2). Métricas entram desde a
 //! primeira task (ADR D4 do plano), não como retrofit.
 
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+
+/// Tamanho máximo das séries temporais em memória (backlog e drift).
+///
+/// Limita memória e custo de ordenação a O(janela), independente da duração da
+/// chamada — sem isso, numa chamada de horas o `Vec` cresceria sem limite e
+/// `backlog_percentiles()` reordenaria uma série cada vez maior a cada leitura
+/// (review H4). A janela deslizante também torna os percentis uma medida do
+/// comportamento **recente**, que é o que importa para detectar backlog em curso.
+/// 4096 leituras ≈ 34 min a uma leitura por 500 ms.
+const MAX_HISTORY: usize = 4096;
+
+/// Empurra `value` numa janela deslizante, descartando a leitura mais antiga
+/// quando cheia.
+fn push_bounded(history: &mut VecDeque<u64>, value: u64) {
+    if history.len() == MAX_HISTORY {
+        history.pop_front();
+    }
+    history.push_back(value);
+}
 
 /// Calcula o percentil pelo método "nearest rank" sobre um slice já ordenado.
 ///
@@ -31,9 +51,9 @@ fn nearest_rank_percentile(sorted: &[u64], pct: f64) -> u64 {
 pub struct BacklogCounter {
     produced: AtomicU64,
     consumed: AtomicU64,
-    /// Série temporal de leituras de backlog — uma amostra por chamada de
-    /// `record_produced`/`record_consumed`, na ordem em que ocorreram.
-    history: Mutex<Vec<u64>>,
+    /// Série temporal deslizante de leituras de backlog — até [`MAX_HISTORY`]
+    /// amostras recentes, uma por chamada de `record_produced`/`record_consumed`.
+    history: Mutex<VecDeque<u64>>,
 }
 
 impl Default for BacklogCounter {
@@ -48,7 +68,7 @@ impl BacklogCounter {
         Self {
             produced: AtomicU64::new(0),
             consumed: AtomicU64::new(0),
-            history: Mutex::new(Vec::new()),
+            history: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -67,7 +87,7 @@ impl BacklogCounter {
     fn sample_backlog(&self) {
         let backlog = self.backlog();
         if let Ok(mut guard) = self.history.lock() {
-            guard.push(backlog);
+            push_bounded(&mut guard, backlog);
         }
         // Mutex envenenado: perde-se esta amostra, mas o contador em si
         // (produced/consumed, atômicos) segue correto — nunca panic aqui.
@@ -93,9 +113,9 @@ impl BacklogCounter {
     /// e o backlog atual é > 0. Com menos de 4 amostras, não há série
     /// suficiente para uma tendência — retorna `false`.
     pub fn is_growing(&self) -> bool {
-        let history = match self.history.lock() {
-            Ok(guard) => guard.clone(),
-            Err(poisoned) => poisoned.into_inner().clone(),
+        let history: Vec<u64> = match self.history.lock() {
+            Ok(guard) => guard.iter().copied().collect(),
+            Err(poisoned) => poisoned.into_inner().iter().copied().collect(),
         };
         if history.len() < 4 {
             return false;
@@ -108,11 +128,11 @@ impl BacklogCounter {
         second_mean > first_mean && self.backlog() > 0
     }
 
-    /// Percentis p50/p95/p99 da série temporal de backlog observada até agora.
+    /// Percentis p50/p95/p99 da janela deslizante recente de backlog.
     pub fn backlog_percentiles(&self) -> (u64, u64, u64) {
         let mut sorted: Vec<u64> = match self.history.lock() {
-            Ok(guard) => guard.clone(),
-            Err(poisoned) => poisoned.into_inner().clone(),
+            Ok(guard) => guard.iter().copied().collect(),
+            Err(poisoned) => poisoned.into_inner().iter().copied().collect(),
         };
         sorted.sort_unstable();
         (
@@ -144,7 +164,9 @@ pub struct DriftSample {
 pub struct DriftMeter {
     started_at: Instant,
     reference_rate_hz: u32,
-    history: Mutex<Vec<DriftSample>>,
+    /// Janela deslizante das últimas [`MAX_HISTORY`] leituras — limita a memória
+    /// numa chamada longa (review H4).
+    history: Mutex<VecDeque<DriftSample>>,
 }
 
 impl DriftMeter {
@@ -154,7 +176,7 @@ impl DriftMeter {
         Self {
             started_at: Instant::now(),
             reference_rate_hz,
-            history: Mutex::new(Vec::new()),
+            history: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -172,7 +194,10 @@ impl DriftMeter {
         let drift_ms = (expected_a_secs - expected_b_secs) * 1000.0;
 
         if let Ok(mut guard) = self.history.lock() {
-            guard.push(DriftSample {
+            if guard.len() == MAX_HISTORY {
+                guard.pop_front();
+            }
+            guard.push_back(DriftSample {
                 at: elapsed,
                 drift_ms,
             });
@@ -181,11 +206,11 @@ impl DriftMeter {
         drift_ms
     }
 
-    /// Série temporal completa de leituras de deriva.
+    /// Janela deslizante recente de leituras de deriva.
     pub fn history(&self) -> Vec<DriftSample> {
         match self.history.lock() {
-            Ok(guard) => guard.clone(),
-            Err(poisoned) => poisoned.into_inner().clone(),
+            Ok(guard) => guard.iter().copied().collect(),
+            Err(poisoned) => poisoned.into_inner().iter().copied().collect(),
         }
     }
 }

@@ -19,9 +19,12 @@ use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 use macaw_asr::AsrEngine;
-use macaw_audio::capture::{active_capture_threads, list_sources, spawn_capture, CaptureConfig};
+use macaw_audio::capture::{
+    active_capture_threads, check_sink_health, evaluate_health, list_sources, spawn_capture,
+    CaptureConfig, Warning,
+};
 use macaw_audio::features::{FeatureCache, StreamState};
-use macaw_audio::metrics::BacklogCounter;
+use macaw_audio::metrics::{BacklogCounter, DriftMeter};
 use macaw_audio::vad::{route_speaker, EnergyZcrVad, SpeechDetector, SpeechState, VadConfig};
 use macaw_audio::{MEL_BINS, SAMPLE_RATE, VAD_WINDOW};
 
@@ -135,6 +138,27 @@ fn run_live() -> Result<(), Box<dyn std::error::Error>> {
     let monitor_name = list_sources()
         .ok()
         .and_then(|s| s.into_iter().find(|d| d.is_monitor).map(|d| d.name));
+
+    // T2.3 — saúde do sink ANTES de capturar o loopback: se o sink estiver mudo, o
+    // monitor captura silêncio legítimo e o cliente deixa de ser transcrito SEM
+    // erro. Isso tem que ser visível (`error-handling.md` § 1). Deriva o nome do
+    // sink do monitor (`<sink>.monitor` → `<sink>`).
+    if let Some(ref mon) = monitor_name {
+        let sink = mon.strip_suffix(".monitor").unwrap_or(mon);
+        match check_sink_health(sink) {
+            Ok(health) => {
+                if let Some(Warning::SinkMuted) = evaluate_health(&health) {
+                    eprintln!(
+                        "AVISO SinkMuted: sink '{sink}' está mudo/volume 0 (muted={}, vol={}%) \
+                         — o loopback NÃO vai capturar o áudio do cliente",
+                        health.muted, health.volume_pct
+                    );
+                }
+            }
+            Err(e) => eprintln!("aviso: não foi possível checar a saúde do sink '{sink}': {e}"),
+        }
+    }
+
     let loopback = monitor_name.and_then(|name| {
         spawn_capture(CaptureConfig {
             source: name,
@@ -147,24 +171,33 @@ fn run_live() -> Result<(), Box<dyn std::error::Error>> {
     println!("threads de captura vivas: {}", active_capture_threads());
 
     let backlog = BacklogCounter::new();
+    let drift = DriftMeter::new(SAMPLE_RATE);
     let mut vad_mic = EnergyZcrVad::new(VadConfig::default());
     let mut vad_loop = EnergyZcrVad::new(VadConfig::default());
     let mut buf_mic: Vec<i16> = Vec::new();
     let mut buf_loop: Vec<i16> = Vec::new();
+    // Total de amostras já entregues por cada stream — alimenta o DriftMeter (T5.2).
+    let mut mic_total = 0u64;
+    let mut loop_total = 0u64;
 
     let deadline = Instant::now() + Duration::from_secs(seconds);
     while Instant::now() < deadline {
-        drain_into(&mic, &mut buf_mic, &backlog);
+        mic_total += drain_into(&mic, &mut buf_mic, &backlog);
         if let Some(ref lp) = loopback {
-            drain_into(lp, &mut buf_loop, &backlog);
+            loop_total += drain_into(lp, &mut buf_loop, &backlog);
         }
 
         let mic_state = classify_latest(&mut vad_mic, &mut buf_mic, &backlog);
         let loop_state = classify_latest(&mut vad_loop, &mut buf_loop, &backlog);
         let speaker = route_speaker(mic_state, loop_state);
 
+        // T5.2 — deriva entre os dois streams via a API testada (não reimplementada).
+        let drift_ms = drift.record(mic_total, loop_total);
+
         let (p50, p95, p99) = backlog.backlog_percentiles();
-        println!("falante: {speaker:?} | backlog p50/p95/p99 = {p50}/{p95}/{p99}");
+        println!(
+            "falante: {speaker:?} | backlog p50/p95/p99 = {p50}/{p95}/{p99} | drift = {drift_ms:.1}ms"
+        );
 
         std::thread::sleep(Duration::from_millis(500));
     }
@@ -172,27 +205,46 @@ fn run_live() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn drain_into(rx: &Receiver<Vec<i16>>, buf: &mut Vec<i16>, backlog: &BacklogCounter) {
+/// Drena o canal para o buffer e retorna quantas amostras foram entregues (para o
+/// DriftMeter). Cada amostra é contabilizada como produzida no backlog.
+fn drain_into(rx: &Receiver<Vec<i16>>, buf: &mut Vec<i16>, backlog: &BacklogCounter) -> u64 {
+    let mut delivered = 0u64;
     while let Ok(chunk) = rx.try_recv() {
         backlog.record_produced(chunk.len() as u64);
+        delivered += chunk.len() as u64;
         buf.extend_from_slice(&chunk);
     }
+    delivered
 }
 
-/// Classifica a janela mais recente e drena o buffer até menos de uma janela,
-/// registrando cada amostra consumida no contador de backlog (RNF-03).
+/// Classifica as janelas completas do buffer e as remove, registrando o consumo no
+/// contador de backlog (RNF-03).
+///
+/// Recebe `&mut dyn SpeechDetector` — não o `EnergyZcrVad` concreto — para que a
+/// troca por Silero em M1 seja só uma segunda implementação do traço, sem tocar
+/// nesta assinatura (OCP, `vad.rs` doc do traço). Realiza no composition root a
+/// abstração que o traço promete.
+///
+/// Sem alocação por janela: classifica um slice de `buf` e só então remove o
+/// prefixo consumido de uma vez (`drain(..consumed)`), em vez de `collect`ar cada
+/// janela num `Vec` novo.
 fn classify_latest(
-    vad: &mut EnergyZcrVad,
+    vad: &mut dyn SpeechDetector,
     buf: &mut Vec<i16>,
     backlog: &BacklogCounter,
 ) -> SpeechState {
     let mut last = SpeechState::Silence;
-    while buf.len() >= VAD_WINDOW {
-        let window: Vec<i16> = buf.drain(..VAD_WINDOW).collect();
-        backlog.record_consumed(window.len() as u64);
-        if let Ok(state) = vad.process_window(&window) {
+    let mut consumed = 0usize;
+    while consumed + VAD_WINDOW <= buf.len() {
+        let window = &buf[consumed..consumed + VAD_WINDOW];
+        if let Ok(state) = vad.process_window(window) {
             last = state;
         }
+        consumed += VAD_WINDOW;
+    }
+    if consumed > 0 {
+        backlog.record_consumed(consumed as u64);
+        buf.drain(..consumed);
     }
     last
 }

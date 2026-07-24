@@ -10,7 +10,6 @@ description = "Captura dual, VAD e extração de features para ASR em CPU"
 libpulse-binding = { workspace = true }
 libpulse-simple-binding = { workspace = true }
 realfft = { workspace = true }
-hound = { workspace = true }
 
 [dev-dependencies]
 hound = { workspace = true }

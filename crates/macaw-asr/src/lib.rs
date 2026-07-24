@@ -147,11 +147,11 @@ impl AsrEngine {
             reason,
         };
         // Otimização de grafo DESABILITADA em M0. `[MEDIDO]` 2026-07-24: com a
-        // otimização default (`Level3`), abrir o encoder-model.onnx quantizado
-        // (40 MB, transducer) não terminou em 180 s neste ambiente. M0 prova o
-        // encanamento — a otimização de grafo é escopo de M6 (runtime otimizado),
-        // não deste walking skeleton. Sem otimização, o load é praticamente
-        // instantâneo.
+        // otimização default (`Level3`), abrir o encoder (grafo de 40 MB +
+        // pesos externos `encoder-model.onnx.data` de ~2,3 GB, fp32) não terminou
+        // em 180 s neste ambiente. M0 prova o encanamento — a otimização de grafo é
+        // escopo de M6 (runtime otimizado), não deste walking skeleton. Sem
+        // otimização, o load é praticamente instantâneo.
         let mut builder = ort::session::Session::builder()
             .map_err(|e| session_err(e.to_string()))?
             .with_optimization_level(ort::session::builder::GraphOptimizationLevel::Disable)

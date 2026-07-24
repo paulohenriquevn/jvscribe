@@ -33,20 +33,30 @@ fn run_consumer(counter: &BacklogCounter, rate_hz: u64, duration: Duration) {
 #[test]
 fn test_backlog_counter_reports_zero_when_consumer_keeps_up() {
     let counter = BacklogCounter::new();
-    let duration = Duration::from_secs(1);
 
-    // Produtor a 100/s, consumidor a 200/s — consumidor sempre alcança o
-    // produtor entre uma amostra e outra, então o backlog nunca deveria
-    // ficar preso acima de zero por muito tempo.
-    thread::scope(|scope| {
-        scope.spawn(|| run_producer(&counter, 100, duration));
-        scope.spawn(|| run_consumer(&counter, 200, duration));
-    });
+    // Interleaving determinístico (sem `sleep` de parede — review MEDIUM-3): cada
+    // produção é seguida imediatamente pelo consumo correspondente. Modela um
+    // consumidor que sempre alcança o produtor.
+    //
+    // A propriedade RNF-03 relevante aqui é que o backlog **não acumula** — não que
+    // o valor instantâneo nunca pisque para 1. Como `sample_backlog()` é chamado
+    // após cada produção E cada consumo, a série alterna 1,0,1,0 (o backlog É 1 no
+    // instante entre produzir e consumir); logo o p99 dessa amostragem é 1, e
+    // afirmá-lo 0 testaria um artefato da amostragem, não a propriedade física.
+    // O que importa: a tendência não é de crescimento e o backlog volta a 0.
+    for _ in 0..1_000 {
+        counter.record_produced(1);
+        counter.record_consumed(1);
+    }
 
-    let (_p50, _p95, p99) = counter.backlog_percentiles();
+    assert!(
+        !counter.is_growing(),
+        "backlog não deveria crescer quando o consumidor acompanha o produtor"
+    );
     assert_eq!(
-        p99, 0,
-        "p99 do backlog deveria ser 0 quando o consumidor acompanha o produtor"
+        counter.backlog(),
+        0,
+        "backlog em regime deve voltar a 0 quando o consumidor acompanha"
     );
 }
 

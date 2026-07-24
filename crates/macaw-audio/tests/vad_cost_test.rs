@@ -54,28 +54,39 @@ fn test_vad_cost_is_measured_and_reported() {
     let var = samples_ns.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n;
     let std = var.sqrt();
 
+    // Cauda: p99 e máximo. Para um custo por janela que decide se o backlog cresce
+    // sob carga, o pior caso importa mais que a média — uma preempção do scheduler
+    // pode inflar uma janela isolada (review MEDIUM-2).
+    let mut sorted = samples_ns.clone();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let p99 = sorted[((0.99 * n).ceil() as usize).saturating_sub(1).min(sorted.len() - 1)];
+    let max = *sorted.last().expect("há amostras");
+
     let mean_us = mean / 1000.0;
     let std_us = std / 1000.0;
+    let p99_us = p99 / 1000.0;
+    let max_us = max / 1000.0;
     // Uma janela de 512 amostras a 16 kHz = 32 ms de áudio.
     let window_budget_us = VAD_WINDOW as f64 / 16_000.0 * 1_000_000.0;
-    let realtime_factor = window_budget_us / mean_us;
+    let rt_mean = window_budget_us / mean_us;
+    let rt_worst = window_budget_us / max_us;
 
     eprintln!(
         "[MEDIDO] VAD (energia+ZCR) por janela de {VAD_WINDOW} amostras: \
-         {mean_us:.2} ± {std_us:.2} µs (n={REPS}) em \"{}\"",
+         média {mean_us:.2} ± {std_us:.2} µs · p99 {p99_us:.2} µs · max {max_us:.2} µs \
+         (n={REPS}) em \"{}\"",
         cpu_model()
     );
     eprintln!(
         "[MEDIDO] orçamento da janela = {window_budget_us:.0} µs (32 ms de áudio) \
-         → VAD roda a {realtime_factor:.0}× real-time"
+         → VAD roda a {rt_mean:.0}× real-time na média, {rt_worst:.0}× no pior caso"
     );
 
-    // O VAD de M0 é uma heurística barata; deve rodar muitíssimas vezes mais
-    // rápido que o áudio. Uma margem folgada (≥ 10× real-time) é o mínimo aceitável
-    // — se o VAD sozinho passasse disso, o orçamento de CPU do pipeline (RNF-07)
-    // já estaria comprometido antes mesmo do modelo acústico.
+    // A margem é avaliada no PIOR CASO, não na média — é o pior caso que ameaça o
+    // orçamento de CPU do pipeline (RNF-07). ≥ 10× real-time mesmo no máximo
+    // observado é o mínimo aceitável.
     assert!(
-        realtime_factor >= 10.0,
-        "VAD custa {mean_us:.2}µs/janela = apenas {realtime_factor:.0}× real-time (esperado ≥ 10×)"
+        rt_worst >= 10.0,
+        "VAD no pior caso custa {max_us:.2}µs/janela = apenas {rt_worst:.0}× real-time (esperado ≥ 10×)"
     );
 }

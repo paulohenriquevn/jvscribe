@@ -69,12 +69,12 @@ fn test_end_to_end_encoder_forward_pass_on_real_features() {
     let mut engine = AsrEngine::load(&encoder).expect("encoder deve carregar");
     let (mel, n_frames) = fixture_features();
 
-    // O forward pass real: features → encoder → tensor de saída.
-    let t = Instant::now();
+    // Aquecimento: a primeira passagem inclui paginação do mmap de 2,3 GB e
+    // alocação de arena do ORT — descartada para não poluir a medição (a mesma
+    // disciplina que vad_cost_test aplica). Review HIGH-2.
     let out_shape = engine
         .encode(&mel, MEL_BINS, n_frames)
         .expect("forward pass do encoder deve rodar");
-    let elapsed = t.elapsed();
 
     // O encoder produz [dim0, 1024, dim2]: batch 1, hidden 1024, tempo subamostrado.
     assert_eq!(out_shape.len(), 3, "saída do encoder deve ser 3D, veio {out_shape:?}");
@@ -82,13 +82,29 @@ fn test_end_to_end_encoder_forward_pass_on_real_features() {
     assert_eq!(out_shape[1], 1024, "dim hidden do encoder deve ser 1024");
     assert!(out_shape[2] > 0, "dimensão temporal deve ser positiva");
 
-    // Evidência `[MEDIDO — encanamento apenas]`: tempo do forward pass do encoder
-    // de 600M nesta CPU. Não é RTFx de produto (modelo emprestado, offline), mas
-    // mostra a ordem de grandeza que motiva o modelo próprio de M5/M6.
+    // Medição aquecida: 10 repetições, média ± desvio (não single-shot).
+    const REPS: usize = 10;
+    let mut times_ms: Vec<f64> = Vec::with_capacity(REPS);
+    for _ in 0..REPS {
+        let t = Instant::now();
+        let _ = engine
+            .encode(&mel, MEL_BINS, n_frames)
+            .expect("forward pass deve rodar");
+        times_ms.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    let mean = times_ms.iter().sum::<f64>() / REPS as f64;
+    let std = (times_ms.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / REPS as f64).sqrt();
     let audio_secs = n_frames as f64 * 512.0 / 16_000.0;
+    let rtf = (mean / 1000.0) / audio_secs;
+
+    // Evidência `[MEDIDO — só encoder, aquecido, grafo não-otimizado — encanamento
+    // apenas]`. NÃO é RTFx de produto: mede só o encoder (o decode, a parte cara de
+    // um transducer, está bloqueado por M2), com otimização de grafo desabilitada.
+    // Não sustenta a tese do projeto — a viabilidade real-time do modelo completo é
+    // [DESCONHECIDO]. Ver m0-borrowed-model-dod-analysis.md.
     eprintln!(
-        "[MEDIDO — encanamento apenas] encoder 600M: {n_frames} frames ({audio_secs:.2}s de áudio) \
-         em {:.0}ms → shape {out_shape:?}",
-        elapsed.as_millis()
+        "[MEDIDO — só encoder, aquecido, grafo não-otimizado — encanamento apenas] \
+         encoder 600M: {mean:.0} ± {std:.0} ms (n={REPS}) para {audio_secs:.2}s de áudio \
+         (RTF {rtf:.3}) → shape {out_shape:?}"
     );
 }

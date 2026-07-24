@@ -13,7 +13,15 @@ Nenhum finding acima de INFO após remediação.
 |---|---|---|
 | **D1 — Dead code** | `clippy -D warnings` (lints `dead_code`, `unused_*`) | ✅ limpo em todo o workspace, `--all-targets` |
 | **D2 — Fabricação de símbolo** | compilador Rust | ✅ garantido pelo sistema de tipos — API inexistente não compila. `cargo build --workspace` verde |
-| **D3 — Exports órfãos** | verificação manual de `pub fn` sem uso externo + `cargo-machete` | ✅ 3 órfãos encontrados e **removidos**; 0 dependências não usadas |
+| **D3 — Exports órfãos** | verificação manual de `pub fn` sem uso externo + `cargo-machete` | ✅ 3 `pub fn` órfãos + o módulo `ring` inteiro (código morto, apontado no review H3) **removidos**; 0 dependências não usadas |
+
+> **Nota de método (review H3):** a primeira passagem deste audit usou
+> `clippy -D warnings` como proxy de D1, que **não** sinaliza itens `pub` sem
+> consumidor no workspace (são superfície de API por definição). O review pré-merge
+> pegou `ring::SampleRing` — módulo inteiro construído, testado isolado e nunca
+> integrado ao pipeline. Removido. Lição: para Rust, a detecção de código morto
+> `pub` precisa de verificação de caller explícita (feita agora manualmente), não
+> só clippy.
 | **D4 — Mutation testing** | — | N/A para Rust (golden rule § 5: Rust+Go deferidos; só Python/TS) |
 
 ## Findings remediados

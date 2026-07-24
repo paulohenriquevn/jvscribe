@@ -13,9 +13,18 @@ branch: develop
 
 Entregar um binário Rust que capture **microfone e áudio do sistema em streams
 independentes**, aplique VAD por stream, rotule o falante por roteamento, extraia
-log-mel sem alocar no caminho quente, e produza **transcrição incremental** usando
-modelo emprestado — sustentando ≥ 5 minutos sem crash e **sem crescimento de
-backlog**.
+log-mel sem alocar no caminho quente, e prove a **fronteira features→modelo**
+rodando o forward pass do encoder emprestado sobre features reais — com backlog
+instrumentado, sem crash.
+
+> **Correção de DoD (2026-07-24, review-driven).** A versão anterior deste Goal
+> exigia "transcrição incremental sustentando ≥ 5 min sem crescimento de backlog".
+> Isso foi movido para M5/M6: a transcrição (texto) exige o decoder TDT, que é
+> específico da arquitetura e está **BLOQUEADO POR M2**; e o real-time sustentado
+> do modelo completo de 600M offline é `[DESCONHECIDO]` até o decode existir. M0
+> prova o encanamento. Ver `ROADMAP.md` M0 e
+> `knowledge-base/discoveries/m0-borrowed-model-dod-analysis.md`. As Acceptance
+> Criteria de T4.1 e a Integração Final abaixo foram ajustadas em conformidade.
 
 ## Context
 
@@ -673,12 +682,16 @@ test_asr_engine_is_not_shared_between_threads:
 
 - `AsrEngine::load("/caminho/inexistente")` retorna `Err(AsrError::ModelNotFound { path })` com o caminho na mensagem
 - `vocab.txt` carregado reporta exatamente `8193` tokens
-- A execução do CLI sobre a fixture imprime ≥ 1 linha de texto antes de terminar
-- Cada linha impressa é prefixada por `[Agent]` ou `[Customer]`
+- O encoder carrega com pesos reais e expõe entradas/saídas (grafo aberto pelo runtime, não só arquivo presente)
+- `encode()` sobre features reais da fixture retorna tensor de shape `[1, 1024, T]` (fronteira features→modelo provada)
+
+> Critério revisado (review M3): "imprimir texto transcrito prefixado por falante"
+> exigiria o decoder TDT, BLOQUEADO POR M2. M0 prova a fronteira features→encoder;
+> a transcrição de texto pertence a M2+.
 
 #### DoD
 
-- [ ] CLI transcreve a fixture e imprime texto
+- [ ] CLI roda o pipeline até o forward pass do encoder sobre a fixture
 - [ ] Rótulo de falante acompanha cada segmento
 - [ ] Restrição de `!Sync` documentada em teste
 
@@ -906,18 +919,27 @@ Nenhum destes cenários pode resultar em panic ou em silêncio — conforme
 
 ### Execution
 
-1. Iniciar o CLI capturando mic + monitor do sink em uso
-2. Reproduzir áudio de fala em português no sistema por ≥ 5 min
-3. Falar ao microfone intercalando com o áudio reproduzido
-4. Registrar: texto transcrito, rótulos de falante, backlog p50/p95/p99, drift, RTFx
+1. Modo fixture: `macaw-cli` roda o pipeline determinístico completo (captura de
+   arquivo → VAD → features → encoder) sobre a fixture versionada
+2. Modo live: `macaw-cli live` captura mic + monitor real, com detecção de sink
+   mudo, roteamento de falante, backlog e drift instrumentados
+3. Registrar: shape de saída do encoder, rótulos de falante, backlog p50/p95/p99,
+   drift, tempo do forward pass
 
 ### Acceptance Criteria
 
-- Processo sobrevive ≥ 5 min sem crash
-- Backlog p99 == 0
-- Rótulo de falante alterna corretamente entre `Agent` e `Customer`
-- Texto aparece incrementalmente
-- Todos os números com rótulo `[MEDIDO — encanamento apenas]`
+- Ambos os modos rodam sem crash
+- O forward pass do encoder produz tensor `[1, 1024, T]` sobre features reais
+- Rótulo de falante deriva corretamente do par de estados de VAD (tabela-verdade)
+- Sink mudo produz `Warning::SinkMuted` visível (não falha silenciosa)
+- Todos os números com rótulo de proveniência; o RTF do encoder marcado como
+  `[MEDIDO — só encoder, aquecido, grafo não-otimizado — encanamento apenas]`
+
+> Critério revisado (review M3): "sobrevive ≥ 5 min" e "texto incremental" foram
+> movidos para M5/M6 — dependem do decoder (M2) e do modelo próprio streaming. O
+> backlog `p99 == 0` sustentado também: com o modelo emprestado offline no loop, o
+> backlog do CLI-demo reflete o transiente do poll, não overflow — a instrumentação
+> de backlog é provada deterministicamente em `metrics_test.rs`, não pelo demo.
 
 ### If Validation Fails
 
