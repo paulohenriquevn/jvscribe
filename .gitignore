@@ -44,3 +44,4 @@ vendor/
 # Modelo emprestado de M0 (artefato de terceiro, grande) — baixado por scripts/setup_model.sh
 models/
 *.onnx.data
+tmp_*.txt
