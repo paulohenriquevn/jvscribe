@@ -13,7 +13,7 @@
 //! - `macaw-cli live` — captura mic + loopback do sistema em tempo real e imprime
 //!   rótulo de falante + backlog enquanto roda. Precisa de servidor de áudio.
 
-mod app;
+use macaw_cli::app;
 
 use std::path::PathBuf;
 use std::process::ExitCode;

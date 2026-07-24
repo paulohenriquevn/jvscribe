@@ -101,6 +101,12 @@ fn fixture_path() -> PathBuf {
 pub fn run(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(Mutex::new(Snapshot::initial()));
     let running = Arc::new(AtomicBool::new(true));
+    // Garante que só UM `/fixture` roda por vez — cada um carrega o encoder de
+    // 2,3 GB, e várias cargas concorrentes estourariam a memória.
+    let fixture_busy = Arc::new(AtomicBool::new(false));
+    // Encoder carregado sob demanda e cacheado: a primeira chamada de `/fixture`
+    // paga os ~2 s de load; as seguintes reusam a sessão (~130 ms).
+    let engine: Arc<Mutex<Option<AsrEngine>>> = Arc::new(Mutex::new(None));
 
     // Thread do pipeline de áudio: captura + VAD + roteamento + métricas.
     let pipe_state = Arc::clone(&state);
@@ -117,11 +123,18 @@ pub fn run(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     for stream in listener.incoming() {
         match stream {
             Ok(s) => {
-                // Cada conexão é curta (poll); tratar inline mantém o servidor
-                // simples. Um erro numa conexão nunca derruba o servidor.
-                if let Err(e) = handle(s, &state) {
-                    eprintln!("aviso: conexão falhou: {e}");
-                }
+                // Uma thread POR conexão: `/fixture` carrega o encoder (~2-3s) e
+                // NÃO pode bloquear os polls de `/metrics`, senão a UI congela — foi
+                // exatamente esse o bug do servidor single-threaded. Threads leves,
+                // conexões curtas.
+                let st = Arc::clone(&state);
+                let fb = Arc::clone(&fixture_busy);
+                let eng = Arc::clone(&engine);
+                std::thread::spawn(move || {
+                    if let Err(e) = handle(s, &st, &fb, &eng) {
+                        eprintln!("aviso: conexão falhou: {e}");
+                    }
+                });
             }
             Err(e) => eprintln!("aviso: accept falhou: {e}"),
         }
@@ -259,14 +272,16 @@ fn classify(
 }
 
 /// Trata uma requisição HTTP — roteia por caminho.
-fn handle(mut stream: TcpStream, state: &Arc<Mutex<Snapshot>>) -> std::io::Result<()> {
+fn handle(
+    mut stream: TcpStream,
+    state: &Arc<Mutex<Snapshot>>,
+    fixture_busy: &Arc<AtomicBool>,
+    engine: &Arc<Mutex<Option<AsrEngine>>>,
+) -> std::io::Result<()> {
     let mut buf = [0u8; 1024];
     let n = stream.read(&mut buf)?;
     let req = String::from_utf8_lossy(&buf[..n]);
-    let path = req
-        .split_whitespace()
-        .nth(1)
-        .unwrap_or("/");
+    let path = req.split_whitespace().nth(1).unwrap_or("/");
 
     match path {
         "/" => respond(&mut stream, "200 OK", "text/html; charset=utf-8", DASHBOARD_HTML),
@@ -275,7 +290,14 @@ fn handle(mut stream: TcpStream, state: &Arc<Mutex<Snapshot>>) -> std::io::Resul
             respond(&mut stream, "200 OK", "application/json", &json)
         }
         "/fixture" => {
-            let body = run_fixture_test();
+            // Single-flight: só um forward pass por vez (cada um usa o encoder de
+            // 2,3 GB); dois em paralelo estourariam a memória e a UI.
+            if fixture_busy.swap(true, Ordering::SeqCst) {
+                let busy = "{\"ok\":false,\"msg\":\"Um teste já está rodando — aguarde.\"}";
+                return respond(&mut stream, "200 OK", "application/json", busy);
+            }
+            let body = run_fixture_test(engine);
+            fixture_busy.store(false, Ordering::SeqCst);
             respond(&mut stream, "200 OK", "application/json", &body)
         }
         _ => respond(&mut stream, "404 Not Found", "text/plain", "não encontrado"),
@@ -298,7 +320,10 @@ fn respond(
 }
 
 /// Roda o teste do encoder sobre a fixture e devolve o resultado como JSON.
-fn run_fixture_test() -> String {
+///
+/// O engine é cacheado no `Arc<Mutex<Option<_>>>` — a primeira chamada carrega, as
+/// seguintes reusam.
+fn run_fixture_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
     let encoder = model_dir().join("encoder-model.onnx");
     if !encoder.exists() || !model_dir().join("encoder-model.onnx.data").exists() {
         return "{\"ok\":false,\"msg\":\"Modelo emprestado ausente. Rode scripts/setup_model.sh\"}"
@@ -333,10 +358,15 @@ fn run_fixture_test() -> String {
         }
     }
 
-    let mut engine = match AsrEngine::load(&encoder) {
-        Ok(e) => e,
-        Err(e) => return format!("{{\"ok\":false,\"msg\":\"encoder: {e}\"}}"),
-    };
+    // Carrega o encoder na primeira vez e cacheia; reusa nas seguintes.
+    let mut guard = engine_cache.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.is_none() {
+        match AsrEngine::load(&encoder) {
+            Ok(e) => *guard = Some(e),
+            Err(e) => return format!("{{\"ok\":false,\"msg\":\"encoder: {e}\"}}"),
+        }
+    }
+    let engine = guard.as_mut().expect("engine acabou de ser carregado");
     let t = Instant::now();
     match engine.encode(&flat, MEL_BINS, n) {
         Ok(shape) => {
