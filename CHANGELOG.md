@@ -21,6 +21,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+- Gate `/discover-plan-confidence` dava INVALID para qualquer plano de descoberta: o arquivo `.claude/rules/discover-plan-thresholds.txt` (gerado pelo `roadmap-init`) declarava as bandas de verdict no formato `chave = valor`, mas o parser `_parse_thresholds` lê `TOKEN | valor` (split em `|`) — resultado: dicionário de bandas vazio e verdict INVALID mesmo com score 100/100. Corrigido o formato do arquivo para pipe, preservando os floors originais (90/70/50) e os tokens canônicos do `discover-plan-golden-rule.md`; nenhum hard cap foi afrouxado (`.claude/rules/discover-plan-thresholds.txt`)
 - VAD de energia não disparava em áudio real de sistema: o ganho estava calibrado para o tom sintético da fixture (RMS ≈ 0,35) e exigia RMS ≈ 0,25, mas áudio real via loopback fica muito mais baixo (medido: vídeo do YouTube pelo monitor do sink → RMS ≈ 0,065), então era classificado como silêncio e o roteamento de falante não acendia o "Sistema". Ganho recalibrado de 2,0 para 15,0 (dispara em RMS ≈ 0,033) — heurística de M0, robustez real vem do Silero em M1 (`crates/macaw-audio/src/vad.rs`)
 - App de teste congelava ao rodar o forward pass do encoder: o servidor HTTP era single-threaded e bloqueante, então carregar o encoder de 2,3 GB travava os polls de métricas e a UI inteira. Corrigido com thread por conexão, guard de single-flight no teste do modelo e cache do engine carregado (`crates/macaw-cli/src/app.rs`)
 
