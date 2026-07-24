@@ -13,6 +13,8 @@
 //! - `macaw-cli live` — captura mic + loopback do sistema em tempo real e imprime
 //!   rótulo de falante + backlog enquanto roda. Precisa de servidor de áudio.
 
+mod app;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
@@ -41,8 +43,15 @@ fn main() -> ExitCode {
     let result = match mode.as_str() {
         "fixture" => run_fixture(),
         "live" => run_live(),
+        "serve" => {
+            let port = std::env::args()
+                .nth(2)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(7070);
+            app::run(port)
+        }
         other => {
-            eprintln!("modo desconhecido: {other:?} (use 'fixture' ou 'live')");
+            eprintln!("modo desconhecido: {other:?} (use 'fixture', 'live' ou 'serve')");
             return ExitCode::from(2);
         }
     };
