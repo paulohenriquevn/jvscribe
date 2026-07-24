@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["crates/macaw-audio", "crates/macaw-asr", "crates/macaw-cli"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Captura de áudio — decidido em ADR D2 do plano m0-walking-skeleton.
+# libpulse permite especificar a source POR STREAM, o que cpal não permite
+# (ver knowledge-base/discoveries/m0-capture-probe-evidence.md, experimento 6).
+libpulse-binding = "2.28"
+libpulse-simple-binding = "2.28"
+
+# FFT real — mesmo crate usado por parakeet-rs.
+realfft = "3"
+
+# I/O de WAV para fixtures de teste.
+hound = "3.5"
+
+# Inferência ONNX — encanamento apenas; macaw-asr é descartável por M2.
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["std", "ndarray"] }
+ndarray = "0.16"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

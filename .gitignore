@@ -13,6 +13,8 @@ ralph-loop.local.md
 data/
 datasets/
 *.wav
+# Fixtures determinísticas SÃO versionadas (T0.1) — o CI não pode depender de rede.
+!tests/fixtures/*.wav
 *.flac
 *.mp3
 *.onnx
