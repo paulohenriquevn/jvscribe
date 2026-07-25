@@ -1,15 +1,18 @@
-"""Treino Zipformer-CTC PT-BR + cabeça de fonema auxiliar (M4 — piloto). Roda NA GPU.
+"""[SMOKE ONLY — NÃO USAR NO PILOTO] Treino Zipformer-CTC self-contained (M4).
 
-Reuso máximo (Regra 9): importa Zipformer2 + Conv2dSubsampling + ScaledAdam + Eden +
-ScheduledFloat do icefall (os módulos pesados, testados pelos autores do Zipformer).
-O mínimo próprio (rung 6): as 2 cabeças CTC (subword BPE + fonema), o loop de treino e
-a loss — porque a supervisão FONÉTICA não existe na recipe (Blueprint M4 Q2: a recipe
-só tem CTC de subword). CTC via `torch.nn.functional.ctc_loss` (não precisa de k2).
+⚠️ Este wrapper serviu apenas para PROVAR a infra na GPU (k2/CUDA/corpus/treino/WER).
+Ele NÃO é a base do piloto de 500 h, por defeitos confirmados contra a recipe real do
+icefall:
+  - BUG: o forward NÃO passa `src_key_padding_mask` ao encoder (o `AsrModel` do icefall
+    faz `make_pad_mask(x_lens)` → `self.encoder(x, x_lens, mask)`). Sem a máscara, o
+    encoder atende a frames de padding — degrada treino/generalização.
+  - A cabeça de fonema é técnica ad-hoc (não validada contra paper/recipe).
+  - As configs de tamanho eram derivadas por escala, não copiadas do RESULTS.md.
+  - O smoke overfitou (WER treino 18% vs held-out 99%) — "funcionar" ≠ estar correto.
 
-Ablação (a decisão do dono — construir a cabeça de fonema): `--use-phoneme 1` liga a
-2ª cabeça; comparar WER com/sem responde "a supervisão fonética ajuda ≥ 3%?".
-
-Uso: python3 train_ctc.py --exp exp --epochs N [--use-phoneme 0|1]
+**O PILOTO usa a recipe REAL do icefall** (`train.py`/`model.py`/`asr_datamodule.py`
+com `--use-ctc 1 --use-transducer 0`), sem reescrever o loop/loss/model — ver
+`training/run_pilot_icefall.md`. Mantido aqui só como registro do smoke.
 """
 
 from __future__ import annotations

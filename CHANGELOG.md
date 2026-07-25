@@ -21,6 +21,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Changed
 
+- **Correção de rumo em M4 (honestidade):** o `train_ctc.py` (wrapper self-contained) foi rebaixado a SMOKE ONLY — tem bug confirmado contra a recipe real do icefall (não passa `src_key_padding_mask` ao encoder → atende frames de padding) + cabeça de fonema ad-hoc + configs por escala. O smoke overfitou (WER treino 18% vs held-out 99%), o que mascarou os defeitos. O **piloto de 500 h passa a usar a recipe REAL do icefall** (`train.py`/`model.py`/`asr_datamodule.py`, `--use-ctc 1 --use-transducer 0`) sem reescrever loop/loss/model (Regra 9) — runbook em `training/run_pilot_icefall.md`
+
 ### Deprecated
 
 ### Removed
