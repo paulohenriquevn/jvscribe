@@ -11,22 +11,33 @@ frota, compliance LGPD e UI estão fora (`PRD.md` § 3.2).
 
 ---
 
-## ⏸ Estado travado: discover contínuo
+## ⏸ Estado: M2 concluído — 2 finalistas, vencedor em M4 (discover contínuo)
 
-**Nada de arquitetura está escolhido.** Encoder, decoder, tokenização e tamanho
-seguem `PENDENTE` (`PRD.md` § 8.1) até M2 produzir blueprint + ADR e M4 produzir
-medição própria.
+**M2 (Decisão de arquitetura) foi concluído (v0.3.0).** O ciclo discover produziu
+blueprint + ADR (`knowledge-base/adrs/0001-m2-architecture-finalists.md`): a família
+**CTC/transducer** venceu o critério de RTFx em CPU, e há **2 finalistas a pilotar
+em M4** — **Zipformer+CTC** e **FastConformer+CTC** — com Moonshine-AED como controle.
 
-O default de qualquer sessão é **investigar e medir**, não escolher. Escrever
-"vamos de X" em qualquer artefato antes do ADR de M2 é violação de
-`.claude/rules/asr-evidence-discipline.md` § 0 — mesmo que X venha a ganhar depois.
+**O vencedor NÃO está travado.** Encoder específico, decoder, tokenização e tamanho
+seguem `PENDENTE` (`PRD.md` § 8.1) até **M4** medir WER 8 kHz + RTFx sob carga +
+equivalência batch≡streaming. Escrever "vamos de X" (um finalista único) antes do ADR
+de M4 é violação de `.claude/rules/asr-evidence-discipline.md` § 0 — mesmo que X venha
+a ganhar depois. O default de qualquer sessão continua sendo **investigar e medir**.
 
-| Liberado hoje | Bloqueado por M2 |
+**Conclusão `[MEDIDO]` de M2:** transducer/CTC é **~2× mais rápido que AED em CPU**
+(Zipformer 20M = 15,90 ± 2,06× vs Moonshine tiny 27M = 7,93 ± 0,72×, n=10, mesma clip,
+separação limpa). A razão é arquitetural — AED custa ∝ tokens (autoregressivo),
+transducer ∝ frames. A re-medição com dispersão corrigiu a magnitude de ~3× para ~2×
+(a diferença era carga de CPU): a **direção** é robusta, a **magnitude** exige soak em
+M4. Isto inverteu o viés do PRD que favorecia Moonshine por um benchmark `[LITERATURA]`
+de outra CPU que não transferia.
+
+| Liberado hoje | Bloqueado até M4 (o piloto escolhe o vencedor entre os 2 finalistas) |
 |---|---|
-| Captura mic + loopback, VAD, ring buffers, log-mel, afinidade de threads | Decoder |
-| Harness de medição dos RNFs | Hotwords / word spotter |
-| Corpus, augmentação, manifests (M3, paralelo) | Backend do encoder |
-| Test set de call center e protocolo de avaliação | Formato de estado/cache do modelo |
+| Captura mic + loopback, VAD, ring buffers, log-mel, afinidade de threads | Encoder/decoder final (Zipformer vs FastConformer) |
+| Harness de medição dos RNFs | Formato de estado/cache do modelo (difere por finalista) |
+| Corpus, augmentação, manifests (M3, paralelo) | Hotwords / word spotter afinado ao decoder escolhido |
+| Test set de call center e protocolo de avaliação | Backend de inferência do encoder escolhido |
 
 ---
 

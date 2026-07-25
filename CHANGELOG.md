@@ -25,6 +25,29 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Security
 
+## [0.4.0] - 2026-07-25
+
+### Added
+
+- Pipeline de corpus de M3 (`scripts/corpus/`): pseudo-labeling com filtro por concordância entre 2 transcritores whisper + manifests Lhotse com augmentação telefônica on-the-fly. Componentes: `telephone_channel.py` (cadeia G.711 8 kHz em memória via scipy+audioop, nunca em disco), `agreement_filter.py` (CER par-a-par normalizado PT-BR + τ calibrado empiricamente), `pseudo_label.py` (2 whisper sequenciais RAM-safe), `build_manifest.py` (RecordingSet→SupervisionSet→CutSet Lhotse + telephone on-the-fly), `run_pipeline.py` (orquestrador). 22 testes verdes. **Evidência `[MEDIDO]`** rodando sobre 20 clips reais de FLEURS pt_br (i7-1355U): CER par-a-par média 0,055 ± 0,051 (σ), IC95% da média [0,032, 0,077], **τ=0,072 com IC95% bootstrap [0,038, 0,164]**, **manifest filtrado a 16 cuts aprovados**, augmentação on-the-fly confirmada a 8 kHz (`knowledge-base/corpus/m3-cer-distribution.md`)
+- Mapa de licenças das fontes de corpus PT-BR com veredito comercial + volume declarado + Q-09 respondida (`knowledge-base/corpus/m3-licenses.md`); risco de licença do TAGARELA (NC-SA) assumido explicitamente pelo dono do projeto
+- Blueprint de discovery de M3 (corpus) — `knowledge-base/discoveries/blueprints/m3-corpus-blueprint.md` (SHIPPABLE 99,1). Deep research de 3 agentes (speech-data-scientist, audio-dsp-engineer, general-purpose) respondeu 8 questões: augmentação telefônica on-the-fly via `input_transform` scipy+audioop (o `Narrowband` nativo do lhotse não cobre A-law/banda); filtro por concordância = predicado `CutSet.filter` com CER par-a-par e threshold calibrado empiricamente; lhotse exige torch; e o mapa de licenças das fontes PT-BR com veredito comercial. Achado dominante: o dataset TAGARELA (8.972 h) é CC-BY-NC-SA-4.0 (não-comercial) — risco de licença assumido explicitamente pelo dono do projeto
+- `README.md` público na raiz — HERO orientado a resultado (transcrição PT-BR em tempo real sobre CPU), tabela de estado dos milestones e a conclusão `[MEDIDO]` de M2 (transducer ~2× mais rápido que AED em CPU, com link ao artefato de medição e nota de honestidade sobre a frota BYOD). Segue `.claude/rules/public-copy.md`
+
+### Changed
+
+- `CLAUDE.md` § estado atualizado de "discover travado / bloqueado por M2" para "M2 concluído — 2 finalistas (Zipformer+CTC, FastConformer+CTC), vencedor em M4"; tabela de bloqueios re-ancorada de "Bloqueado por M2" para "Bloqueado até M4", preservando a não-travagem (§ 0)
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Findings do `/review` de M3 (1 BLOCKER + 3 HIGH + 6 MEDIUM/LOW) corrigidos: o manifest agora aplica de fato o filtro por concordância (`filter_cutset` — antes incluía os cuts descartados, contradizendo a Goal); `pairwise_cer` não estoura mais quando uma hipótese é vazia (silêncio → discordância máxima); o relatório `[MEDIDO]` separa spread (±σ) de incerteza (IC95%) e reporta IC bootstrap de τ + hardware + comando exato; teste de sequencialidade dos modelos usa hooks de ciclo de vida em vez de `__del__` frágil (`knowledge-base/reviews/m3-corpus-review-2026-07-25.md`)
+
+### Security
+
 ## [0.3.0] - 2026-07-25
 
 ### Added
@@ -35,6 +58,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Changed
 
+- `PRD.md` § 8 (filtro por concordância) passa a referenciar o entregável concreto de M3 (`scripts/corpus/`, blueprint + `m3-licenses.md`); a alegação Granary "~50% dos dados" registrada como hipótese a testar em M4, não premissa
 - RTFx dos candidatos de M2 **re-medido com dispersão** (média ± desvio, min–max, n=10) em vez de só mediana, conforme a disciplina de evidência exige para `[MEDIDO]`. A re-medição na mesma clip (contagem de tokens idêntica) corrigiu a magnitude da vantagem do transducer de ~3× para **~2×** (Zipformer 15,90 ± 2,06× vs Moonshine tiny 7,93 ± 0,72×) — a diferença face à medição inicial é carga de CPU, o que reforça o soak sob carga em M4. A direção (transducer > AED) permanece com separação estatística limpa. Números propagados a ADR/blueprint/PRD; script + log salvos como evidência reprodutível (`knowledge-base/measurements/m2-rtfx-candidates.md`, `m2-rtfx-measure.py`, `m2-rtfx-run-2026-07-25.log`) (review F1)
 - Rótulo de proveniência `[FONTE-REPO]` (fato lido no código de um peer clonado) **registrado formalmente** na disciplina de evidência (`.claude/rules/asr-evidence-discipline.md` § 1) — antes era usado nos artefatos de M2 sem definição no contrato. Exige citação `arquivo:linha` que exibe o fato; é mais forte que `[LITERATURA]` (fonte em disco, reproduzível) e mais fraco que `[MEDIDO]` (não roda experimento) (review F4)
 - Disciplina de rotulagem dos artefatos de M2 endurecida após review: RTFx do FastConformer reclassificado de `[LITERATURA]` para `[ESTIMATIVA]` (analogia de decoder, encoders diferem); "diferença amplia para áudio longo" reclassificada para `[ESTIMATIVA]` com mecanismo; citações de streaming corrigidas para linhas que exibem o fato (`test_paraformer_streaming.py:13`, `zipformer.py:487/:573`); "7 tensores de cache" precisado para "7 categorias por encoder" (review F2/F3/STREAM-ADR-01/STREAM-ADR-02/BP-03)
