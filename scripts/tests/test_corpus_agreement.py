@@ -73,11 +73,11 @@ def test_transcribe_pair_loads_sequentially():
     live = {"count": 0, "max": 0}
 
     class FakeModel:
-        def __init__(self, size, **kw):
+        def __init__(self, size, **_kw):
             live["count"] += 1
             live["max"] = max(live["max"], live["count"])
 
-        def transcribe(self, path, **kw):
+        def transcribe(self, path, **_kw):
             seg = mock.Mock()
             seg.text = f"hyp de {os.path.basename(path)}"
             return [seg], mock.Mock()
