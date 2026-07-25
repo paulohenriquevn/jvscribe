@@ -170,7 +170,7 @@ via ciclo de descoberta formal — não por acumulação de argumentos.
 
 ---
 
-### M3 — [ ] Corpus
+### M3 — [x] Corpus
 
 **Objective:** Sair de 8.972 h para volume dentro da faixa que a receita de
 referência exige — este é o **risco dominante do projeto**.
