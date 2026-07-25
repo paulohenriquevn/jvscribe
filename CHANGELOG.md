@@ -15,6 +15,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- Decisão de arquitetura de M2 formalizada (`knowledge-base/adrs/0001-m2-architecture-finalists.md`): **Zipformer+CTC e FastConformer+CTC** nomeados como os 2 finalistas a pilotar em M4, com Moonshine-AED como braço de controle. Decisão por evidência medida — RTFx na CPU: Zipformer transducer 20M = 20,45× vs Moonshine tiny 27M = 7,09× (o transducer é ~3× mais rápido; `knowledge-base/measurements/m2-rtfx-candidates.md`). LC-BiMamba descartado (ONNX inviável), Paraformer descartado (streaming como artefato separado). Vencedor NÃO travado — WER 8 kHz é o piloto de M4 (`knowledge-base/discoveries/blueprints/m2-architecture-decision-blueprint.md`, SHIPPABLE 100)
+
 - Painel "Régua de medição (M1)" no dashboard de teste (`macaw-cli serve`): mostra a tabela de WER do baseline pt-BR (lida do relatório real) e um botão "Rodar benchmark rápido" que roda 10 iterações do encoder ao vivo e reporta RTFx + latência p50/p95/p99 com selo de aprovação/reprovação vs os alvos (RNF-07 ≥6×, RNF-02 p99 ≤500ms). Endpoints `/m1` e `/bench` em `std::net`, sem dependência nova (`crates/macaw-cli/src/app.rs`, `dashboard.html`)
 
 ### Changed
@@ -24,6 +26,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Removed
 
 ### Fixed
+
+- Teste de concorrência do servidor (`server_concurrency_test`) não é mais flaky: usava porta fixa 7391 (colidia sob `cargo test` paralelo/TIME_WAIT) e um bound de latência absoluto (1s, sensível a carga de CPU). Corrigido para porta efêmera (`bind` na porta 0) via novo `app::run_with_listener`, e asserção relativa (`/metrics` mais rápido que a duração do `/fixture` — prova de não-serialização load-independent) (`crates/macaw-cli/tests/server_concurrency_test.rs`, `crates/macaw-cli/src/app.rs`)
 
 ### Security
 

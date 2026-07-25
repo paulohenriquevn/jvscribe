@@ -105,8 +105,18 @@ fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/tone_440hz_16k.wav")
 }
 
-/// Ponto de entrada do modo `serve`.
+/// Ponto de entrada do modo `serve` — vincula a porta e serve.
 pub fn run(port: u16) -> Result<(), Box<dyn std::error::Error>> {
+    let listener = TcpListener::bind(("127.0.0.1", port))?;
+    run_with_listener(listener)
+}
+
+/// Serve sobre um listener JÁ vinculado. Existe para que o teste possa usar
+/// porta efêmera (`bind(("127.0.0.1", 0))` → o SO atribui uma porta livre),
+/// eliminando a colisão de porta fixa entre execuções paralelas do `cargo test`
+/// (a causa do flakiness — `.claude/rules/testing.md` § 3).
+pub fn run_with_listener(listener: TcpListener) -> Result<(), Box<dyn std::error::Error>> {
+    let port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
     let state = Arc::new(Mutex::new(Snapshot::initial()));
     let running = Arc::new(AtomicBool::new(true));
     // Garante que só UM `/fixture` roda por vez — cada um carrega o encoder de
@@ -121,7 +131,6 @@ pub fn run(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let pipe_running = Arc::clone(&running);
     std::thread::spawn(move || pipeline_loop(&pipe_state, &pipe_running));
 
-    let listener = TcpListener::bind(("127.0.0.1", port))?;
     println!("┌───────────────────────────────────────────────┐");
     println!("│  Macaw Voice — app de teste                    │");
     println!("│  Abra no navegador:  http://127.0.0.1:{port}      │");

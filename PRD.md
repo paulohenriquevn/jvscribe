@@ -222,6 +222,17 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 > **A escolha de arquitetura NÃO está tomada.** Ela é output de um ciclo
 > `cycle-discover` (blueprint + ADR) seguido de piloto medido, **não deste PRD**.
 
+> **Atualização M2 (2026-07-24).** O ciclo de descoberta produziu o blueprint
+> `knowledge-base/discoveries/blueprints/m2-architecture-decision-blueprint.md`
+> (SHIPPABLE 100) e o ADR `knowledge-base/adrs/0001-m2-architecture-finalists.md`,
+> que nomeiam **2 finalistas a pilotar em M4** — **Zipformer+CTC** e
+> **FastConformer+CTC** — com Moonshine-AED como braço de controle. A decisão foi
+> por evidência: RTFx `[MEDIDO]` na CPU (Zipformer transducer 20M = 20,45× vs
+> Moonshine tiny 27M = 7,09×, `knowledge-base/measurements/m2-rtfx-candidates.md`).
+> **O vencedor NÃO está travado** — WER 8 kHz e equivalência batch≡streaming são
+> medidos no piloto de M4. A tabela abaixo permanece como registro dos trade-offs
+> conhecidos; a avaliação completa 5×8 está no blueprint.
+
 **Por que está pendente.** A decisão oscilou três vezes durante o levantamento —
 FastConformer (para herdar inicialização) → Zipformer (ao decidir treinar do zero)
 → Moonshine (ao surgirem benchmarks em CPU x86). Uma decisão que oscila assim não
@@ -234,7 +245,7 @@ com CTC). É o mesmo erro de método que invalidou os números da pesquisa origi
 
 | Candidato | A favor | Contra |
 |---|---|---|
-| **Moonshine-like (AED)** | **Único com benchmark em CPU x86** (165 ms/123M; roda em RPi 5); valida a tese monolíngue; receita completa publicada; código MIT | FLToP e blank layer-skip **não se aplicam**; hotwords mais difíceis em AED; sem código de treino público |
+| **Moonshine-like (AED)** | Benchmark CPU x86 publicado (`[LITERATURA]`, outra CPU); valida a tese monolíngue; código MIT | FLToP e blank layer-skip **não se aplicam**; hotwords fracos no ASR (`[FONTE-REPO]`: sem biasing no repo); **sem recipe ASR from-scratch** (`[FONTE-REPO]`, M2: o `train.py` do repo é WordCNN de MCU, não ASR); RTFx ~3× pior que transducer `[MEDIDO]` (M2) |
 | **Zipformer + CTC** | Recipe de treino aberta (icefall); FLToP aplicável (10,5×); hotwords via WCTC-Biasing; timestamps nativos; um encoder serve os dois modos [`arXiv:2506.14434`] | Sem benchmark publicado em CPU x86 nesta faixa |
 | **FastConformer + CTC** | Maduro; cache-aware validado; ecossistema NeMo | Sem vantagem clara sobre os dois acima quando se treina do zero |
 | **Paraformer / NAR** | Robustez a ruído explícita; hotwords e timestamps nativos; FunASR reporta **16 streams em 4 vCPU** | Números vêm de documentação de projeto, não de paper revisado |
