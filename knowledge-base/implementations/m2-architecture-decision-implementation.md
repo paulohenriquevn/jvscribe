@@ -15,7 +15,7 @@
 
 ## Evidência [MEDIDO] que sustentou a decisão
 
-RTFx na mesma CPU (régua de M1 + sherpa-onnx/moonshine): **Zipformer transducer 20M = 20,45×** vs **Moonshine tiny 27M = 7,09×** — o transducer é ~3× mais rápido em tamanho comparável (`knowledge-base/measurements/m2-rtfx-candidates.md`). Razão arquitetural: AED custa ∝ tokens (autoregressivo), transducer/CTC ∝ frames. Isto reordenou a preferência do PRD (que favorecia Moonshine "por ter benchmark CPU" — número `[LITERATURA]` de outra CPU que não transferia).
+RTFx na mesma CPU (régua de M1 + sherpa-onnx/moonshine), n=10 com dispersão: **Zipformer transducer 20M = 15,90 ± 2,06×** vs **Moonshine tiny 27M = 7,93 ± 0,72×** — o transducer é **~2× mais rápido** em tamanho comparável, separação limpa (intervalos min–max não sobrepõem; `knowledge-base/measurements/m2-rtfx-candidates.md`). Razão arquitetural: AED custa ∝ tokens (autoregressivo), transducer/CTC ∝ frames. Isto reordenou a preferência do PRD (que favorecia Moonshine "por ter benchmark CPU" — número `[LITERATURA]` de outra CPU que não transferia). *(A medição inicial reportou 20,45× → ~2,9× sem dispersão; a re-medição N=10 na mesma clip corrigiu para ~2,0×, review F1 — a diferença é carga de CPU.)*
 
 ## Critérios de aceite (verificados por grep)
 

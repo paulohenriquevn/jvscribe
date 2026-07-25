@@ -13,14 +13,14 @@ O ciclo de descoberta de M2 produziu o blueprint `knowledge-base/discoveries/blu
 
 **Finalistas para o piloto comparativo de M4: Zipformer+CTC e FastConformer+CTC.**
 
-Ambos são da família CTC/transducer, fortes nos critérios bloqueantes lidos (streaming, timestamps, hotwords) e com RTFx medido (Zipformer) ou esperado próximo (FastConformer, mesma família). **Não é a escolha do vencedor** — os finalistas são *a-medir* em M4 (`asr-evidence-discipline.md` § 0). O que decide entre eles e valida a escolha é o piloto de M4: WER 8 kHz call center (crit. 2, `[LITERATURA]` até lá), equivalência batch≡streaming (crit. 3, nenhum peer prova), e RTFx sob RNF-04/05 (soak + carga).
+Ambos são da família CTC/transducer, fortes nos critérios bloqueantes lidos (streaming, timestamps, hotwords). O RTFx é **`[MEDIDO]`** para o Zipformer (15,90 ± 2,06×, n=10) e apenas **`[ESTIMATIVA]`** para o FastConformer — "esperado próximo" por analogia de *decoder*, com a ressalva de que os *encoders* diferem (Zipformer U-Net/k2 vs FastConformer Conformer + subsampling 8×/NeMo). É o **elo mais fraco** da decisão: o FastConformer é mensurável agora na mesma régua (`parakeet-rs` expõe `encoder.onnx`/`decoder_joint.onnx` no sherpa), e o piloto de M4 deve medi-lo antes de tratá-lo como par do Zipformer — a inclusão dele como finalista repousa nos critérios não-RTFx lidos no repo, não numa velocidade medida. **Não é a escolha do vencedor** — os finalistas são *a-medir* em M4 (`asr-evidence-discipline.md` § 0). O que decide entre eles e valida a escolha é o piloto de M4: WER 8 kHz call center (crit. 2, `[LITERATURA]` até lá), equivalência batch≡streaming (crit. 3, nenhum peer prova), e RTFx sob RNF-04/05 (soak + carga).
 
 ### Evidência que sustenta a decisão (por critério)
 
 | Critério | Evidência | Rótulo |
 |---|---|---|
-| 1 — RTFx (bloqueante) | Zipformer transducer 20M = **20,45×**; Moonshine tiny 27M = **7,09×** — na MESMA CPU, mesma clip de 12s (`knowledge-base/measurements/m2-rtfx-candidates.md`). O transducer é ~3× mais rápido em tamanho comparável | `[MEDIDO]` |
-| 3 — Streaming+cache (bloqueante) | Zipformer: cache tipado de 7 tensores, um encoder dois modos (`icefall/egs/ksponspeech/ASR/pruned_transducer_stateless7_streaming/zipformer.py:62-69`) | `[FONTE-REPO]` |
+| 1 — RTFx (bloqueante) | Zipformer transducer 20M = **15,90 ± 2,06×**; Moonshine tiny 27M = **7,93 ± 0,72×** (n=10, mesma CPU/clip de 12s; `knowledge-base/measurements/m2-rtfx-candidates.md`). O transducer é **~2× mais rápido** em tamanho comparável, com separação limpa (intervalos min–max não sobrepõem) | `[MEDIDO]` |
+| 3 — Streaming+cache (bloqueante) | Zipformer: cache tipado com **7 categorias por encoder** (`7 * num_encoders` tensores: `cached_len/avg/key/val/val2/conv1/conv2`), `icefall/egs/ksponspeech/ASR/pruned_transducer_stateless7_streaming/zipformer.py:62-69`; **um encoder em dois modos** — `forward` (batch, `:487`) e `streaming_forward` (incremental com cache, `:573`) no mesmo módulo | `[FONTE-REPO]` |
 | 4 — Timestamps (bloqueante) | CTC/transducer dão timestamps por alinhamento nativo da decodificação | `[FONTE-REPO]` |
 | 5 — Hotwords (alto) | ContextGraph (Aho-Corasick) no `icefall/icefall/context_graph.py:81-100` — biasing por token, propriedade de CTC/transducer | `[FONTE-REPO]` |
 | 6 — Export ONNX (alto) | `icefall/egs/reazonspeech/ASR/zipformer/export-onnx.py:49-50` gera encoder/decoder/joiner; rodam no sherpa | `[FONTE-REPO]` |
@@ -29,13 +29,13 @@ Ambos são da família CTC/transducer, fortes nos critérios bloqueantes lidos (
 ## Alternativas descartadas (com motivo)
 
 ### Moonshine-AED — rebaixado a braço de controle (não finalista primário)
-- **RTFx ~3× pior medido** na mesma CPU (7,09× tiny vs 20,45× Zipformer) — a razão é arquitetural: AED é autoregressivo (custo ∝ tokens; a variância tiny-vs-base de 193→49 tokens prova a content-dependência), transducer/CTC faz um passe (custo ∝ frames). Para áudio longo de call center, a diferença **amplia**. `[MEDIDO]`
+- **RTFx ~2× pior medido** na mesma CPU (7,93× tiny vs 15,90× Zipformer, n=10) — a razão é arquitetural: AED é autoregressivo (custo ∝ tokens; a variância tiny-vs-base de 193→49 tokens prova a content-dependência), transducer/CTC faz um passe (custo ∝ frames). O gap ~2× em 12 s é `[MEDIDO]` (separação limpa: intervalos não sobrepõem); a *ampliação* para áudio longo é `[ESTIMATIVA]` (mecanismo: custo AED ∝ tokens + self-attention O(n²) do decoder), a-medir em M4 — a clip de 12 s não a demonstra. Além disso, o gap medido é um **teto** da vantagem real: modelo AED inglês em áudio pt_br pode inflar tokens (measurement § 4).
 - **Hotword fraco no ASR** `[FONTE-REPO]`: o repo Moonshine não expõe biasing/context-boost na transcrição (`moonshine/README.md:1309-1310` é intent-embedding, não boost de token). Nome próprio raro em AED é estruturalmente mais difícil (RF-08b).
 - **Sem recipe ASR from-scratch** `[FONTE-REPO]`: o único `train.py` do repo (`moonshine/micro/stt-training/stt_training/train.py:1-12`) é um WordCNN de MCU, não o encoder-decoder ASR — para um projeto treino-do-zero, exigiria reimplementar do paper.
 - **Permanece como braço de controle** no piloto: valida a tese monolíngue e dá timestamps sem 2º passe (`moonshine/docs/word-level-timestamps.md:129-190`).
 
 ### Paraformer/NAR — descartado
-- **Streaming é artefato separado** do NAR offline `[FONTE-REPO]` (`funasr/tests_models/test_paraformer_streaming.py:24-26` usa modelo `-online` distinto), enfraquecendo o critério 3 (bloqueante) vs o "um encoder dois modos" do Zipformer.
+- **Streaming é artefato separado** do NAR offline `[FONTE-REPO]`: o streaming carrega um modelo `-online` distinto (`funasr/tests_models/test_paraformer_streaming.py:13` → `iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online`) do modelo offline (`funasr/tests_models/test_paraformer.py:12` → `...vocab8404-pytorch`), enfraquecendo o critério 3 (bloqueante) vs o "um encoder dois modos" do Zipformer.
 - **Hotwords médio**: o CIF paralelo do NAR dificulta o boost por token. `[LITERATURA]`
 
 ### LC-BiMamba/SSM — descartado (falha critério bloqueante-indireto)

@@ -38,12 +38,21 @@ Nenhum número entra em artefato sem rótulo de proveniência. Sem rótulo, o n�
 |---|---|---|
 | `[MEDIDO]` | Rodamos o experimento | comando exato, hardware, nº de repetições, média ± desvio |
 | `[LITERATURA]` | Reportado por terceiro | citação resolvível (paper/model card/URL) + condições do experimento original |
+| `[FONTE-REPO]` | Fato lido no código de um peer clonado | citação `arquivo:linha` que **exibe o fato** em `knowledge-base/references/` (§ 3 #2 — a linha citada tem de mostrar o que se afirma, não vizinhança) |
 | `[ESTIMATIVA]` | Derivado por cálculo | fórmula explícita + premissas de entrada |
 | `[DESCONHECIDO]` | Não sabemos | o que seria preciso medir para saber |
 
 Um `[LITERATURA]` **nunca** é promovido a `[MEDIDO]` por conveniência. Um
 `[ESTIMATIVA]` que sustenta decisão bloqueante deve virar `[MEDIDO]` antes da
 decisão ser travada.
+
+`[FONTE-REPO]` rotula **fatos verificáveis** (arquitetura, formato de cache,
+existência de recipe/biasing) — não números — extraídos por leitura do código dos
+8 peers clonados (`_catalog.md`). É mais forte que `[LITERATURA]` porque a fonte
+está em disco e a citação `arquivo:linha` é reproduzível por qualquer agent; é mais
+fraco que `[MEDIDO]` porque não roda o experimento. A citação **tem de resolver e
+exibir o fato**: citar uma linha vizinha que não mostra a afirmação é a falácia § 3
+#2 em miniatura (foi o vetor da falha original de método deste projeto).
 
 ## § 2 — Hipótese, evidência e conclusão são seções distintas
 

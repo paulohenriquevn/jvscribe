@@ -40,13 +40,13 @@ Sustentar o ADR de seleção: avaliar cada candidato nos 8 critérios com proven
 
 Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a régua de M1 (`crates/macaw-audio/src/harness.rs` `RtfxMeter`), sobre 12 s de fala, 8 runs, 2 warmup, mediana. Evidência completa: `knowledge-base/measurements/m2-rtfx-candidates.md`.
 
-| Arquitetura | Params | RTFx `[MEDIDO]` | Custo escala com |
-|---|---|---|---|
-| Zipformer (transducer) | ~20M | **20,45×** | frames de áudio (fixo) |
-| Moonshine tiny (AED) | ~27M | **7,09×** | tokens gerados (193) |
-| Moonshine base (AED) | ~62M | **11,49×** | tokens gerados (49) |
+| Arquitetura | Params | RTFx `[MEDIDO]` (média ± desvio, n=10) | min–max | Custo escala com |
+|---|---|---|---|---|
+| Zipformer (transducer) | ~20M | **15,90 ± 2,06×** | 11,72–18,04× | frames de áudio (fixo) |
+| Moonshine tiny (AED) | ~27M | **7,93 ± 0,72×** | 6,52–8,58× | tokens gerados (193) |
+| Moonshine base (AED) | ~62M | **12,10 ± 3,15×** | 7,10–15,19× | tokens gerados (49) |
 
-**Achado `[MEDIDO]` decisivo:** em tamanho comparável (~20-27M), o **Zipformer transducer é ~3× mais rápido** que o Moonshine AED na mesma CPU. A razão é arquitetural — AED é autoregressivo (custo ∝ tokens; a variância tiny-vs-base prova a content-dependência); transducer/CTC faz um passe (custo ∝ frames, independente do texto). Para áudio longo de call center, a vantagem do transducer **amplia**. Isto **corrige** o viés do PRD que favorecia Moonshine "por ter benchmark CPU" — o benchmark publicado (69ms/34M, `moonshine/README.md:113-117`) é `[LITERATURA]` de outra CPU, em clips curtos, que não transfere (falácia §3 #1/#4).
+**Achado `[MEDIDO]` decisivo:** em tamanho comparável (~20-27M), o **Zipformer transducer é ~2× mais rápido** que o Moonshine AED na mesma CPU (15,90× vs 7,93×), com **separação limpa** — o pior Zipformer (11,72×) supera o melhor tiny (8,58×), intervalos não sobrepõem. A razão é arquitetural — AED é autoregressivo (custo ∝ tokens; a variância tiny-vs-base prova a content-dependência); transducer/CTC faz um passe (custo ∝ frames, independente do texto). Para áudio longo de call center, a vantagem do transducer *tende a ampliar* (`[ESTIMATIVA]`, a-medir M4). Isto **corrige** o viés do PRD que favorecia Moonshine "por ter benchmark CPU" — o benchmark publicado (69ms/34M, `moonshine/README.md:113-117`) é `[LITERATURA]` de outra CPU, em clips curtos, que não transfere (falácia §3 #1/#4). *(Nota de dispersão: a medição inicial deu 20,45× → ~2,9×; a re-medição N=10 na mesma clip deu ~2,0× — a diferença é carga de CPU, ver measurement § Leitura honesta / F1.)*
 
 **Não medidos** (honesto): Paraformer/NAR e FastConformer — `[LITERATURA]` (FunASR: 16 streams/4vCPU, doc de projeto; FastConformer é família transducer/CTC, RTFx esperado próximo do Zipformer — a medir em M4). LC-BiMamba: `[DESCONHECIDO]` por impossibilidade ONNX (já exclui pelo crit. 6).
 
@@ -56,7 +56,7 @@ Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a ré
 
 | Candidato | Topologia | Citação |
 |---|---|---|
-| **Zipformer+CTC** | Encoder U-Net (downsampling/upsampling), atenção com máscara que serve batch e streaming; 7 tensores de cache tipados | `icefall/egs/reazonspeech/ASR/zipformer/zipformer.py:428` |
+| **Zipformer+CTC** | Encoder U-Net (downsampling/upsampling), atenção com máscara que serve batch e streaming; **7 categorias de cache tipadas por encoder** (`7 * num_encoders` tensores) | `icefall/egs/reazonspeech/ASR/zipformer/zipformer.py:428` |
 | **Moonshine-AED** | Encoder-decoder com RoPE + SwiGLU; pipeline `frontend→encoder→adapter→memory→cross_kv→decoder_kv`; custo ∝ duração real | `moonshine/README.md:141,1024-1025`, `moonshine/docs/word-level-timestamps.md:169-177` |
 | **Paraformer/NAR** | Non-autoregressive com predictor CIF; artefato offline distinto do streaming | `funasr/tests_models/test_paraformer.py:12` |
 | **FastConformer+CTC** | Conformer com subsampling agressivo; TDT (Token-and-Duration Transducer) | `parakeet-rs/README.md:29,155-157` |
@@ -64,7 +64,7 @@ Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a ré
 
 ### Q2 — Streaming nativo com cache (crit. 3, bloqueante)
 
-- **Zipformer** — o mais forte `[FONTE-REPO]`: cache tipado de 7 tensores (`cached_len, cached_avg, cached_key, cached_val, cached_val2, cached_conv1, cached_conv2`) mantido entre chunks; `streaming_forward` distinto do batch; **um encoder, dois modos por máscara**; treino `--causal 1`. `icefall/egs/ksponspeech/ASR/pruned_transducer_stateless7_streaming/zipformer.py:62-69`.
+- **Zipformer** — o mais forte `[FONTE-REPO]`: cache tipado com **7 categorias por encoder** (`7 * num_encoders` tensores: `cached_len, cached_avg, cached_key, cached_val, cached_val2, cached_conv1, cached_conv2`) mantido entre chunks; **um encoder, dois modos** — `forward` (batch, `:487`) e `streaming_forward` (incremental, `:573`) distintos; treino `--causal 1`. Cache: `icefall/egs/ksponspeech/ASR/pruned_transducer_stateless7_streaming/zipformer.py:62-69`.
 - **Moonshine** — nativo, cache de encoding + estado do decoder (`moonshine/README.md:141`; "Ergodic Streaming Encoder" no paper v2).
 - **Paraformer** — streaming é **artefato separado** do NAR offline (`chunk_size=[0,10,5]`, `encoder_chunk_look_back=4`); divergência estrutural com Zipformer. `funasr/tests_models/test_paraformer_streaming.py:24-26`.
 - **FastConformer** — cache-aware (Nemotron) via ONNX `[FONTE-REPO]` (`parakeet-rs/README.md:58,64-66`); mecanismo não lido.
@@ -79,11 +79,13 @@ Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a ré
 
 | Candidato | 1 RTFx | 2 WER 8k | 3 Streaming | 4 Timestamps | 5 Hotwords | 6 ONNX | 7 Recipe | 8 Licença |
 |---|---|---|---|---|---|---|---|---|
-| **Zipformer+CTC** | **20,45× `[MEDIDO]`** | `[LITERATURA]`/M4 | ✅ nativo, cache tipado | ✅ CTC nativo | ✅ forte (ContextGraph) | ✅ export completo | ✅ **madura/aberta** | ✅ Apache-2.0 |
-| **Moonshine-AED** | 7,09× (tiny)/11,49× (base) `[MEDIDO]` | `[LITERATURA]`/M4 | ✅ cache enc+dec | ✅ DTW cross-attn | ⚠️ **fraco no ASR** | ✅ `.ort`/sherpa | ❌ **ausente p/ ASR** | ✅ MIT; ⚠️ pesos ñ-EN NC |
-| **FastConformer+CTC** | `[LITERATURA]` (≈Zipformer, a medir M4) | `[LITERATURA]`/M4 | ✅ cache-aware | ✅ TDT | ✅ forte | ✅ ONNX | ⚠️ NeMo, ñ clonada | ✅ Apache |
+| **Zipformer+CTC** | **15,90 ± 2,06× `[MEDIDO]`** | `[LITERATURA]`/M4 | ✅† nativo, cache tipado | ✅ CTC nativo | ✅ forte (ContextGraph) | ✅ export completo | ✅ **madura/aberta** | ✅ Apache-2.0 |
+| **Moonshine-AED** | 7,93× (tiny)/12,10× (base) `[MEDIDO]` | `[LITERATURA]`/M4 | ✅† cache enc+dec | ✅ DTW cross-attn | ⚠️ **fraco no ASR** | ✅ `.ort`/sherpa | ❌ **ausente p/ ASR** | ✅ MIT; ⚠️ pesos ñ-EN NC |
+| **FastConformer+CTC** | `[ESTIMATIVA]` (≈Zipformer p/ analogia de decoder; encoders diferem; a medir M4) | `[LITERATURA]`/M4 | ✅† cache-aware | ✅ TDT | ✅ forte | ✅ ONNX | ⚠️ NeMo, ñ clonada | ✅ Apache |
 | **Paraformer/NAR** | `[LITERATURA]` (16 str/4vCPU) | `[LITERATURA]`/M4 | ⚠️ artefato separado | ✅ CIF | ⚠️ média (NAR) | ✅ sherpa | ⚠️ ñ lida | ✅ MIT |
 | **LC-BiMamba/SSM** | `[DESCONHECIDO]` (ñ roda ONNX) | `[DESCONHECIDO]` | ⚠️ reivindicado | `[DESCONHECIDO]` | `[DESCONHECIDO]` | ❌ **inviável** | `[DESCONHECIDO]` | `[DESCONHECIDO]` |
+
+> **†** Coluna **3 Streaming**: `✅` = mecanismo de cache/streaming **lido no código** (`[FONTE-REPO]`), **não** a equivalência batch≡streaming — essa é experimento novo de **M4** (§ Q2 e ADR D3). Nenhum candidato prova equivalência em M2.
 
 ## ADRs
 
@@ -95,7 +97,7 @@ Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a ré
 
 ### D2 — O achado medido reordena a preferência do PRD
 
-**Decisão:** registrar que, medido na mesma CPU, **transducer/CTC (Zipformer) > AED (Moonshine) no critério 1** (~3×), invertendo o viés do PRD que favorecia Moonshine "por ter benchmark CPU".
+**Decisão:** registrar que, medido na mesma CPU, **transducer/CTC (Zipformer) > AED (Moonshine) no critério 1** (~2×, separação limpa), invertendo o viés do PRD que favorecia Moonshine "por ter benchmark CPU".
 
 **Rationale:** o benchmark do Moonshine é `[LITERATURA]` de outra CPU em clips curtos; medindo na mesma CPU com a régua, o transducer ganha — e a razão (custo ∝ frames vs ∝ tokens) **amplia** para áudio longo de call center. Somado à vantagem lida do Zipformer em streaming (crit. 3), hotwords (crit. 5) e recipe (crit. 7), a evidência converge. **Alternativa considerada:** manter Moonshine como favorito pela tese monolíngue — mas a tese (monolíngue pequeno vence) vale para AMBOS (Zipformer também é monolíngue pequeno treinado do zero); não é exclusiva do Moonshine.
 
@@ -108,7 +110,7 @@ Ferramenta de medição: `sherpa_onnx.OnlineRecognizer`/`moonshine_onnx` + a ré
 ## Recommendations for the project
 
 1. **Finalistas propostos para o piloto de M4: Zipformer+CTC e FastConformer+CTC.** Ambos CTC/transducer — fortes nos critérios 3/4/5/6, com RTFx medido (Zipformer) ou esperado próximo (FastConformer, mesma família). A diferença entre eles (crit. 7: Zipformer recipe clonada/madura vs FastConformer recipe NeMo não-clonada) é o que o piloto de M4 resolve.
-2. **Moonshine-AED não avança como finalista primário**, mas fica como **braço de controle** no piloto (valida a tese monolíngue e tem timestamps sem 2º passe). Ônus medidos/lidos: RTFx ~3× pior, hotword fraco no ASR, ausência de recipe ASR.
+2. **Moonshine-AED não avança como finalista primário**, mas fica como **braço de controle** no piloto (valida a tese monolíngue e tem timestamps sem 2º passe). Ônus medidos/lidos: RTFx ~2× pior, hotword fraco no ASR, ausência de recipe ASR.
 3. **LC-BiMamba e Paraformer/NAR descartados como finalistas:** LC-BiMamba falha o crit. 6 (ONNX inviável — bloqueia a própria medição do crit. 1); Paraformer tem streaming como artefato separado (crit. 3 mais frágil) e hotwords médio.
 4. **Corrigir o PRD § 8.1** (Regra 6): "receita completa publicada" do Moonshine é impreciso — é WordCNN de MCU, não recipe ASR. E referenciar este blueprint em vez de fixar arquitetura (DoD de M2).
 5. **Experimento de M4 (o mais barato que decide):** treinar/pilotar Zipformer-CTC e FastConformer-CTC em faixa ~30-80M, medir WER 8 kHz + RTFx sob RNF-04/05 (soak+carga) + equivalência batch≡incremental. A régua de M1 já está pronta para isso.
@@ -124,7 +126,7 @@ Nenhuma bloqueada. Fronteiras honestas registradas: crit. 2 (WER) é `[LITERATUR
 | Q1 | Techniques | `moonshine/README.md`, `icefall/egs/reazonspeech/ASR/zipformer/zipformer.py:428`, `funasr/tests_models/test_paraformer.py` | done `[FONTE-REPO]` |
 | Q2 | Techniques | `icefall/egs/ksponspeech/ASR/pruned_transducer_stateless7_streaming/zipformer.py:62-69`, `funasr/tests_models/test_paraformer_streaming.py:24-26` | done `[FONTE-REPO]` |
 | Q3 | Techniques | `moonshine/docs/word-level-timestamps.md:129-190`, `icefall/icefall/context_graph.py:81-100` | done `[FONTE-REPO]` |
-| Q4 | Tools | `knowledge-base/measurements/m2-rtfx-candidates.md` (RTFx `[MEDIDO]` Zipformer 20,45× vs Moonshine 7,09×) | done `[MEDIDO]` |
+| Q4 | Tools | `knowledge-base/measurements/m2-rtfx-candidates.md` (RTFx `[MEDIDO]` Zipformer 15,90± vs Moonshine 7,93×, n=10) | done `[MEDIDO]` |
 | Q5 | Deps | `icefall/egs/reazonspeech/ASR/zipformer/export-onnx.py:49-50`, `moonshine/micro/stt-training/stt_training/train.py:1-12`, `moonshine/LICENSE:1-7`, `funasr/LICENSE:1` | done `[FONTE-REPO]` |
 | Q6 | Tests | `funasr/tests_models/test_paraformer_streaming.py:54-55` (smoke, não equivalência) | done `[FONTE-REPO]` |
 
