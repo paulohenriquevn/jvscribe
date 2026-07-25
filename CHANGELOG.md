@@ -34,6 +34,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+- `training/prep_mls.py` (2 bugs descobertos rodando na instância): `corpus_dir` passado ao `prepare_mls` é o **parent** que contém `mls_portuguese_opus/` (o recipe faz `corpus_dir.glob("mls_*")`), não o dir do idioma; e a estrutura de retorno é `manifests[lang][split]` (lhotse `mls.py:94,133`), não `[split][lang]`. Adicionado `output_dir` de cache para re-runs não re-escanearem os opus
 - `training/prep_icefall.py`: `_download` agora cria o `PARQUET_DIR` antes do `curl` (o `curl -o` falhava com exit 23 "write error" quando o diretório não existia — descoberto ao rodar o piloto real na vast.ai) e usa `curl -sfL` (`-f`: falha explícita em HTTP 4xx/5xx em vez de gravar página de erro como se fosse parquet). Teste de regressão em `training/tests/test_prep_icefall.py` (`test_download_cria_pqdir_antes_do_curl`)
 
 ### Security
