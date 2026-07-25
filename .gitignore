@@ -45,3 +45,4 @@ vendor/
 models/
 *.onnx.data
 tmp_*.txt
+training/**/*.pt
