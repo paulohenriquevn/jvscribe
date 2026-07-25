@@ -46,3 +46,4 @@ models/
 *.onnx.data
 tmp_*.txt
 training/**/*.pt
+system-design-output/

@@ -17,7 +17,6 @@ Uso (na instância, HF_TOKEN no ambiente):
 from __future__ import annotations
 
 import argparse
-import glob
 import io
 import os
 import re
@@ -25,7 +24,6 @@ import subprocess
 import unicodedata
 from pathlib import Path
 
-import numpy as np
 import pyarrow.parquet as pq
 import soundfile as sf
 from lhotse import CutSet, Fbank, FbankConfig, Recording, SupervisionSegment, SupervisionSet
@@ -107,6 +105,8 @@ def main():
     ap.add_argument("--lang", default="pt")
     ap.add_argument("--sources", nargs="+", default=["fleurs", "mls"])
     ap.add_argument("--limit", type=int, default=None, help="máx utts por fonte/split (teste)")
+    ap.add_argument("--num-jobs", type=int, default=1,
+                    help="paralelismo do fbank (1 no piloto de ~10h; subir p/ o prep de ~500h de M5)")
     args = ap.parse_args()
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     extractor = Fbank(FbankConfig(num_mel_bins=80))
@@ -123,7 +123,7 @@ def main():
                                      supervisions=SupervisionSet.from_segments(sups))
         cuts = cuts.compute_and_store_features(extractor=extractor,
                                                storage_path=str(out / f"feats_{split_key}"),
-                                               num_jobs=1)
+                                               num_jobs=args.num_jobs)
         cuts = CutSet.from_cuts(
             fastcopy(c, supervisions=[
                 fastcopy(sp, duration=round(c.duration - sp.start, 4))

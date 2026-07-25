@@ -24,6 +24,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Changed
 
+- **Limpeza de `training/` pós-audit `/loop-system-design`** (relatório: `knowledge-base/audits/2026-07-25-training-system-design.md`, score 3,5/5, 0 críticos/altos): o **cluster smoke** (`train_ctc.py`, `decode_ctc.py`, `prep_fleurs.py`, `gen_phonemes.py`) foi movido para `training/smoke/` (quarentena) — remove o risco de copy-paste ao lado do único código de produção `prep_icefall.py` (findings B1/D3) e resolve a duplicação/drift do `normalize_ptbr` (D2) deixando a produção com uma cópia só. `prep_icefall.py`: removidos imports mortos `numpy`/`glob` (D4) e parametrizado `--num-jobs` para o prep de ~500h de M5 (SC1). ADR sugerido (formaliza a decisão Regra-9 de reusar a recipe): `knowledge-base/audits/000X-m4-reuse-icefall-recipe.md`
 - **Correção de rumo em M4 (honestidade):** o `train_ctc.py` (wrapper self-contained) foi rebaixado a SMOKE ONLY — tem bug confirmado contra a recipe real do icefall (não passa `src_key_padding_mask` ao encoder → atende frames de padding) + cabeça de fonema ad-hoc + configs por escala. O smoke overfitou (WER treino 18% vs held-out 99%), o que mascarou os defeitos. O **piloto de 500 h passa a usar a recipe REAL do icefall** (`train.py`/`model.py`/`asr_datamodule.py`, `--use-ctc 1 --use-transducer 0`) sem reescrever loop/loss/model (Regra 9) — runbook em `training/run_pilot_icefall.md`
 
 ### Deprecated
