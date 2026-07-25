@@ -15,6 +15,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- Blueprint de discovery de M4 (piloto comparativo) — `knowledge-base/discoveries/blueprints/m4-pilot-blueprint.md` (SHIPPABLE 100). Deep research de 3 agentes (asr-chief-scientist, ptbr-phonetics-scientist, ml-infra-engineer) respondeu 8 questões: recipe icefall Zipformer-CTC (train.py paramétrico, 3 tamanhos por escala), **G2P PT-BR medido** (cobertura/determinismo 100% sobre FLEURS pt_br, mas GPLv3 — só treino offline; PER absoluto `[DESCONHECIDO]`), e a **estimativa de custo com fórmula**: piloto ~$98-200, M5 completo ~$1.350-2.000/run. Achados que reenquadram M4: a supervisão fonética NÃO existe pronta na recipe (só CTC de subword — exige construir a cabeça de fonema); k2 é incompatível com o torch instalado (treino exige imagem GPU separada)
+
 ### Changed
 
 ### Deprecated
