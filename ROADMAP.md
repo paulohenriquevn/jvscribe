@@ -145,7 +145,7 @@ reprodutível — antes de escolher qualquer arquitetura.
 
 ---
 
-### M2 — [ ] Decisão de arquitetura
+### M2 — [x] Decisão de arquitetura
 
 **Objective:** Escolher encoder, decoder e faixa de tamanho por evidência medida,
 via ciclo de descoberta formal — não por acumulação de argumentos.

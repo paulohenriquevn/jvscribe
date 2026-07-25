@@ -69,6 +69,7 @@ fn test_vad_cost_is_measured_and_reported() {
     // Uma janela de 512 amostras a 16 kHz = 32 ms de áudio.
     let window_budget_us = VAD_WINDOW as f64 / 16_000.0 * 1_000_000.0;
     let rt_mean = window_budget_us / mean_us;
+    let rt_p99 = window_budget_us / p99_us;
     let rt_worst = window_budget_us / max_us;
 
     eprintln!(
@@ -79,14 +80,20 @@ fn test_vad_cost_is_measured_and_reported() {
     );
     eprintln!(
         "[MEDIDO] orçamento da janela = {window_budget_us:.0} µs (32 ms de áudio) \
-         → VAD roda a {rt_mean:.0}× real-time na média, {rt_worst:.0}× no pior caso"
+         → VAD roda a {rt_mean:.0}× real-time na média, {rt_p99:.0}× no p99, \
+         {rt_worst:.0}× no máximo observado"
     );
 
-    // A margem é avaliada no PIOR CASO, não na média — é o pior caso que ameaça o
-    // orçamento de CPU do pipeline (RNF-07). ≥ 10× real-time mesmo no máximo
-    // observado é o mínimo aceitável.
+    // A margem é avaliada no p99, NÃO no máximo absoluto. O max de uma única janela
+    // entre 5000 é dominado por preempção isolada do scheduler (ruído de SO sob
+    // `cargo test --workspace` paralelo), não pelo custo do algoritmo — usá-lo como
+    // gate reintroduz o flakiness load-sensitive que o fix do `server_concurrency_test`
+    // eliminou (testing.md § 6; asr-evidence-discipline § 3 #3 — p99 é a métrica de
+    // cauda que o RNF-02 exige). O p99 sobre 5000 amostras é a cauda robusta a outlier
+    // de amostra única; o max continua reportado acima como log `[MEDIDO]`, não como gate.
     assert!(
-        rt_worst >= 10.0,
-        "VAD no pior caso custa {max_us:.2}µs/janela = apenas {rt_worst:.0}× real-time (esperado ≥ 10×)"
+        rt_p99 >= 10.0,
+        "VAD no p99 custa {p99_us:.2}µs/janela = apenas {rt_p99:.0}× real-time (esperado ≥ 10×); \
+         max observado {max_us:.2}µs ({rt_worst:.0}× — inclui preempção do scheduler)"
     );
 }
