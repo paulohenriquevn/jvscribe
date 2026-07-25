@@ -15,6 +15,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- Blueprint de discovery de M3 (corpus) — `knowledge-base/discoveries/blueprints/m3-corpus-blueprint.md` (SHIPPABLE 99,1). Deep research de 3 agentes (speech-data-scientist, audio-dsp-engineer, general-purpose) respondeu 8 questões: augmentação telefônica on-the-fly via `input_transform` scipy+audioop (o `Narrowband` nativo do lhotse não cobre A-law/banda); filtro por concordância = predicado `CutSet.filter` com CER par-a-par e threshold calibrado empiricamente; lhotse exige torch; e o mapa de licenças das fontes PT-BR com veredito comercial. Achado dominante: o dataset TAGARELA (8.972 h) é CC-BY-NC-SA-4.0 (não-comercial) — risco de licença assumido explicitamente pelo dono do projeto
 - `README.md` público na raiz — HERO orientado a resultado (transcrição PT-BR em tempo real sobre CPU), tabela de estado dos milestones e a conclusão `[MEDIDO]` de M2 (transducer ~2× mais rápido que AED em CPU, com link ao artefato de medição e nota de honestidade sobre a frota BYOD). Segue `.claude/rules/public-copy.md`
 
 ### Changed
