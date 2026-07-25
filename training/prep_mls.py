@@ -41,9 +41,11 @@ def _clamp(c):
 
 
 def download_extract_mls(work: Path) -> Path:
-    corpus = work / "mls_portuguese"
-    if (corpus / "train").exists():
-        return corpus
+    # prepare_mls faz corpus_dir.glob("mls_*") → corpus_dir é o PARENT que contém
+    # mls_portuguese_opus/ (o dir do idioma, com metainfo.txt + train/dev/test).
+    langdir = work / "mls_portuguese_opus"
+    if (langdir / "train").exists():
+        return work
     tar = work / "mls_portuguese_opus.tar.gz"
     if not tar.exists():
         print(f"[mls] baixando {MLS_URL} ...", flush=True)
@@ -51,18 +53,19 @@ def download_extract_mls(work: Path) -> Path:
     print("[mls] extraindo ...", flush=True)
     with tarfile.open(tar) as t:
         t.extractall(work)
-    return corpus
+    return work
 
 
 def mls_train(work: Path, out: Path, extractor, num_jobs: int) -> list[str]:
     corpus = download_extract_mls(work)
-    manifests = prepare_mls(corpus, opus=True, num_jobs=num_jobs)
-    # {split: {language: {recordings, supervisions}}} — um só idioma (portuguese)
-    tr = manifests["train"]
-    lang_key = next(iter(tr))
-    recs = tr[lang_key]["recordings"]
+    cache = out / "mls_manifests"; cache.mkdir(parents=True, exist_ok=True)
+    manifests = prepare_mls(corpus, output_dir=cache, opus=True, num_jobs=num_jobs)
+    # estrutura real (lhotse mls.py:94,133): manifests[lang][split] = {recordings, supervisions}
+    lang_key = next(iter(manifests))  # 'mls_portuguese_opus' (único idioma)
+    tr = manifests[lang_key]["train"]
+    recs = tr["recordings"]
     sups = SupervisionSet.from_segments(
-        fastcopy(s, text=PI.normalize_ptbr(s.text)) for s in tr[lang_key]["supervisions"])
+        fastcopy(s, text=PI.normalize_ptbr(s.text)) for s in tr["supervisions"])
     cuts = CutSet.from_manifests(recordings=recs, supervisions=sups)
     cuts = cuts.compute_and_store_features(
         extractor=extractor, storage_path=str(out / "feats_train"), num_jobs=num_jobs)
