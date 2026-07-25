@@ -15,7 +15,11 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- `README.md` público na raiz — HERO orientado a resultado (transcrição PT-BR em tempo real sobre CPU), tabela de estado dos milestones e a conclusão `[MEDIDO]` de M2 (transducer ~2× mais rápido que AED em CPU, com link ao artefato de medição e nota de honestidade sobre a frota BYOD). Segue `.claude/rules/public-copy.md`
+
 ### Changed
+
+- `CLAUDE.md` § estado atualizado de "discover travado / bloqueado por M2" para "M2 concluído — 2 finalistas (Zipformer+CTC, FastConformer+CTC), vencedor em M4"; tabela de bloqueios re-ancorada de "Bloqueado por M2" para "Bloqueado até M4", preservando a não-travagem (§ 0)
 
 ### Deprecated
 
