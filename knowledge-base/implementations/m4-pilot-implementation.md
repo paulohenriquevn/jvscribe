@@ -38,6 +38,20 @@ O DoD de M4 **não está 100%** — reportá-lo completo seria falso (`asr-evide
 - [ ] **FastConformer** (2º finalista) — não treinado
 - [x] G2P Q-08, estimativa de GPU-horas — feitos no discover
 
+## Validação do `prep_icefall.py` (o único código nosso do piloto)
+
+- **Parte pura testada** `[MEDIDO]`: `training/tests/test_prep_icefall.py` (7/7 verde) — `normalize_ptbr`
+  preserva diacríticos PT-BR, colapsa espaço, trata `None`; estrutura de `SOURCES` (fleurs/mls com
+  `repo/path/splits/text_col`, splits `train/dev/test`).
+- **Lógica de I/O exercitada localmente**: numa execução local o script rodou download → parse do
+  parquet FLEURS → `Recording` → `Fbank.compute` com sucesso; parou só na **escrita** da feature
+  pelo `open_best` do lhotse, que carrega `smart_open`→`pyOpenSSL` — e o ambiente **local** tem
+  `pyOpenSSL` incompatível com `cryptography 49.0.0` (`_lib.GEN_EMAIL`). É quirk de ambiente
+  (ver memória `baseline-python-env-quirks`), **não** defeito do script.
+- **I/O idêntico já provado na imagem limpa**: `prep_fleurs.py` — mesma cadeia
+  `Recording→Fbank→to_file` — gerou cuts válidos e treináveis na instância vast.ai (`k2fsa/icefall`,
+  onde `pyOpenSSL` não está quebrado). O end-to-end do `prep_icefall.py` roda ali, na hora do piloto.
+
 ## Reuso (Regra 9) — o que a comunidade faz, aplicado
 
 - **Imagem Docker oficial `k2fsa/icefall`** na vast.ai — mata o setup k2/CUDA (o maior risco).

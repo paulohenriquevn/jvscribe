@@ -64,7 +64,8 @@ def _download(repo: str, path: str, dest: str) -> str:
     return dest
 
 
-def build(source: str, split_key: str, out: Path, n_start: int) -> tuple[list, list, int]:
+def build(source: str, split_key: str, out: Path, n_start: int,
+          limit: int | None = None) -> tuple[list, list, int]:
     cfg = SOURCES[source]
     hf_split = cfg["splits"][split_key]
     pqfile = _download(cfg["repo"], cfg["path"].format(split=hf_split),
@@ -78,6 +79,8 @@ def build(source: str, split_key: str, out: Path, n_start: int) -> tuple[list, l
     for batch in pf.iter_batches(batch_size=64, columns=cols):
         d = batch.to_pydict()
         for i in range(len(d[cfg["text_col"]])):
+            if limit is not None and (n - n_start) >= limit:
+                return recs, sups, n
             raw = d["audio"][i].get("bytes")
             text = normalize_ptbr(d[cfg["text_col"]][i])
             if not raw or not text:
@@ -102,6 +105,7 @@ def main():
     ap.add_argument("--out", default="data/pt")
     ap.add_argument("--lang", default="pt")
     ap.add_argument("--sources", nargs="+", default=["fleurs", "mls"])
+    ap.add_argument("--limit", type=int, default=None, help="máx utts por fonte/split (teste)")
     args = ap.parse_args()
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     extractor = Fbank(FbankConfig(num_mel_bins=80))
@@ -112,7 +116,7 @@ def main():
             # dev/test só do FLEURS (limpo, humano); train combina todas as fontes
             if split_key in ("dev", "test") and source != "fleurs":
                 continue
-            r, s, n = build(source, split_key, out, n)
+            r, s, n = build(source, split_key, out, n, args.limit)
             recs += r; sups += s
         cuts = CutSet.from_manifests(recordings=RecordingSet.from_recordings(recs),
                                      supervisions=SupervisionSet.from_segments(sups))
