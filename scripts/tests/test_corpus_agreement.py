@@ -29,6 +29,19 @@ def test_cer_totally_different_is_high():
     assert pairwise_cer("bom dia", "xyzqw kjhg") > 0.5
 
 
+def test_cer_both_empty_is_zero():
+    """Ambas vazias (2 silêncios) → concordância total, CER 0 (review L-2 branch)."""
+    assert pairwise_cer("", "") == 0.0
+    assert pairwise_cer("   ", "  ") == 0.0
+
+
+def test_cer_one_empty_is_max_disagreement():
+    """Uma vazia (silêncio/VAD) e a outra não → discordância máxima 1.0, sem estourar
+    (review H1: dado real de transcrição vazia não pode derrubar o batch)."""
+    assert pairwise_cer("", "o cliente ligou") == 1.0
+    assert pairwise_cer("o cliente ligou", "") == 1.0
+
+
 def test_cer_normalizes_ptbr():
     """'voce' vs 'você' (só acento/caixa) → CER baixo após normalização PT-BR."""
     assert pairwise_cer("VOCE esta bem", "você está bem") < 0.15
@@ -63,35 +76,59 @@ def test_calibrate_rejects_bad_fraction():
         calibrate_tau([0.1, 0.2], keep_fraction=1.5)
 
 
-def test_transcribe_pair_loads_sequentially():
-    """T3.1: prova que o modelo #1 é liberado (del) ANTES de instanciar o #2 (RAM-safe).
+def test_calibrate_keep_all_is_max():
+    """keep_fraction=1.0 → τ = máximo observado (mantém tudo). Review L-2 borda."""
+    cers = [0.0, 0.1, 0.2, 0.3, 0.9]
+    tau = calibrate_tau(cers, keep_fraction=1.0)
+    assert tau == 0.9
+    assert all(c <= tau for c in cers)
 
-    Rastreia a ordem de instanciação vs liberação via um contador de instâncias vivas.
+
+def test_calibrate_ties_retain_at_least_fraction():
+    """Empates em τ retêm ≥ keep_fraction (não menos) — review L-2."""
+    cers = [0.1, 0.1, 0.1, 0.1, 0.9]  # 4 empatados
+    tau = calibrate_tau(cers, keep_fraction=0.8)
+    kept = [c for c in cers if c <= tau]
+    assert len(kept) >= 4  # nunca descarta um empatado a mais
+
+
+def test_transcribe_pair_loads_sequentially():
+    """T3.1 / review M-4: prova que só 1 modelo vive por vez (RAM-safe) via HOOKS de
+    ciclo de vida — testa o comportamento (ordem load/release), não o mecanismo `__del__`
+    (que dependeria de refcount CPython e seria frágil em PyPy / com ciclos).
     """
     from corpus import pseudo_label
 
-    live = {"count": 0, "max": 0}
+    events: list[tuple[str, str]] = []
 
     class FakeModel:
         def __init__(self, size, **_kw):
-            live["count"] += 1
-            live["max"] = max(live["max"], live["count"])
+            pass
 
         def transcribe(self, path, **_kw):
             seg = mock.Mock()
             seg.text = f"hyp de {os.path.basename(path)}"
             return [seg], mock.Mock()
 
-        def __del__(self):
-            live["count"] -= 1
-
     with mock.patch.object(pseudo_label, "WhisperModel", FakeModel):
         out = pseudo_label.transcribe_pair(
-            {"a": "/tmp/a.wav", "b": "/tmp/b.wav"}, sizes=("small", "medium")
+            {"a": "/tmp/a.wav", "b": "/tmp/b.wav"},
+            sizes=("small", "medium"),
+            on_load=lambda s: events.append(("load", s)),
+            on_release=lambda s: events.append(("release", s)),
         )
 
-    # nunca dois modelos vivos ao mesmo tempo (carga sequencial, EC-3 RAM)
-    assert live["max"] == 1, f"carregou {live['max']} modelos ao mesmo tempo (esperado 1)"
+    # o pico de modelos "vivos" (load sem release correspondente) nunca passa de 1
+    live = peak = 0
+    for kind, _ in events:
+        live += 1 if kind == "load" else -1
+        peak = max(peak, live)
+    assert peak == 1, f"pico de {peak} modelos vivos ao mesmo tempo (esperado 1)"
+    # cada modelo é liberado ANTES do próximo carregar (sequência exata)
+    assert events == [
+        ("load", "small"), ("release", "small"),
+        ("load", "medium"), ("release", "medium"),
+    ]
     assert set(out.keys()) == {"a", "b"}
     for _id, (h1, h2) in out.items():
         assert isinstance(h1, str) and isinstance(h2, str)

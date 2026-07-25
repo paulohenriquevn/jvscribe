@@ -54,15 +54,20 @@ def test_alaw_roundtrip_preserves_shape_within_tolerance():
     assert corr >= 0.8, f"forma degradada demais pela cadeia: corr={corr:.3f}"
 
 
-def test_no_tempfile_created():
-    """A augmentação é on-the-fly: não cria arquivo em disco (DoD 'nunca em disco')."""
+def test_no_tempfile_created(tmp_path, monkeypatch):
+    """A augmentação é on-the-fly: não escreve em disco (DoD 'nunca em disco').
+
+    Review L1: usa um tempdir ISOLADO (monkeypatch), não o /tmp compartilhado (que
+    tornaria o teste flaky sob outros processos). A garantia de fundo é que
+    `apply_telephone_channel` é numpy/scipy/audioop puro — sem I/O de arquivo.
+    """
     import tempfile
 
-    tmp = tempfile.gettempdir()
-    before = set(os.listdir(tmp))
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    before = set(os.listdir(tmp_path))
     apply_telephone_channel(_sine(1000.0, 16000), 16000)
-    after = set(os.listdir(tmp))
-    assert before == after, f"criou arquivo(s) em {tmp}: {after - before}"
+    after = set(os.listdir(tmp_path))
+    assert before == after, f"criou arquivo(s) em disco: {after - before}"
 
 
 def test_rejects_empty_array():

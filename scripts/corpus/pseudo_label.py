@@ -13,6 +13,7 @@ backlog técnico (Blueprint § Corner 3/Q7).
 from __future__ import annotations
 
 import gc
+from collections.abc import Callable
 
 from faster_whisper import WhisperModel
 
@@ -28,10 +29,16 @@ def _transcribe_all(model: "WhisperModel", audio_paths: dict[str, str]) -> dict[
 def transcribe_pair(
     audio_paths: dict[str, str],
     sizes: tuple[str, str] = ("small", "medium"),
+    on_load: Callable[[str], None] | None = None,
+    on_release: Callable[[str], None] | None = None,
 ) -> dict[str, tuple[str, str]]:
     """Transcreve cada áudio com 2 whisper distintos, SEQUENCIALMENTE (RAM-safe).
 
-    Retorna {clip_id: (hyp_modelo1, hyp_modelo2)}. Fail-fast em entrada vazia.
+    Carrega um modelo por vez, libera (`del` + `gc.collect()`) ANTES de instanciar o
+    próximo (EC-3: RAM apertada; nunca 2 residentes). Os hooks `on_load(size)` /
+    `on_release(size)` tornam o ciclo de vida observável para teste sem depender de
+    `__del__`/refcount (review M-4). Retorna {clip_id: (hyp_modelo1, hyp_modelo2)}.
+    Fail-fast em entrada vazia.
     """
     if not audio_paths:
         raise ValueError("transcribe_pair: nenhum áudio fornecido")
@@ -39,9 +46,13 @@ def transcribe_pair(
     hyps_por_modelo: list[dict[str, str]] = []
     for size in sizes:
         model = WhisperModel(size, device="cpu", compute_type="int8", cpu_threads=1)
+        if on_load is not None:
+            on_load(size)
         hyps_por_modelo.append(_transcribe_all(model, audio_paths))
         del model  # libera ANTES de instanciar o próximo (EC-3 RAM)
         gc.collect()
+        if on_release is not None:
+            on_release(size)
 
     return {
         clip_id: (hyps_por_modelo[0][clip_id], hyps_por_modelo[1][clip_id])

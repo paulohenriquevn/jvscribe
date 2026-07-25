@@ -25,15 +25,21 @@ from text_normalize_ptbr import normalize_ptbr  # noqa: E402
 
 
 def pairwise_cer(hyp1: str, hyp2: str) -> float:
-    """CER entre duas hipóteses, ambas normalizadas para PT-BR antes da comparação.
+    """CER de `hyp2` contra `hyp1` (referência), ambas normalizadas para PT-BR.
 
-    Como não há referência humana (são 2 hipóteses de máquina), o CER é usado como
-    medida simétrica de discordância — ordena por magnitude, que é o que o filtro usa.
+    É **direcional** (jiwer.cer divide por len(hyp1) e pode exceder 1.0), não
+    simétrica — o pipeline usa sempre `hyp1` (modelo #1) como referência, o que o
+    mantém internamente consistente para calibrar τ. Usada como medida de discordância:
+    ordena por magnitude, que é o que o filtro consome (review M1).
     """
     a = normalize_ptbr(hyp1)
     b = normalize_ptbr(hyp2)
     if not a and not b:
         return 0.0
+    if not a or not b:
+        # uma hipótese vazia (silêncio / VAD / falha do modelo — dado real, não input
+        # inválido) e a outra não → discordância máxima; descarta o segmento (review H1).
+        return 1.0
     return float(jiwer.cer(a, b))
 
 
@@ -43,11 +49,13 @@ def agree(hyp1: str, hyp2: str, tau: float) -> bool:
 
 
 def calibrate_tau(cer_values: Sequence[float], keep_fraction: float) -> float:
-    """τ tal que ~`keep_fraction` dos segmentos (os mais concordantes) sejam mantidos.
+    """τ tal que **aproximadamente** `keep_fraction` dos segmentos (os mais
+    concordantes) sejam mantidos.
 
     Deriva o threshold da distribuição empírica (não a priori). `method='lower'`
-    escolhe um valor observado, garantindo que exatamente os `keep_fraction` mais
-    concordantes fiquem ≤ τ. Fail-fast em entrada inválida (error-handling.md § 2).
+    escolhe um valor observado; para n pequeno a fração mantida é ≥ `keep_fraction`
+    (empates em τ podem reter um pouco mais). Fail-fast em entrada inválida
+    (error-handling.md § 2). Review L-2.
     """
     if cer_values is None or len(cer_values) == 0:
         raise ValueError("calibrate_tau: distribuição de CER vazia — nada a calibrar")

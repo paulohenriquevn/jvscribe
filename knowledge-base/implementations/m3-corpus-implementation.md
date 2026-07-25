@@ -29,7 +29,7 @@ Pipeline real sobre 20 clips FLEURS pt_br: 2 whisper (`small`+`base`, int8 CPU
 sequenciais) → CER par-a-par → τ calibrado → filtro → manifest com telephone on-the-fly.
 Distribuição gravada em `knowledge-base/corpus/m3-cer-distribution.md`.
 
-**Resultado `[MEDIDO]`:** CER par-a-par média **0,049 ± 0,036** · mediana 0,037 · min 0,009 · max 0,161 (n=20). **τ calibrado (percentil-80 empírico) = 0,064**. Filtro: **16 mantidos / 4 descartados**. Prova on-the-fly: `load_telephone_audio` do 1º cut retorna **8000 Hz** (augmentação em RAM, sem WAV em disco). A distribuição estreita (CER baixo entre small e base) é esperada e confirma o caveat ADR-3: modelos parentes concordam muito — o sinal de concordância superestima confiança até um 2º transcritor de arquitetura distinta entrar.
+**Resultado `[MEDIDO]`** (i7-1355U, 1 run, n=20 clips): spread média **0,055 ± 0,051** (σ amostral) · mediana 0,035 · min 0,000 · max 0,195. Incerteza da média: SEM 0,011 → **IC95% [0,032, 0,077]**. **τ (percentil-80 empírico) = 0,072**, com **IC95% bootstrap [0,038, 0,164]** (largo — n=20 é piloto). **Manifest filtrado: 16 cuts == 16 aprovados** (o filtro É aplicado ao manifest — review B-1). on-the-fly a **8000 Hz** confirmado. A distribuição estreita confirma o caveat ADR-3: modelos parentes (small/base, mais próximos ainda que small/medium) correlacionam erros — a concordância superestima confiança até um 2º transcritor de arquitetura distinta entrar (backlog). Todos os 10 findings do `/review` (1 BLOCKER + 3 HIGH + 6 MEDIUM/LOW) corrigidos e revalidados (`knowledge-base/reviews/m3-corpus-review-2026-07-25.md`).
 
 ## Decisões de escopo honestas
 

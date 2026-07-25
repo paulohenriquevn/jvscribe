@@ -55,6 +55,16 @@ def build_cutset(wav_dir: str, labels: dict[str, str]) -> CutSet:
     return CutSet.from_manifests(recordings=recordings, supervisions=supervisions)
 
 
+def filter_cutset(cutset: CutSet, keep_ids: set[str]) -> CutSet:
+    """Mantém apenas os cuts cujo `recording_id` está em `keep_ids` (review B-1).
+
+    É aqui que o filtro por concordância é LIGADO ao manifest: só os segmentos que
+    passaram no predicado de concordância entram no CutSet de treino. Sem isto, o
+    manifest conteria também os cuts descartados, contradizendo a Goal de M3.
+    """
+    return cutset.filter(lambda c: c.recording_id in keep_ids)
+
+
 def load_telephone_audio(cut) -> tuple[np.ndarray, int]:
     """Carrega o áudio do cut e aplica a cadeia telefônica ON-THE-FLY (8 kHz).
 
