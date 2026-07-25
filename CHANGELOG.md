@@ -31,6 +31,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+- `training/prep_icefall.py`: `_download` agora cria o `PARQUET_DIR` antes do `curl` (o `curl -o` falhava com exit 23 "write error" quando o diretório não existia — descoberto ao rodar o piloto real na vast.ai) e usa `curl -sfL` (`-f`: falha explícita em HTTP 4xx/5xx em vez de gravar página de erro como se fosse parquet). Teste de regressão em `training/tests/test_prep_icefall.py` (`test_download_cria_pqdir_antes_do_curl`)
+
 ### Security
 
 ## [0.4.0] - 2026-07-25

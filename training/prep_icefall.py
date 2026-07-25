@@ -58,9 +58,10 @@ def _download(repo: str, path: str, dest: str) -> str:
     """curl direto (HF migrou p/ xet; resolve/main + token é o caminho robusto)."""
     if os.path.exists(dest):
         return dest
+    os.makedirs(os.path.dirname(dest), exist_ok=True)  # PQ_DIR pode não existir ainda
     url = f"https://huggingface.co/datasets/{repo}/resolve/main/{path}"
-    subprocess.run(["curl", "-sL", "--retry", "3", "-H", f"Authorization: Bearer {_TOK}",
-                    url, "-o", dest], check=True)
+    subprocess.run(["curl", "-sfL", "--retry", "3", "-H", f"Authorization: Bearer {_TOK}",
+                    url, "-o", dest], check=True)  # -f: falha explícita em HTTP 4xx/5xx
     return dest
 
 

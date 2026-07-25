@@ -52,3 +52,23 @@ def test_sources_tem_fleurs_e_mls_com_campos():
 def test_sources_path_tem_placeholder_split():
     for src in SOURCES.values():
         assert "{split}" in src["path"]  # o download formata por split
+
+
+def test_download_cria_pqdir_antes_do_curl(tmp_path, monkeypatch):
+    # Regressão: curl -o falha (exit 23) se o diretório de destino não existe.
+    # O _download DEVE criar o dir ANTES de invocar o curl.
+    import prep_icefall
+
+    seen = {}
+
+    def fake_run(cmd, check):
+        dest = cmd[cmd.index("-o") + 1]
+        seen["dir_existia_no_curl"] = os.path.isdir(os.path.dirname(dest))
+        open(dest, "w").close()  # simula o curl gravando o arquivo
+
+    monkeypatch.setattr(prep_icefall.subprocess, "run", fake_run)
+    dest = tmp_path / "pq_inexistente" / "x.parquet"
+    prep_icefall._download("repo/x", "path/{split}", str(dest))
+
+    assert seen["dir_existia_no_curl"] is True  # o mkdir veio antes do curl
+    assert dest.exists()
