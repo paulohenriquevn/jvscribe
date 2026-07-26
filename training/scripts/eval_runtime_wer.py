@@ -81,6 +81,7 @@ def main() -> None:
     tmp.mkdir(parents=True, exist_ok=True)
 
     tot_err, tot_words, done = 0, 0, 0
+    tot_cerr, tot_chars = 0, 0  # CER: edit-distance por CARACTERE (informativo em PT-BR)
     print(f"[eval] runtime Rust (macaw-cli transcribe) sobre {args.n} utterances FLEURS test\n")
     for batch in pf.iter_batches(batch_size=64, columns=["audio", "transcription"]):
         rows = batch.to_pylist()
@@ -111,16 +112,22 @@ def main() -> None:
             err = word_edit_distance(ref, hyp)
             tot_err += err
             tot_words += len(ref)
+            # CER: mesmo Levenshtein, mas sobre a sequência de caracteres (sem espaços).
+            ref_c, hyp_c = list("".join(ref)), list("".join(hyp))
+            tot_cerr += word_edit_distance(ref_c, hyp_c)
+            tot_chars += len(ref_c)
             done += 1
             if done <= 5 or done % 10 == 0:
-                print(f"  [{done:3d}] WER_acum={100*tot_err/max(tot_words,1):5.2f}%  "
+                print(f"  [{done:3d}] WER={100*tot_err/max(tot_words,1):5.2f}% "
+                      f"CER={100*tot_cerr/max(tot_chars,1):5.2f}%  "
                       f"ref='{' '.join(ref[:8])}...' hyp='{' '.join(hyp[:8])}...'")
         if done >= args.n:
             break
 
     wer = 100.0 * tot_err / max(tot_words, 1)
-    print(f"\n[MEDIDO] Runtime Rust WER = {wer:.2f}%  "
-          f"({tot_err} erros / {tot_words} palavras de ref, n={done} utterances)")
+    cer = 100.0 * tot_cerr / max(tot_chars, 1)
+    print(f"\n[MEDIDO] Runtime Rust WER = {wer:.2f}%  ({tot_err}/{tot_words} palavras)")
+    print(f"[MEDIDO] Runtime Rust CER = {cer:.2f}%  ({tot_cerr}/{tot_chars} caracteres), n={done} utterances")
     print(f"[REF]    Decode Python (icefall) WER = 29,97% (FLEURS test completo, 21.471 palavras)")
     print(f"[NOTA]   n={done} é subconjunto → IC mais largo que o número Python. "
           f"O que importa: o runtime Rust NÃO deve degradar vs o decode de treino.")

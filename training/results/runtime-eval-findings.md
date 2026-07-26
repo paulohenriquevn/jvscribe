@@ -13,11 +13,17 @@ produção (`macaw-cli transcribe` = wav → `macaw_audio::kaldi_fbank` → `Asr
 → `ctc_greedy`) e computa WER real (Levenshtein de palavras) vs a referência normalizada
 com a **mesma `normalize_ptbr` do treino**.
 
-| Caminho | WER | n |
-|---|---|---|
-| **Runtime Rust** (macaw-cli) — amostra grande | **29,92%** | **470 utterances** |
-| Runtime Rust — amostra pequena (interim) | 25,75% | 40 utterances |
-| Decode Python (icefall) | 29,97% | test completo (21.471 palavras) |
+| Caminho | WER | CER | n |
+|---|---|---|---|
+| **Runtime Rust** (macaw-cli) — amostra grande | **29,92%** | — | 470 utterances |
+| **Runtime Rust** — com CER | **28,21%** | **10,99%** | 100 utterances |
+| Decode Python (icefall) | 29,97% | (não medido) | test completo (21.471 palavras) |
+
+**CER ≪ WER (10,99% vs 28,21%) `[MEDIDO]`:** o modelo acerta ~89% dos caracteres; a
+maioria dos erros de palavra são deslizes de 1-2 caracteres foneticamente próximos
+("dirigir→dirigira", "lugares→logares") que o WER pune como palavra inteira errada.
+Sinal de arquitetura saudável — o gap para SOTA é de refinamento (augmentação + dados
+de M5), não de erro grosseiro.
 
 **Conclusão:** o runtime Rust **não degrada** a acurácia vs o decode de treino — em
 n=470 o WER converge para **29,92%, praticamente idêntico aos 29,97%** do decode Python
