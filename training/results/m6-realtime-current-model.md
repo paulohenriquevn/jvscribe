@@ -29,6 +29,34 @@ compartilhada (pico ocioso vs dips de contenção). Um número RNF-04 **definiti
 fundo controlada (pinar P-cores / parar k3s — precisa de sudo). O piso sob contenção já passa o
 requisito com folga, então a viabilidade não muda.
 
+## RNF-05 carga concorrente (4 cores estressados = softphone) `[MEDIDO]`
+
+`bench_rtfx --threads 2` com 4 cores em busy-loop (simula softphone/Zoom):
+
+| Áudio | RTFx sob carga | % do ocioso | vs piso 6× |
+|---|---|---|---|
+| 5s | 44,2× | 49% | 7,4× |
+| 10s | 38,5× | 49% | 6,4× |
+| 20s | 32,0× | 49% | 5,3× |
+| 30s | 25,0× | 51% | 4,2× |
+
+Sob carga, RTFx ~50% do ocioso, mas pior caso (30s) = 4,2× o piso; utterances realistas
+(5-15s) ficam 6-7× **sob carga**. **RNF-05 passa com folga.** (Em streaming, contexto limitado →
+custo/chunk constante → vale o número de clip curto.)
+
+## Placar dos 5 critérios de real-time (modelo atual, offline)
+
+| Critério | Estado |
+|---|---|
+| RNF-01/07 RTFx ≥ 6× | ✅ 41-90× ocioso, 25-44× sob carga |
+| RNF-04 soak 10min | ✅ sem throttle térmico; piso 21,6× sob contenção |
+| RNF-05 carga concorrente | ✅ 25-44× (4,2-7,4× o piso) |
+| RNF-02 latência p99 streaming | ⏳ precisa de modelo causal |
+| RNF-03 operação 8 kHz | parcial — penalidade telefônica medida 1,29× (`m4-decision-161h-results.md`) |
+
+**3 dos 5 critérios validados com o modelo que já temos.** Falta streaming (RNF-02, causal) e o
+soak definitivo com carga controlada.
+
 ## Pendente (não validável no modelo atual)
 
 - **RNF-02 latência p99 streaming** + **equivalência batch≡streaming** — exigem modelo **causal**
