@@ -43,6 +43,8 @@ def main():
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--warmup", type=int, default=3)
     ap.add_argument("--iters", type=int, default=20)
+    ap.add_argument("--soak-min", type=float, default=0.0,
+                    help="se >0: roda continuamente N min a 10s de áudio, logando RTFx por janela (RNF-04 soak térmico)")
     args = ap.parse_args()
 
     sess = make_session(args.model, args.threads)
@@ -56,6 +58,39 @@ def main():
 
     # fbank 80-dim, 100 frames/s. Valores não afetam o tempo (compute data-independent).
     FPS = 100
+    names = list(inputs)
+
+    if args.soak_min > 0:
+        # RNF-04: 10s de áudio em loop por N min; RTFx por janela de ~30s revela throttle.
+        audio_s = 10.0
+        T = int(audio_s * FPS)
+        feed = {names[0]: np.random.randn(1, T, 80).astype(np.float32)}
+        if len(names) > 1:
+            feed[names[1]] = np.array([T], dtype=np.int64)
+        for _ in range(args.warmup):
+            sess.run(None, feed)
+        print(f"=== SOAK {args.soak_min:.0f} min @ {args.threads} thread(s), áudio {audio_s:.0f}s ===")
+        t_end = time.perf_counter() + args.soak_min * 60
+        win_start = time.perf_counter()
+        win_walls = []
+        rtfxs = []
+        while time.perf_counter() < t_end:
+            t0 = time.perf_counter()
+            sess.run(None, feed)
+            win_walls.append(time.perf_counter() - t0)
+            if time.perf_counter() - win_start >= 30:
+                mean = statistics.mean(win_walls)
+                rtfx = audio_s / mean
+                rtfxs.append(rtfx)
+                mm, ss = divmod(int(time.perf_counter() - (t_end - args.soak_min * 60)), 60)
+                print(f"  t+{mm:02d}:{ss:02d} | RTFx {rtfx:6.1f}× | wall méd {mean*1000:6.1f}ms | n={len(win_walls)}")
+                win_start = time.perf_counter(); win_walls = []
+        if rtfxs:
+            drop = (rtfxs[0] - min(rtfxs)) / rtfxs[0] * 100
+            print(f"=== soak: RTFx primeiro={rtfxs[0]:.1f}× min={min(rtfxs):.1f}× "
+                  f"queda={drop:.1f}% (RNF-04 exige sustentado ≥80% do pico) ===")
+        return
+
     for audio_s in (5.0, 10.0, 20.0, 30.0):
         T = int(audio_s * FPS)
         feats = np.random.randn(1, T, 80).astype(np.float32)
