@@ -14,6 +14,18 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 | Zipformer-CTC | large (147M) | ⏳ | ⏳ | |
 | FastConformer-CTC (NeMo) | — | ⏳ | ⏳ | (fase 4) |
 
+## Curva WER × RTFx (o tradeoff que decide o finalist) `[MEDIDO]`
+
+| Tamanho | WER (avg=10) | RTFx @ 2 threads (i7-1355U) | veredito |
+|---|---|---|---|
+| **small (22M)** | 29,97% | **49-90×** | **domina** — quase mesmo WER, 2× mais rápido |
+| medium (64M) | 28,86% | 17-38× | −1 p.p. de WER por 2× o compute |
+| large (147M) | (treinando) | (a medir) | tende a WER≈, RTFx pior |
+
+**Conclusão parcial da curva:** medium compra só ~1 p.p. de WER por ~2× o custo de CPU → **o `small`
+é o forte candidato a finalist** para o objetivo CPU real-time (RNF-07). O `large` deve confirmar
+os retornos decrescentes.
+
 ## RTFx na CPU-alvo i7-1355U (fase 5) `[MEDIDO]`
 
 Export do small para ONNX (`export-onnx-ctc.py` → `model.int8.onnx`, 27MB, int8 quantizado
