@@ -23,14 +23,16 @@ fn word_overlap(reference: &str, hyp: &str) -> f32 {
     hits as f32 / ref_words.len() as f32
 }
 
+// T-02 (/review): #[ignore] em vez de early-return silencioso — verde-fictício no CI
+// mascarava a camada de integração vazia. Listado como IGNORED; rodar com `--ignored`.
 #[test]
+#[ignore = "requer fixtures de fala real (model.int8.onnx + fleurs_one.f32) não versionados"]
 fn transcreve_fala_real_do_fleurs() {
     let model = dir().join("model.int8.onnx");
     let feats_f = dir().join("fleurs_one.f32");
     let text_f = dir().join("fleurs_one.txt");
     if !model.exists() || !feats_f.exists() {
-        eprintln!("SKIP: fixtures de fala real ausentes ({})", feats_f.display());
-        return;
+        panic!("fixtures ausentes ({}) — rode o export/prep para gerá-los", feats_f.display());
     }
 
     // fbank real (T, 80) row-major, f32 little-endian, do lhotse.

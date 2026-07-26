@@ -14,6 +14,11 @@ pub mod decode;
 use std::fmt;
 use std::path::Path;
 
+/// Id do token blank na convenção do export icefall (Zipformer-CTC). Premissa específica
+/// da arquitetura ainda não travada em M4 (`PRD.md` § 8.1, 2 finalistas) — nomeada para
+/// que o swap ao decidir o finalista não caie em número mágico (ARCH-02 do /review).
+const ICEFALL_BLANK_ID: usize = 0;
+
 /// Erros da fronteira de inferência.
 ///
 /// Todos tipados e com contexto suficiente para diagnóstico sem debugger, conforme
@@ -293,7 +298,7 @@ impl AsrEngine {
         vocab: &Vocab,
     ) -> Result<String, AsrError> {
         let (logits, t, v) = self.ctc_logits(mel, n_frames)?;
-        let ids = crate::decode::ctc_greedy(&logits, t, v, 0);
+        let ids = crate::decode::ctc_greedy(&logits, t, v, ICEFALL_BLANK_ID);
         Ok(crate::decode::detok(&ids, vocab))
     }
 

@@ -20,8 +20,10 @@ pub fn argmax(frame: &[f32]) -> usize {
 /// frames de `vocab` classes cada; `blank` é o id do blank (0 no icefall). Retorna os ids
 /// de token após colapso (sem blank, sem repetições consecutivas).
 ///
-/// Não entra em pânico com entrada curta: para no último frame completo disponível
-/// (`rules/error-handling.md` — fail-safe em vez de índice fora de faixa).
+/// Checagem de bounds defensiva: se `log_probs` for mais curto que `t_len * vocab`
+/// (contrato violado pelo chamador), para no último frame completo em vez de indexar
+/// fora de faixa. No caller real (`AsrEngine::transcribe`) `t_len`/`vocab` vêm do shape
+/// do próprio tensor, então o `break` nunca dispara em produção — é guarda, não fluxo.
 #[must_use]
 pub fn ctc_greedy(log_probs: &[f32], t_len: usize, vocab: usize, blank: usize) -> Vec<usize> {
     let mut out = Vec::new();

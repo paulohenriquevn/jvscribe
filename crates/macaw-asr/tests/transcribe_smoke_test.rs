@@ -16,11 +16,13 @@ fn tokens_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../training/results/onnx/tokens.txt")
 }
 
+// T-02 (/review): #[ignore] em vez de early-return silencioso — o cargo lista como
+// IGNORED (honesto), não como PASSED. Rodar local/CI com o artefato via `--ignored`.
 #[test]
+#[ignore = "requer training/results/onnx/model.int8.onnx (não versionado no CI)"]
 fn transcribe_roda_no_modelo_real() {
     if !model_path().exists() {
-        eprintln!("SKIP: {} ausente (baixar do export)", model_path().display());
-        return;
+        panic!("fixture ausente: {} — rode o export ou pule com --skip", model_path().display());
     }
     let mut engine = AsrEngine::load(&model_path()).expect("carrega o int8 onnx");
     let vocab = Vocab::load(&tokens_path()).expect("carrega tokens.txt");
