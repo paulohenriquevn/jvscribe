@@ -11,8 +11,21 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 |---|---|---|---|---|
 | Zipformer-CTC | **small (22,1M)** | 33,99% | **29,97%** | 915 ins, 729 del, 4791 sub, **15.951 corretos** |
 | Zipformer-CTC | medium (64,3M) | 35,04% | **28,86%** | 939 ins, 630 del, 4628 sub, 16.213 corretos |
-| Zipformer-CTC | large (147M) | ⏳ | ⏳ | |
-| FastConformer-CTC (NeMo) | — | ⏳ | ⏳ | (fase 4) |
+| Zipformer-CTC | large (147M) | ⏳ | ⏳ | (treinando epoch 15/30) |
+| **Conformer-CTC (icefall)** | (a treinar) | ⏳ | ⏳ | **2º finalista** — ver nota de divergência |
+
+> **Divergência de blueprint registrada (2026-07-26, decisão do dono).** O 2º
+> finalista era **FastConformer-CTC (NeMo)** (`m4-pilot-blueprint.md`). Após **4+
+> falhas honestas de provisionamento na vast.ai** — `pip nemo_toolkit[asr]` corrompendo
+> o download (hash mismatch com pypi oficial + `--no-cache`, 3×) e o container
+> `nvcr.io/nvidia/nemo:24.12` (40GB) travando no pull sem subir container (2×) — o NeMo
+> é **un-provisionable** neste ambiente `[MEDIDO — 4+ tentativas]`. Substituído por
+> **Conformer-CTC na recipe icefall**: mesma stack, mesmo corpus (`cv-pt_cuts` 161h),
+> mesmo decode (`ctc-greedy-search`), mesmo test (FLEURS). **Serve melhor a intenção
+> científica** (família Conformer vs Zipformer como 2º finalista) por **eliminar os
+> confounds de framework** que o NeMo introduziria (features, loop de treino, tokenizer
+> diferentes). O ADR de M4 fará a comparação Zipformer-CTC vs Conformer-CTC no mesmo
+> eixo WER×RTFx. Não é o FastConformer exato — o ADR registra isso como limite.
 
 ## Curva WER × RTFx (o tradeoff que decide o finalist) `[MEDIDO]`
 
