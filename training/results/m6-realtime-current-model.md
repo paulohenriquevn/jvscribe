@@ -44,6 +44,18 @@ Sob carga, RTFx ~50% do ocioso, mas pior caso (30s) = 4,2× o piso; utterances r
 (5-15s) ficam 6-7× **sob carga**. **RNF-05 passa com folga.** (Em streaming, contexto limitado →
 custo/chunk constante → vale o número de clip curto.)
 
+## Runtime v0 — decoder CTC implementado (CYCLE de M6) `[MEDIDO]`
+
+`crates/macaw-asr/src/decode.rs` + `lib.rs` (`ctc_logits`/`transcribe`): decode CTC greedy portado
+do sherpa (Regra 9) + inferência no `model.int8.onnx` real (contrato `x`/`x_lens`→`log_probs`
+corrigido — o `encode()` de M0 era placeholder NeMo). **11/11 testes do crate verdes**; 60 frames →
+T=13 (subsampling 4×), vocab 500. Discover→plan→implement todos SHIPPABLE.
+
+**Bloqueio honesto da Fase 3 (transcrição de fala real):** o `macaw-audio` produz **128-bin sem
+overlap** (era para o placeholder NeMo de M0); o modelo icefall precisa de **80-bin kaldi 25/10ms**.
+Alimentar features erradas dá lixo. Re-alinhar o fbank é tarefa real (validação numérica vs lhotse) —
+o decode já funciona sobre `log_probs` corretos; falta a fronteira de features casar. Ver task #25.
+
 ## Placar dos 5 critérios de real-time (modelo atual, offline)
 
 | Critério | Estado |
