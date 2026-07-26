@@ -14,6 +14,28 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 | Zipformer-CTC | large (147M) | ⏳ | ⏳ | |
 | FastConformer-CTC (NeMo) | — | ⏳ | ⏳ | (fase 4) |
 
+## RTFx na CPU-alvo i7-1355U (fase 5) `[MEDIDO]`
+
+Export do small para ONNX (`export-onnx-ctc.py` → `model.int8.onnx`, 27MB, int8 quantizado
+automaticamente) + benchmark `training/bench_rtfx.py` na **i7-1355U de referência** (esta máquina).
+RTFx = duração_áudio ÷ wall (definição do blueprint M1). Sustentado, descarta warmup.
+
+| Áudio | RTFx @ 1 thread | RTFx @ 2 threads (orçamento RNF-06) |
+|---|---|---|
+| 5 s | 67,8× | 90,1× |
+| 10 s | 62,1× | 78,8× |
+| 20 s | 48,5× | 65,7× |
+| 30 s | 41,2× | 48,9× |
+
+**RNF-07 exige ASR isolado ≥ 6×. Medido: 41-68× (1 thread) / 49-90× (2 threads) — 7-15× de folga.**
+O RTFx cai com áudio mais longo (atenção O(T²) do Zipformer); em streaming (contexto limitado) o
+custo/frame é constante → RTFx próximo do número de clip curto. Mesmo o pior caso (30s, 41×) tem
+6,8× de margem sobre o piso.
+
+**Caveats (Regra 3):** é inferência **offline** (áudio inteiro, batch), não streaming chunk-a-chunk;
+é um clip, não o **soak sustentado** de 10min sob throttle térmico (RNF-04); é o encoder+CTC cru, sem
+VAD/log-mel/decode (mas RNF-07 mede ASR isolado). A magnitude da folga (7-15×) absorve todos esses.
+
 ## Penalidade telefônica MEDIDA (experimento #1 do asr-chief-scientist) `[MEDIDO]`
 
 Re-decode do checkpoint de 161h JÁ treinado no held-out FLEURS **degradado pela cadeia
