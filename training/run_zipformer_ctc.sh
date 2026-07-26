@@ -27,7 +27,7 @@ if [ ! -f "$LD/bpe.model" ]; then
   mkdir -p "$LD"
   ./local/train_bpe_model.py --lang-dir "$LD" --vocab-size 500 --transcript data/pt/transcript_words.txt
 fi
-if [ ! -f "$LD/tokens.txt" ]; then
+if [ ! -f "$LD/L.pt" ]; then   # L.pt é o artefato final do prepare_lang_bpe (tokens.txt sozinho não basta p/ o decode)
   cp -n data/pt/transcript_words.txt "$LD/transcript_words.txt"
   sed 's/ /\n/g' "$LD/transcript_words.txt" | sort -u | sed '/^$/d' > "$LD/_w.txt"
   { echo '!SIL'; echo '<SPOKEN_NOISE>'; echo '<UNK>'; } | cat - "$LD/_w.txt" | sort | uniq | \
@@ -46,7 +46,7 @@ env OMP_NUM_THREADS=8 ./zipformer/train.py \
 # 3. decode held-out (FLEURS test): avg=1 (sem averaging) e avg=10 (o melhor vence)
 for pair in "1 0" "10 1"; do
   set -- $pair
-  ./zipformer/ctc_decode.py --epoch "$EPOCHS" --avg "$1" --use-averaged-model "$2" \
+  python3 ./zipformer/ctc_decode.py --epoch "$EPOCHS" --avg "$1" --use-averaged-model "$2" \
     --exp-dir "$EXP" --lang-dir "$LD" --decoding-method ctc-greedy-search \
     --bpe-model "$LD/bpe.model" --cv-manifest-dir data/pt --language pt \
     --use-ctc 1 --use-transducer 0 --max-duration 400 $SZ || true
