@@ -236,6 +236,67 @@ impl AsrEngine {
         Ok(shape.to_vec())
     }
 
+    /// Roda a inferência CTC do NOSSO modelo icefall (contrato `x`(1,T,80)/`x_lens` →
+    /// `log_probs`(1,T,vocab)) e retorna `(log_probs achatado, T, vocab)`.
+    ///
+    /// Diferente de [`Self::encode`] (placeholder de M0 com nomes NeMo `audio_signal`/`length`
+    /// que só devolve o SHAPE), este método usa os nomes do export do icefall e retorna os
+    /// **dados** — habilitando o decode. ADR-1 do plano `m6-runtime-v0`: adicionar, não mudar.
+    ///
+    /// `mel` é o log-mel `(T, 80)` achatado em row-major.
+    ///
+    /// # Erros
+    /// [`AsrError::NoSession`] sem sessão; [`AsrError::InferenceFailed`] em shape/grafo inválido.
+    pub fn ctc_logits(
+        &mut self,
+        mel: &[f32],
+        n_frames: usize,
+    ) -> Result<(Vec<f32>, usize, usize), AsrError> {
+        let session = self.session.as_mut().ok_or(AsrError::NoSession)?;
+
+        let x = ndarray::Array3::from_shape_vec((1, n_frames, 80), mel.to_vec()).map_err(|e| {
+            AsrError::InferenceFailed { reason: format!("shape de features inválido: {e}") }
+        })?;
+        let x_lens = ndarray::Array1::from_vec(vec![n_frames as i64]);
+
+        let x_val = ort::value::Value::from_array(x)
+            .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
+        let xl_val = ort::value::Value::from_array(x_lens)
+            .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
+
+        let outputs = session
+            .run(ort::inputs!["x" => x_val, "x_lens" => xl_val])
+            .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
+
+        let (shape, data) = outputs["log_probs"]
+            .try_extract_tensor::<f32>()
+            .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
+        if shape.len() != 3 {
+            return Err(AsrError::InferenceFailed {
+                reason: format!("log_probs esperado 3-D, veio {:?}", shape),
+            });
+        }
+        let t = shape[1] as usize;
+        let vocab = shape[2] as usize;
+        Ok((data.to_vec(), t, vocab))
+    }
+
+    /// Transcreve um log-mel `(T, 80)` em texto: `ctc_logits` → CTC greedy → detok BPE.
+    /// `vocab` mapeia ids de token → pieces (carregado do `tokens.txt`). blank = 0 (icefall).
+    ///
+    /// # Erros
+    /// Propaga os erros de [`Self::ctc_logits`].
+    pub fn transcribe(
+        &mut self,
+        mel: &[f32],
+        n_frames: usize,
+        vocab: &Vocab,
+    ) -> Result<String, AsrError> {
+        let (logits, t, v) = self.ctc_logits(mel, n_frames)?;
+        let ids = crate::decode::ctc_greedy(&logits, t, v, 0);
+        Ok(crate::decode::detok(&ids, vocab))
+    }
+
     /// Caminho do modelo carregado.
     #[must_use]
     pub fn model_path(&self) -> &str {
