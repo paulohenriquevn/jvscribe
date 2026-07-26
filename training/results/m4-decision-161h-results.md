@@ -14,6 +14,26 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 | Zipformer-CTC | large (147M) | ⏳ | ⏳ | |
 | FastConformer-CTC (NeMo) | — | ⏳ | ⏳ | (fase 4) |
 
+## Penalidade telefônica MEDIDA (experimento #1 do asr-chief-scientist) `[MEDIDO]`
+
+Re-decode do checkpoint de 161h JÁ treinado no held-out FLEURS **degradado pela cadeia
+telefônica do M3** (banda 300-3400 Hz + G.711 A-law, resample de volta a 16 kHz para casar
+o pipeline de features — isola o dano do canal). `training/make_telephone_test.py`.
+
+| Domínio | WER (avg=10) | corretos |
+|---|---|---|
+| Clean (FLEURS 16 kHz) | 29,97% | 15.951 / 21.471 |
+| **Telefônico (banda + A-law)** | **38,60%** | 14.277 / 21.471 |
+
+**Penalidade = 1,29× (+8,6 p.p.)** — muito mais branda que o fator 2-3× da literatura
+(PRD § 7.1). Era o MAIOR risco identificado; medido, é favorável. Projeção honesta: se M5
+levar o clean a ~15%, o telefônico fica ~19% antes de augmentação — dentro do alvo 15-25%.
+
+**Caveats obrigatórios:** isola band-limiting + A-law com features casadas em 16 kHz. NÃO
+inclui resolução nativa 8 kHz, ruído acústico real, nem codec além do A-law. É o **piso** da
+penalidade de deploy; o número real pode ser maior. E é **antes** de treino com augmentação
+telefônica (que recuperaria a maior parte até desse 1,3×).
+
 ## Achados `[MEDIDO]`
 
 **1. Tese data-bound plenamente confirmada.** Zipformer-CTC small: **10h → 96% WER** (piloto,
