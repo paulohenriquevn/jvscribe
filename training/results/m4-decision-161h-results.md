@@ -10,7 +10,7 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 | Arquitetura | Tamanho | avg=1 | **avg=10** | erros (avg=10) |
 |---|---|---|---|---|
 | Zipformer-CTC | **small (22,1M)** | 33,99% | **29,97%** | 915 ins, 729 del, 4791 sub, **15.951 corretos** |
-| Zipformer-CTC | medium (64,3M) | ⏳ | ⏳ | (treinando) |
+| Zipformer-CTC | medium (64,3M) | 35,04% | **28,86%** | 939 ins, 630 del, 4628 sub, 16.213 corretos |
 | Zipformer-CTC | large (147M) | ⏳ | ⏳ | |
 | FastConformer-CTC (NeMo) | — | ⏳ | ⏳ | (fase 4) |
 
@@ -35,6 +35,12 @@ penalidade de deploy; o número real pode ser maior. E é **antes** de treino co
 telefônica (que recuperaria a maior parte até desse 1,3×).
 
 ## Achados `[MEDIDO]`
+
+**0. Retornos decrescentes com tamanho (favorece small p/ CPU).** small (22M) = 29,97% vs
+medium (64M) = 28,86% — **3× os params compram só −1,1 p.p. de WER** em 161h. Regime data-bound
+(capacidade não é o limite). Para o objetivo CPU real-time isto é decisivo: o `small` dá quase o
+mesmo WER a uma fração do compute → forte candidato a finalist. O `large` (147M) tende a ganho
+ainda menor e RTFx pior.
 
 **1. Tese data-bound plenamente confirmada.** Zipformer-CTC small: **10h → 96% WER** (piloto,
 colapso-para-blank) vs **161h → 30% WER** (este run). 16× mais dados leva de inútil a usável. O
