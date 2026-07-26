@@ -3,3 +3,4 @@
 //! processo, sem depender de subir um binário externo.
 
 pub mod app;
+pub mod transcribe;
