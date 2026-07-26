@@ -6,6 +6,7 @@ Other methods still stubs (T3.1) — T4.3 ADR DEFER for mutation.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -17,7 +18,56 @@ from . import BaseDetector
 
 _RUST_MODULE_LOCAL_PREFIXES = ("crate::", "self::", "super::", "crate", "self", "super")
 
+# Rust standard-library crates — always in-scope, never published to crates.io.
+# Treating them as "fabricated crates" is a detector bug, not a code defect.
+_RUST_STDLIB_CRATES = frozenset({"std", "core", "alloc", "proc_macro", "test"})
+
 _CARGO_UDEPS_TIMEOUT_SEC = 180
+
+
+def _norm_crate(name: str) -> str:
+    """Cargo package names use `-`; `use` paths use `_`. Compare on the `_` form."""
+    return name.strip().replace("-", "_")
+
+
+def _workspace_member_crates(changed_files: list[Path]) -> frozenset[str]:
+    """Collect local Cargo package names so intra-workspace `use` isn't fabricated.
+
+    Walks up from each changed file to the workspace root (the nearest ancestor
+    whose `Cargo.toml` declares `[workspace]`), then reads every `Cargo.toml`
+    under it for `name = "..."`. Names are normalized to the underscore form used
+    in `use` paths. Dependency-free (regex, no TOML lib) and failure-tolerant.
+    """
+    roots: set[Path] = set()
+    for f in changed_files:
+        cur = f.resolve().parent
+        while True:
+            manifest = cur / "Cargo.toml"
+            try:
+                if manifest.is_file() and "[workspace]" in manifest.read_text(
+                    encoding="utf-8", errors="ignore"
+                ):
+                    roots.add(cur)
+                    break
+            except OSError:
+                pass
+            if cur.parent == cur:
+                break
+            cur = cur.parent
+
+    names: set[str] = set()
+    name_re = re.compile(r'^\s*name\s*=\s*"([^"]+)"', re.MULTILINE)
+    for root in roots:
+        for manifest in root.rglob("Cargo.toml"):
+            if "target" in manifest.parts:
+                continue
+            try:
+                text = manifest.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for m in name_re.finditer(text):
+                names.add(_norm_crate(m.group(1)))
+    return frozenset(names)
 
 
 class RustDetector(BaseDetector):
@@ -71,6 +121,7 @@ class RustDetector(BaseDetector):
     def detect_symbol_fabrication(self, changed_files: list[Path]) -> list[Finding]:
         """T2.4 — Validate `use` statements against crates.io. Skip module-local (EC-17 analog)."""
         findings: list[Finding] = []
+        workspace_crates = _workspace_member_crates(changed_files)
         for src_file in changed_files:
             if not src_file.exists():
                 continue
@@ -84,9 +135,16 @@ class RustDetector(BaseDetector):
                 # EC-17 analog — module-local
                 if any(module == p or module.startswith(p) for p in _RUST_MODULE_LOCAL_PREFIXES):
                     continue
-                # Extract crate name (first segment of "serde::Deserialize")
-                crate = module.split("::", 1)[0].strip()
+                # Extract crate name (first segment of "serde::Deserialize"), stripping
+                # any `use x as y` alias that the extractor preserves verbatim.
+                crate = module.split("::", 1)[0].split(" as ", 1)[0].strip()
                 if not crate:
+                    continue
+                # Rust stdlib is never on crates.io; skip without a registry hit.
+                if crate in _RUST_STDLIB_CRATES:
+                    continue
+                # A crate defined in this Cargo workspace is not a fabricated crate.
+                if _norm_crate(crate) in workspace_crates:
                     continue
                 exists = _registry.crate_exists_on_crates_io(crate)
                 if exists is True:
