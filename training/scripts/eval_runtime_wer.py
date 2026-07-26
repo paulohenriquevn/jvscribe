@@ -98,10 +98,16 @@ def main() -> None:
             sf.write(wav, data16, sr, subtype="PCM_16")
 
             ref = normalize_ptbr(row["transcription"]).split()
-            out = subprocess.run(
-                [str(CLI), "transcribe", str(wav)], capture_output=True, text=True, timeout=120
-            )
-            hyp = normalize_ptbr(out.stdout).split()
+            # Robustez: um timeout transitório (contenção de CPU) NÃO pode derrubar o
+            # eval inteiro. Conta a utterance como toda-deleção (hyp vazia) e segue.
+            try:
+                out = subprocess.run(
+                    [str(CLI), "transcribe", str(wav)], capture_output=True, text=True, timeout=120
+                )
+                hyp = normalize_ptbr(out.stdout).split()
+            except subprocess.TimeoutExpired:
+                print(f"  [TIMEOUT] u{done:03d} — contado como falha, seguindo", file=sys.stderr)
+                hyp = []
             err = word_edit_distance(ref, hyp)
             tot_err += err
             tot_words += len(ref)

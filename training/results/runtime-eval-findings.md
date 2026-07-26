@@ -15,18 +15,23 @@ com a **mesma `normalize_ptbr` do treino**.
 
 | Caminho | WER | n |
 |---|---|---|
-| **Runtime Rust** (macaw-cli) | **25,75%** | 40 utterances (1.033 palavras) |
+| **Runtime Rust** (macaw-cli) — amostra grande | **29,92%** | **470 utterances** |
+| Runtime Rust — amostra pequena (interim) | 25,75% | 40 utterances |
 | Decode Python (icefall) | 29,97% | test completo (21.471 palavras) |
 
-**Conclusão:** o runtime Rust **não degrada** a acurácia vs o decode de treino — 25,75%
-(n=40) é consistente com 29,97% (set completo), dentro do ruído do subconjunto (IC largo
-com n=40). Prova que a cadeia Rust (kaldi_fbank 80-bin + transcribe + ctc_greedy) é
-**funcionalmente equivalente ao decode Python do icefall**. Transcrições sensatas
-(ex: "consequentemente duas espécies de peixe entraram em extinção" — perfeita).
+**Conclusão:** o runtime Rust **não degrada** a acurácia vs o decode de treino — em
+n=470 o WER converge para **29,92%, praticamente idêntico aos 29,97%** do decode Python
+(o n=40 = 25,75% era só ruído de subconjunto; com n grande o número casa). Prova que a
+cadeia Rust (kaldi_fbank 80-bin + transcribe + ctc_greedy) é **funcionalmente equivalente
+ao decode Python do icefall**. Transcrições sensatas (ex: "consequentemente duas espécies
+de peixe entraram em extinção" — perfeita; "os anúncios regulares no metrô..." — 17,8 s
+correta).
 
-**Caveats (Regra 3):** n=40 é subconjunto (IC mais largo que o número Python); é WER
-**wideband limpo** (não telefônico 8 kHz — ver penalidade 1,29× em `m4-decision-161h-results.md`);
-é o modelo **small atual**, não o WER final de M5.
+**Caveats (Regra 3):** o run de n=470 parou em u476 por um timeout transitório (contenção
+de CPU durante o treino do large; u476 sozinho roda em 0,48 s) — o eval agora trata timeout
+sem derrubar; 470/919 já dá IC apertado. É WER **wideband limpo** (não telefônico 8 kHz —
+ver penalidade 1,29× em `m4-decision-161h-results.md`); é o modelo **small atual**, não o
+WER final de M5.
 
 ## Velocidade — RTFx do runtime `[MEDIDO]`
 
