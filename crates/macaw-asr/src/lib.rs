@@ -9,6 +9,8 @@
 //! válido para o produto**; todos devem ser rotulados
 //! `[MEDIDO — encanamento apenas]`.
 
+pub mod decode;
+
 use std::fmt;
 use std::path::Path;
 

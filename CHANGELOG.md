@@ -15,6 +15,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- **M6 runtime v0 — decoder CTC greedy em Rust `[MEDIDO]`** (`crates/macaw-asr/src/decode.rs`): implementado o `ctc_greedy` (argmax por frame + colapso blank/repetição, portado de sherpa-onnx `offline-ctc-greedy-search-decoder.cc:42`, Regra 9) + `detok` BPE (▁→espaço) + `argmax`. Domínio puro (sem ONNX), fail-safe a entrada curta. **5/5 testes fixture verdes** (`tests/ctc_decode_test.rs`), clippy limpo, 57 LoC. Fase 1 do plano `m6-runtime-v0` (CYCLE de M6: discover SHIPPABLE → plan SHIPPABLE 100 → implement). Zero dep nova
+
 - **M6 early (real-time de-risk com o modelo atual)** — `training/bench_rtfx.py --soak-min N`: modo soak que roda o int8 continuamente por N min na i7-1355U, logando RTFx por janela de 30s para revelar throttle térmico (RNF-04 exige RTFx sustentado ≥ 80% do pico ≥ 10 min). Iniciado M6 com o Zipformer-CTC small que já temos, conforme decisão do dono (2026-07-26): valida os critérios de real-time que NÃO dependem de M5. Nota honesta: soak/carga/int8 são validáveis já; a latência p99 streaming (RNF-02) + equivalência batch≡streaming exigem um modelo causal (`train --causal 1`), que fica para quando um GPU liberar
 
 - **M4 fase 4 — corpus NeMo p/ o 2º finalista** (`training/prep_nemo.py`): converte o MESMO corpus (MLS-PT 161h train + FLEURS dev/test) para o formato de manifest do NeMo (`{audio_filepath, duration, text}`), reusando `prepare_mls` + o build do FLEURS (Regra 9) — comparação justa FastConformer-CTC vs Zipformer-CTC no mesmo test. Testes: `training/tests/test_prep_nemo.py`. Instância NeMo (imagem `nvcr.io/nvidia/nemo:24.12`) provisionada
