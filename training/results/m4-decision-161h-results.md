@@ -26,6 +26,21 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 > confounds de framework** que o NeMo introduziria (features, loop de treino, tokenizer
 > diferentes). O ADR de M4 fará a comparação Zipformer-CTC vs Conformer-CTC no mesmo
 > eixo WER×RTFx. Não é o FastConformer exato — o ADR registra isso como limite.
+>
+> **Setup do Conformer-CTC pronto e validado `[MEDIDO — dry-run CPU]`** (recipe
+> `conformer_ctc3` do icefall = CTC puro, análogo do Zipformer-CTC): datamodule
+> adaptado ao commonvoice-PT (reusa o mesmo `data/pt/lang_bpe_500`), **64,718M params**
+> (casa com o Zipformer-medium 64,3M, dif 0,65%). Dry-run em CPU (GPU intocada, Zipformer
+> seguiu treinando): carrega cuts PT reais + forward `k2.ctc_loss` → loss finito. Patch
+> reprodutível: `prep_conformer_ctc.py` na instância. **Lançar quando o large liberar a
+> GPU** (OOM: só ~9,5GB livres com o large rodando):
+> ```bash
+> cd /workspace/icefall/egs/commonvoice/ASR
+> env OMP_NUM_THREADS=8 ./conformer_ctc3/train.py --world-size 1 --num-epochs 30 \
+>   --start-epoch 1 --use-fp16 1 --enable-musan 0 --exp-dir conformer_ctc3/exp-medium-ctc \
+>   --language pt --cv-manifest-dir data/pt --lang-dir data/pt/lang_bpe_500 --max-duration 300
+> ```
+> Depois: adaptar `ctc_decode.py` (mínimo, análogo ao zipformer) → WER held-out FLEURS.
 
 ## Curva WER × RTFx (o tradeoff que decide o finalist) `[MEDIDO]`
 
