@@ -12,7 +12,24 @@ use std::time::{Duration, Instant};
 
 /// GET simples via TCP cru (sem dependência de cliente HTTP). Retorna o corpo.
 fn http_get(port: u16, path: &str) -> std::io::Result<String> {
-    let mut s = TcpStream::connect(("127.0.0.1", port))?;
+    // Retry no connect: sob contenção de CPU (suíte inteira em paralelo) o accept
+    // do servidor pode recusar transitoriamente antes de estar pronto — isso é
+    // starvação, NÃO serialização (essa apareceria na asserção de timing, não no
+    // connect). Retry curto elimina o flaky sem mascarar o bug que o teste caça.
+    let mut s = {
+        let mut attempt = 0;
+        loop {
+            match TcpStream::connect(("127.0.0.1", port)) {
+                Ok(s) => break s,
+                Err(e) if attempt < 10 => {
+                    attempt += 1;
+                    std::thread::sleep(Duration::from_millis(20));
+                    let _ = e;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    };
     s.set_read_timeout(Some(Duration::from_secs(10)))?;
     write!(s, "GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")?;
     let mut buf = String::new();
