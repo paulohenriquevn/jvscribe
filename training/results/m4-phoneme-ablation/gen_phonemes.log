@@ -1,0 +1,3 @@
+[phonemes] train: +37521 textos únicos (total acumulado 37521)
+[phonemes] dev: +147 textos únicos (total acumulado 37668)
+[phonemes] 37668/37668 textos mapeados, 62 fonemas distintos, 0 G2P vazios → data/pt/phoneme_targets.json

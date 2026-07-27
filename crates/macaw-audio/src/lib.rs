@@ -11,6 +11,7 @@
 pub mod capture;
 pub mod features;
 pub mod harness;
+pub mod kaldi_fbank;
 pub mod metrics;
 pub mod vad;
 

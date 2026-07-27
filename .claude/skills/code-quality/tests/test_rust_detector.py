@@ -72,3 +72,55 @@ def test_rust_detector_handles_malformed_json(tmp_path: Path) -> None:
         findings = det.detect_dead_code(tmp_path)
     assert len(findings) == 1
     assert "auditor_output_malformed_cargo-udeps" in findings[0].allowlist_key
+
+
+# --- D2 symbol-fabrication false-positive regressions (rust.py) ---------------
+# The Rust D2 detector flagged 98 false positives on the macaw workspace:
+# 57 stdlib (`std`), 40 workspace-internal crates (`macaw_*`), 1 `use x as y`
+# alias whose ` as pulse` suffix polluted the crate name. All three are detector
+# bugs, not fabricated symbols. These tests pin the fix.
+
+
+def _d2(findings):
+    return [f for f in findings if f.detector == "d2_symbol_fab"]
+
+
+def test_symbol_fab_skips_rust_stdlib(tmp_path: Path) -> None:
+    """`std`/`core`/`alloc` are never on crates.io — must not hit the registry."""
+    src = tmp_path / "a.rs"
+    src.write_text("use std::collections::HashMap;\nuse core::fmt;\n")
+    det = RustDetector()
+    with patch("scripts.detectors.rust._registry.crate_exists_on_crates_io") as m:
+        findings = det.detect_symbol_fabrication([src])
+    m.assert_not_called()
+    assert _d2(findings) == []
+
+
+def test_symbol_fab_skips_workspace_member_crate(tmp_path: Path) -> None:
+    """A crate defined in the same Cargo workspace is not a fabricated crate."""
+    (tmp_path / "Cargo.toml").write_text('[workspace]\nmembers = ["crates/*"]\n')
+    crate_dir = tmp_path / "crates" / "macaw-asr"
+    crate_dir.mkdir(parents=True)
+    (crate_dir / "Cargo.toml").write_text('[package]\nname = "macaw-asr"\n')
+    src = crate_dir / "src" / "lib.rs"
+    src.parent.mkdir()
+    # a sibling crate importing the workspace member (underscore form)
+    src.write_text("use macaw_asr::AsrEngine;\n")
+    det = RustDetector()
+    with patch("scripts.detectors.rust._registry.crate_exists_on_crates_io") as m:
+        findings = det.detect_symbol_fabrication([src])
+    m.assert_not_called()
+    assert _d2(findings) == []
+
+
+def test_symbol_fab_strips_use_alias(tmp_path: Path) -> None:
+    """`use libpulse_binding as pulse;` must query the registry with the bare crate."""
+    src = tmp_path / "a.rs"
+    src.write_text("use libpulse_binding as pulse;\n")
+    det = RustDetector()
+    with patch(
+        "scripts.detectors.rust._registry.crate_exists_on_crates_io", return_value=True
+    ) as m:
+        findings = det.detect_symbol_fabrication([src])
+    m.assert_called_once_with("libpulse_binding")
+    assert _d2(findings) == []

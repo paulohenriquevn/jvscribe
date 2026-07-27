@@ -1,0 +1,6 @@
+n_frames=300
+n_bins=80
+sample_rate=16000
+num_input_samples=48000
+source_wav=tests/fixtures/tone_440hz_16k.wav
+lhotse_config=Fbank(FbankConfig(num_mel_bins=80))

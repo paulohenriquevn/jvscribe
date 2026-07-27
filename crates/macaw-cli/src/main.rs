@@ -14,6 +14,8 @@
 //!   rótulo de falante + backlog enquanto roda. Precisa de servidor de áudio.
 
 use macaw_cli::app;
+use macaw_cli::ort_setup::ensure_ort_dylib;
+use macaw_cli::transcribe::transcribe_wav;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -39,12 +41,48 @@ fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/tone_440hz_16k.wav")
 }
 
+/// Diretório do export do modelo icefall de produção (`model.int8.onnx` + `tokens.txt`).
+fn onnx_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../training/results/onnx")
+}
+
+/// Modo `transcribe <wav>`: caller de produção do runtime v0 (pilar a do wiring triad).
+/// Roda `wav → macaw_audio::kaldi_fbank → AsrEngine::transcribe` e imprime o texto + a
+/// métrica de runtime (pilar c: RTFx/tokens/duração — observabilidade em produção).
+fn run_transcribe(wav: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let (text, m) = transcribe_wav(&onnx_dir(), std::path::Path::new(wav))?;
+    println!("{text}");
+    // Pilar (c) — métrica observável: sem isto, o decode é invisível quando quebra.
+    eprintln!(
+        "[macaw-cli transcribe] T={} audio={:.2}s decode={:.0}ms RTFx={:.1}× tokens={}",
+        m.n_frames, m.audio_secs, m.decode_ms, m.rtfx, m.tokens
+    );
+    Ok(())
+}
+
 fn main() -> ExitCode {
     let mode = std::env::args().nth(1).unwrap_or_else(|| "fixture".to_string());
+    // Task #26: garante a libonnxruntime otimizada ANTES de qualquer uso do ort.
+    // Todos os modos abaixo carregam o modelo (ort); sem a lib certa a inferência é
+    // até 40× mais lenta. Falha alto em vez de degradar em silêncio.
+    match ensure_ort_dylib() {
+        Ok(lib) => eprintln!("[ort] libonnxruntime: {}", lib.display()),
+        Err(e) => {
+            eprintln!("erro: {e}");
+            return ExitCode::from(2);
+        }
+    }
     let result = match mode.as_str() {
         "fixture" => run_fixture(),
         "bench" => run_bench(),
         "live" => run_live(),
+        "transcribe" => match std::env::args().nth(2) {
+            Some(wav) => run_transcribe(&wav),
+            None => {
+                eprintln!("uso: macaw-cli transcribe <arquivo.wav>");
+                return ExitCode::from(2);
+            }
+        },
         "serve" => {
             let port = std::env::args()
                 .nth(2)
@@ -53,7 +91,9 @@ fn main() -> ExitCode {
             app::run(port)
         }
         other => {
-            eprintln!("modo desconhecido: {other:?} (use 'fixture', 'bench', 'live' ou 'serve')");
+            eprintln!(
+                "modo desconhecido: {other:?} (use 'fixture', 'bench', 'live', 'transcribe' ou 'serve')"
+            );
             return ExitCode::from(2);
         }
     };
