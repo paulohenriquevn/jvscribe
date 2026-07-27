@@ -14,6 +14,7 @@
 //!   rótulo de falante + backlog enquanto roda. Precisa de servidor de áudio.
 
 use macaw_cli::app;
+use macaw_cli::ort_setup::ensure_ort_dylib;
 use macaw_cli::transcribe::transcribe_wav;
 
 use std::path::PathBuf;
@@ -61,6 +62,16 @@ fn run_transcribe(wav: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 fn main() -> ExitCode {
     let mode = std::env::args().nth(1).unwrap_or_else(|| "fixture".to_string());
+    // Task #26: garante a libonnxruntime otimizada ANTES de qualquer uso do ort.
+    // Todos os modos abaixo carregam o modelo (ort); sem a lib certa a inferência é
+    // até 40× mais lenta. Falha alto em vez de degradar em silêncio.
+    match ensure_ort_dylib() {
+        Ok(lib) => eprintln!("[ort] libonnxruntime: {}", lib.display()),
+        Err(e) => {
+            eprintln!("erro: {e}");
+            return ExitCode::from(2);
+        }
+    }
     let result = match mode.as_str() {
         "fixture" => run_fixture(),
         "bench" => run_bench(),
