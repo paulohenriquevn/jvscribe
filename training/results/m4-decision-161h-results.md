@@ -5,14 +5,28 @@
 vast.ai RTX 3090 (imagem `k2fsa/icefall`). **Decode:** `ctc-greedy-search`. Este é o run de
 DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arquiteturas no mesmo test set.
 
-## WER held-out (FLEURS test, 21.471 palavras de ref) `[MEDIDO]`
+## WER + CER held-out (FLEURS test, 21.471 palavras de ref) `[MEDIDO]`
 
-| Arquitetura | Tamanho | avg=1 | **avg=10** | erros (avg=10) |
+| Arquitetura | Tamanho | WER (melhor avg) | **CER (limpo)** | params |
 |---|---|---|---|---|
-| Zipformer-CTC | **small (22,1M)** | 33,99% | **29,97%** | 915 ins, 729 del, 4791 sub, **15.951 corretos** |
-| Zipformer-CTC | medium (64,3M) | 35,04% | **28,86%** | 939 ins, 630 del, 4628 sub, 16.213 corretos |
-| Zipformer-CTC | large (147M) | ⏳ | ⏳ | (treinando epoch 15/30) |
+| Zipformer-CTC | **small (22,1M)** | **29,97%** (avg=10) | **~11,0%**¹ | 1× |
+| Zipformer-CTC | medium (64,3M) | **28,86%** (avg=10) | **10,94%** | 3× |
+| Zipformer-CTC | large (147M) | **28,87%** (avg=9)² | **11,14%** | 7× |
 | **Conformer-CTC (icefall)** | (a treinar) | ⏳ | ⏳ | **2º finalista** — ver nota de divergência |
+
+¹ CER do small vem do runtime (`runtime-eval-findings.md`, 10,99%) porque os recogs
+icefall do small foram sobrescritos pelo experimento telefônico (mesmo exp-dir).
+² large decodado com **avg=9** (não avg=10): o `epoch-20.pt` foi apagado ao consertar
+o crash de disco cheio (o treino morreu no epoch-28 com o checkpoint corrompido; retomado
+do epoch-27 até 30). avg=9 (baseline epoch-21) ≈ avg=10 — diferença desprezível.
+
+> **Retornos decrescentes CONFIRMADOS de forma decisiva `[MEDIDO]`.** O **large (147M) empata
+> com o medium (64M)** em WER (28,87% ≈ 28,86%) **e** CER (11,14% ≈ 10,94%) — **2,3× mais
+> parâmetros, ganho ZERO**. E o **small (22M) tem o MESMO CER (~11%) que o large** — no nível
+> de caractere o small é tão bom quanto o modelo 7× maior; o 1,1pp de WER a mais do small é
+> fronteira-de-palavra/rare-word, não erro acústico. Regime **data-bound** (capacidade não é
+> o gargalo — corpus é, tese do PRD R9). **O `small` é o finalista claro** para CPU real-time:
+> mesmo CER, ~1pp de WER, a 1/3–1/7 do compute (RTFx 49-90× vs 17-38× do medium).
 
 > **Divergência de blueprint registrada (2026-07-26, decisão do dono).** O 2º
 > finalista era **FastConformer-CTC (NeMo)** (`m4-pilot-blueprint.md`). Após **4+
