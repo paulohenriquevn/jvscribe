@@ -15,6 +15,20 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.5.0] - 2026-07-27
+
+### Added
+
 - **M4 fase 3 — cabeça de fonema: DoD ≥3% atingida no ponto (WER −4,63% rel, IC fronteiriço) `[MEDIDO]`** (`training/prep_phoneme_head.py` + `training/gen_phonemes.py` + `training/scripts/bootstrap_wer_ci.py` + `training/scripts/wer_core.py`, NOVOS): estende a recipe REAL do icefall (`zipformer/{zipformer.py,model.py,train.py}`) com uma 2ª cabeça CTC de fonema em camada intermediária (§ 8.1 do PRD), via patch determinístico idempotente (substrings exatas + `assert count==1` — Regra 9). Colocação em ~50% da profundidade (stack 2, dim 256), fundamentada em Lee & Watanabe 2021 (intermediate-CTC). Custo em produção `[ESTIMATIVA/FONTE-REPO]` zero (cabeça só instancia quando `phoneme_vocab_size>0` e não entra no grafo ONNX de decode — verificado; +16.034 params = +0,07% no treino). Alvos G2P `phonemizer`+`espeak-ng` (GPLv3, **só treino offline**): 37.668 textos, 62 fonemas, 0 falhas. **Resultado da ablação** (30 épocas, `phoneme_loss_scale=0.3`, decode `ctc-greedy-search` avg=10, FLEURS held-out, load estrito 559/559 chaves): **WER 29,97% → 28,58%** (CER **11,42% → 10,85%**), **melhora relativa 4,63%** (IC95% bootstrap pareado [2,63%, 6,63%], n=919, B=10.000). **P(melhora>0)=100%** (inequivocamente significativa), **P(melhora≥3%)=94,1%**. **Critério de DoD = estimativa pontual** (4,63% ≥ 3% → atingida); o IC é qualificação obrigatória e é honesto: limite inferior 2,63% < 3% → **PASS com nota, fronteiriço, não folgado** (o critério IC-inferior≥3% exigiria varredura de peso — follow-up). Supervisão fonética do § 8.1 empiricamente validada para o Zipformer-CTC small. Evidência: `training/results/m4-phoneme-ablation-results.md`. Testes puros (15 casos): `test_gen_phonemes.py`, `test_prep_phoneme_head.py`, `test_bootstrap_wer_ci.py`, `test_cer_from_recogs.py`.
 - **ADR 0002 — finalista de arquitetura de M4: Zipformer-CTC small (22M), int8 `[MEDIDO]`** (`knowledge-base/adrs/0002-m4-architecture-finalist.md`): fecha a pendência do ADR 0001 (`asr-chief-scientist`). Decide encoder/decoder/tamanho para o alvo CPU real-time **por medição** (mesmo corpus/test/decode/máquina para todos os braços). Head-to-head arquitetural: **Zipformer-CTC medium domina os dois eixos de acurácia sobre Conformer-CTC medium** (WER 28,86% vs 31,57%, CER 10,94% vs 11,90%, params equivalentes +0,7%) — diferença atribuível à arquitetura, não a confound de framework. Curva WER×RTFx decide o tamanho: **small (22M) domina** — mesmo CER (~11%) do large 7× maior, ~1pp de WER a mais, RTFx 49-90× vs 17-38× do medium (retornos decrescentes: large empata com medium, ganho zero por 2,3× params — regime data-bound, R9). int8 lossless (Δ 0,24pp WER vs fp32). Rejeita Conformer-CTC (perde acurácia; RTFx CPU `[DESCONHECIDO]` mas não-decisivo) e medium/large Zipformer (retornos decrescentes). Limites honestos: WER é wideband FLEURS (não 8 kHz call center — M5); é Conformer-icefall, não FastConformer-NeMo (un-provisionable, 4+ falhas); treino causal/equivalência streaming são M4-fase-3/M6. Evidência: `training/results/m4-decision-161h-results.md`, `training/results/runtime-eval-findings.md`.
 - **M4 fase 4 — Conformer-CTC (2º finalista) treinado e decodado `[MEDIDO]`** (`training/scripts/cer_from_recogs.py`, NOVO): Conformer-CTC medium (64,72M, recipe `conformer_ctc3` do icefall) treinou 30 épocas no MESMO corpus `data/pt` (161h) e decodou `ctc-greedy-search` avg=10 no FLEURS test full (919 cuts, 21.471 palavras) → **WER 31,57% / CER 11,90%**. Fecha o head-to-head do ADR 0002. O scorer novo computa WER+CER de um `recogs-*.txt` do icefall reutilizando o Levenshtein do `eval_runtime_wer.py` (Regra 9) — **validado** por reproduzir o WER oficial do icefall exatamente (31,57%), o que torna o CER confiável; método idêntico ao que produziu o CER do Zipformer (comparação apples-to-apples). Testes: `training/tests/test_cer_from_recogs.py` (caso conhecido + transcrição perfeita + caso negativo ref/hyp desemparelhado falha alto). Artefatos (recogs/errs/logs de avg=10 e avg=1): `training/results/m4-conformer-ctc-medium/`.
@@ -45,14 +59,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - Blueprint de discovery de M4 (piloto comparativo) — `knowledge-base/discoveries/blueprints/m4-pilot-blueprint.md` (SHIPPABLE 100). Deep research de 3 agentes (asr-chief-scientist, ptbr-phonetics-scientist, ml-infra-engineer) respondeu 8 questões: recipe icefall Zipformer-CTC (train.py paramétrico, 3 tamanhos por escala), **G2P PT-BR medido** (cobertura/determinismo 100% sobre FLEURS pt_br, mas GPLv3 — só treino offline; PER absoluto `[DESCONHECIDO]`), e a **estimativa de custo com fórmula**: piloto ~$98-200, M5 completo ~$1.350-2.000/run. Achados que reenquadram M4: a supervisão fonética NÃO existe pronta na recipe (só CTC de subword — exige construir a cabeça de fonema); k2 é incompatível com o torch instalado (treino exige imagem GPU separada)
 
+
 ### Changed
 
 - **Limpeza de `training/` pós-audit `/loop-system-design`** (relatório: `knowledge-base/audits/2026-07-25-training-system-design.md`, score 3,5/5, 0 críticos/altos): o **cluster smoke** (`train_ctc.py`, `decode_ctc.py`, `prep_fleurs.py`, `gen_phonemes.py`) foi movido para `training/smoke/` (quarentena) — remove o risco de copy-paste ao lado do único código de produção `prep_icefall.py` (findings B1/D3) e resolve a duplicação/drift do `normalize_ptbr` (D2) deixando a produção com uma cópia só. `prep_icefall.py`: removidos imports mortos `numpy`/`glob` (D4) e parametrizado `--num-jobs` para o prep de ~500h de M5 (SC1). ADR sugerido (formaliza a decisão Regra-9 de reusar a recipe): `knowledge-base/audits/000X-m4-reuse-icefall-recipe.md`
 - **Correção de rumo em M4 (honestidade):** o `train_ctc.py` (wrapper self-contained) foi rebaixado a SMOKE ONLY — tem bug confirmado contra a recipe real do icefall (não passa `src_key_padding_mask` ao encoder → atende frames de padding) + cabeça de fonema ad-hoc + configs por escala. O smoke overfitou (WER treino 18% vs held-out 99%), o que mascarou os defeitos. O **piloto de 500 h passa a usar a recipe REAL do icefall** (`train.py`/`model.py`/`asr_datamodule.py`, `--use-ctc 1 --use-transducer 0`) sem reescrever loop/loss/model (Regra 9) — runbook em `training/run_pilot_icefall.md`
 
-### Deprecated
-
-### Removed
 
 ### Fixed
 
@@ -64,8 +76,6 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `training/run_zipformer_ctc.sh` (2 bugs pegos no run do small): o decode chamava `./zipformer/ctc_decode.py` (permission-denied, pois o `patch_ctc_decode.py` escreve sem +x) → agora `python3 ./...`; e o guard do lang-dir olhava `tokens.txt` (que existe sem o lang completo) → agora olha `L.pt`, o artefato final do `prepare_lang_bpe`
 - `training/prep_mls.py` (2 bugs descobertos rodando na instância): `corpus_dir` passado ao `prepare_mls` é o **parent** que contém `mls_portuguese_opus/` (o recipe faz `corpus_dir.glob("mls_*")`), não o dir do idioma; e a estrutura de retorno é `manifests[lang][split]` (lhotse `mls.py:94,133`), não `[split][lang]`. Adicionado `output_dir` de cache para re-runs não re-escanearem os opus
 - `training/prep_icefall.py`: `_download` agora cria o `PARQUET_DIR` antes do `curl` (o `curl -o` falhava com exit 23 "write error" quando o diretório não existia — descoberto ao rodar o piloto real na vast.ai) e usa `curl -sfL` (`-f`: falha explícita em HTTP 4xx/5xx em vez de gravar página de erro como se fosse parquet). Teste de regressão em `training/tests/test_prep_icefall.py` (`test_download_cria_pqdir_antes_do_curl`)
-
-### Security
 
 ## [0.4.0] - 2026-07-25
 
