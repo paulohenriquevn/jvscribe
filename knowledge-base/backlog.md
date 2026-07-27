@@ -38,3 +38,20 @@ Itens de investigação registrados para não se perderem. Cada um vira um ciclo
   Para call center + compliance, ter um sinal "esta transcrição é incerta" (em vez de
   emitir lixo confiante) é valioso. Adaptar a ideia ao nosso CTC (confiança por posterior).
   `[LITERATURA]`.
+
+- **DISC-04 — léxico + biasing contextual sobre CTC (a ideia do Paulo, versão rigorosa).**
+  Ideia (Paulo, 2026-07-26): "conhecemos todas as palavras PT-BR → se a palavra existe,
+  não mexe; se não, corrige via retrieval/biasing". **Instinto certo — é a restrição de
+  léxico que decoders WFST embutem no grafo** (`L`∘`G`∘`B`: léxico ∘ LM ∘ biasing). 3
+  refinamentos obrigatórios (análise de PhD): (a) hashmap sozinho tem **recall baixo** —
+  erros real-word ("acidente→ocidente", ambas palavras) PASSAM no filtro; (b) **corrompe
+  nomes corretos** — nome de cliente/protocolo ∉ dicionário → discriminador tem de ser
+  `∈ (dicionário ∪ lista de biasing)`; (c) non-word é correção **fonética+LM**, não
+  semântica (MiniLM não leva "logares"→"lugares"). **Arquitetura certa: trocar greedy por
+  BEAM + FST de (léxico PT-BR ∪ hotwords) + LM leve** — usa o posterior do CTC (que o
+  pós-hoc joga fora), previne non-word por construção, reusa o **sherpa-onnx** (Regra 9,
+  já clonado). Fontes: CB-RAG `arxiv 2509.19567`, ED-CEC `arxiv 2310.05129`, entity-RAG
+  `arxiv 2409.06062`. **Pré-req:** beam no runtime + finalista de M4. **Evidência que
+  decide o teto:** `training/scripts/analyze_error_composition.py` mede a fração de erro
+  atacável por léxico vs real-word (inatacável) vs rare-ref (biasing) vs false-flag
+  (corrupção). Líder: `decoding-biasing-engineer` (destravado com CTC decidido). `[LITERATURA]`.
