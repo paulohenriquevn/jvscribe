@@ -55,3 +55,25 @@ Itens de investigação registrados para não se perderem. Cada um vira um ciclo
   decide o teto:** `training/scripts/analyze_error_composition.py` mede a fração de erro
   atacável por léxico vs real-word (inatacável) vs rare-ref (biasing) vs false-flag
   (corrupção). Líder: `decoding-biasing-engineer` (destravado com CTC decidido). `[LITERATURA]`.
+
+  **Afinado pelo paper Apple (`arxiv 2409.06062`, texto completo lido 2026-07-27) — 3 correções:**
+  (i) **retrieval ACÚSTICO, não semântico.** Tabela II do paper: Acoustic Neighbor Embeddings
+  (ANE) recall@1 head 84,8% > T5-semântico 80,7% > BM25 53,5%. A chave de retrieval das
+  entidades (nomes/protocolos) tem de capturar acústica, NÃO significado. Refuta o framing
+  "MiniLM semântico". Embedding da **ortografia ≈ do fonema** (fonema dá <1%, exige G2P) →
+  pode pular G2P no retrieval. (ii) **injeção IN-DECODER, não pós-hoc.** O paper corrige a
+  string 1-best sem áudio e admite (§ III) que re-rodar o ASR com contexto ([15][16]) é
+  melhor mas exige áudio — **nós TEMOS o áudio + posterior do CTC**, então injetamos o
+  biasing no decode (context-graph/FST `B`, como o sherpa), não num corretor pós-hoc.
+  (iii) **simplicidade:** all-n-grams como query (sem NER), **1 melhor match acústico** (multi
+  candidato piora), adaptação mínima. O **LLM de 7B do paper NÃO transfere** (CPU), mas seu
+  valor é o retrieval — a injeção é FST, sem LLM.
+
+- **EXP-02 — fusão de LM (neural + n-gram) no beam do decode: o maior ganho barato.** PRIORIDADE
+  e pré-requisito de DISC-04. Hoje decodamos **greedy, sem LM**. O paper Apple (`arxiv 2409.06062`
+  § IV-A) mostra que até o CTC deles usa **DOIS LMs externos** (neural + 4-gram) — fusão de LM é
+  table-stakes. Ataca a classe **real-word 36%** (medida em `analyze_error_composition.py`) que o
+  léxico NÃO pega ("estruturas→torturas"). icefall/sherpa já suportam LM rescoring sobre CTC
+  (Regra 9). **Fazer:** treinar um n-gram PT-BR (ou reusar) + beam + shallow fusion; medir a
+  queda de WER. Barato, independente de biasing, e destrava o beam que DISC-04 também precisa.
+  Pré-req: finalista de M4 + beam no runtime. `[LITERATURA/MEDIDO]`.
