@@ -21,8 +21,8 @@ from eval_runtime_wer import word_edit_distance  # reuso, não reinventa (Regra 
 LINE = re.compile(r":\t(ref|hyp)=(\[.*\])$")
 
 
-def score_recogs(text: str) -> dict:
-    """Computa WER+CER de um recogs do icefall (lógica pura, sem I/O — testável).
+def parse_recogs(text: str) -> dict[str, tuple[list[str], list[str]]]:
+    """Parseia um recogs do icefall em {utt: (ref_words, hyp_words)} (puro, testável).
 
     Falha alto (`ValueError`) se ref/hyp ficarem desemparelhados (caso negativo:
     recogs truncado ou corrompido não pode virar um número silenciosamente).
@@ -40,6 +40,14 @@ def score_recogs(text: str) -> dict:
     unpaired = set(refs) ^ set(hyps)
     if unpaired:
         raise ValueError(f"ref/hyp desemparelhados em {len(unpaired)} utterances: {sorted(unpaired)[:3]}")
+    return {utt: (refs[utt], hyps[utt]) for utt in refs}
+
+
+def score_recogs(text: str) -> dict:
+    """Computa WER+CER de um recogs do icefall (lógica pura, sem I/O — testável)."""
+    parsed = parse_recogs(text)
+    refs = {u: r for u, (r, _) in parsed.items()}
+    hyps = {u: h for u, (_, h) in parsed.items()}
 
     tot_cerr = tot_chars = tot_werr = tot_words = 0
     for utt, ref in refs.items():
