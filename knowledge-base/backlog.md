@@ -69,6 +69,36 @@ Itens de investigação registrados para não se perderem. Cada um vira um ciclo
   candidato piora), adaptação mínima. O **LLM de 7B do paper NÃO transfere** (CPU), mas seu
   valor é o retrieval — a injeção é FST, sem LLM.
 
+  **Mapeamento ao roadmap existente (verificado nos arquivos, não é feature nova — 2026-07-27):**
+  DISC-04 NÃO cria requisito; **implementa RF-08/RF-08b já escritos**. Mapa:
+  - **RF-08** (`PRD.md:107`, v1.1): "aceitar lista de hotwords em runtime e favorecê-las na
+    decodificação" = a lista de termos do domínio (Itaú, Nubank, Pix, boleto, nome do cliente).
+  - **RF-08b** (`PRD.md:108`, v1.1): "casar hotwords em espaço fonético (pronúncia, não grafia) —
+    nomes próprios raros" = a expansão fonética (G2P, Q-08 de M4) + matching ACÚSTICO (insight Apple).
+  - **ROADMAP M8** (`ROADMAP.md:274`): "Hotwords em espaço fonético (nomes próprios raros, **nome
+    do cliente**)" — já prevê o vocabulário por-cliente.
+  - **`decoding-biasing-engineer`** (agent): dono; WFST/context-graph, FLToP, WCTC-Biasing, word
+    spotter, contextual biasing SEM retreino, streaming. Modo "discover agora, implementar pós-M2"
+    (destravado — CTC decidido).
+  - **`PRD.md:250`**: Zipformer+CTC tem "FLToP aplicável (10,5×); **hotwords via WCTC-Biasing**" —
+    o mecanismo é vantagem da família que escolhemos.
+
+  **Timing honesto:** é **v1.1 / M8**, NÃO v1/agora. O runtime v0 atual é **greedy SEM** isso —
+  FLToP/word-spotter/context-graph são requisito documentado, ainda **não implementados**.
+
+  **Delta que os papers adicionam ALÉM do roadmap (o que registrar de novo):**
+  (a) matching **acústico, não semântico** (Apple Tab II) — refina o "espaço fonético" do RF-08b;
+  (b) injeção **só na inferência** (RASR) = privacidade + zero re-treino por cliente — justificativa
+  nova p/ RF-08 (LGPD, PRD § 3.2); (c) **lista bounded → sem RAG/grafo** (MiniRAG resolve QA sobre
+  docs, tarefa diferente — não se aplica ao reforço de palavra, que é autômato/FST);
+  (d) **arquitetura de DUAS transcrições** (delta NÃO presente no roadmap): **biasing no vivo**
+  (RF-08, real-time, no beam streaming, sem 2ª passada) para a legenda ao vivo, **+ correção pesada
+  pós-chamada** (LM rescoring / corretor pequeno / GER) para o transcrito arquivado/pesquisável,
+  onde a latência não conta. Dois orçamentos de latência, duas técnicas — serve os dois sem quebrar
+  o real-time. Exemplo canônico: "Itaú/Nubank" no vivo = boost de hotword no beam; garbling residual
+  no arquivo = correção. Caveat: boosting agressivo → falso-positivo ("Nubank" quando disseram
+  "nublado"); medir recall de nome próprio **e** taxa de falso-positivo (já exigido no agent).
+
 - **EXP-02 — fusão de LM (neural + n-gram) no beam do decode: o maior ganho barato.** PRIORIDADE
   e pré-requisito de DISC-04. Hoje decodamos **greedy, sem LM**. O paper Apple (`arxiv 2409.06062`
   § IV-A) mostra que até o CTC deles usa **DOIS LMs externos** (neural + 4-gram) — fusão de LM é
