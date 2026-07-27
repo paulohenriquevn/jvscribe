@@ -62,9 +62,10 @@ Mas o **binário standalone** (rodado direto, sem cargo) **não herda esse env**
   O(T²), não era utterance longa — era **a biblioteca ONNX Runtime errada**.
 - **Fix operacional (hoje):** exportar `ORT_DYLIB_PATH=.../vendor/.../libonnxruntime.so`
   ao rodar o binário fora do cargo (o eval faz isso).
-- **Fix de produto (a fazer):** o binário de produção deve garantir a lib certa —
-  embutir via `rpath`/bundle, ou resolver `vendor/` relativo ao executável, ou checar no
-  startup e falhar claro se a lib for a errada. **Task de follow-up** (runtime otimizado M6).
+- **Fix de produto (FEITO, task #26, commit 283282e):** `crates/macaw-cli/src/ort_setup.rs`
+  — `ensure_ort_dylib()` no startup resolve a lib vendorizada subindo a árvore (relativo ao
+  executável e ao manifest) e a seta, ou **falha alto** com mensagem acionável (nunca degrada
+  em silêncio). Prova: `env -u ORT_DYLIB_PATH macaw-cli transcribe` acha a lib e roda RTFx 28,8×.
 
 ## Achado de deployment #2 — `GraphOptimizationLevel::Level3` DEGRADA o int8 aqui `[MEDIDO]`
 
