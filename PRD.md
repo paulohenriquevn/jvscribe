@@ -237,7 +237,8 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 > framework (`training/results/m4-decision-161h-results.md`). Limites honestos no
 > ADR: WER é wideband FLEURS (não 8 kHz call center — M5); treino causal/equivalência
 > streaming são M4-fase-3/M6. Restam da § 8.1 `✅ Decidido` acima: BPE, supervisão
-> fonética (M4 fase 3, em curso), timestamps e cache-aware — herdados dos invariantes.
+> fonética (M4 fase 3 **concluída** — cabeça auxiliar dá −4,63% relativo de WER, DoD ≥3%
+> atingida no ponto), timestamps e cache-aware — herdados dos invariantes.
 
 > **Atualização M2 (2026-07-24).** O ciclo de descoberta produziu o blueprint
 > `knowledge-base/discoveries/blueprints/m2-architecture-decision-blueprint.md`

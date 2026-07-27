@@ -31,7 +31,7 @@ Todos os números abaixo: corpus train = MLS-PT ~161h (CC-BY humano), test = FLE
 ## Alternativas rejeitadas (com motivo)
 
 ### Conformer-CTC (representante da família Conformer / 2º finalista de M2) — rejeitado
-- **Perde os DOIS eixos de acurácia com params equivalentes** `[MEDIDO]`: +2,71pp WER (31,57% vs 28,86%) e +0,96pp CER (11,90% vs 10,94%), no mesmo corpus, época, decode e máquina. Como o único grau de liberdade que varia é a arquitetura, a diferença é **atribuível à arquitetura** — exatamente o confound que o protocolo idêntico foi desenhado para isolar.
+- **Perde os DOIS eixos de acurácia com params equivalentes** `[MEDIDO]`: +2,71pp WER (31,57% vs 28,86%) e +0,96pp CER (11,90% vs 10,94%), no mesmo corpus, época, decode e máquina. Como o único grau de liberdade que varia é a arquitetura, a diferença é **atribuível à arquitetura** — exatamente o confound que o protocolo idêntico foi desenhado para isolar. **A vantagem de WER do Zipformer é estatisticamente robusta** `[MEDIDO]`: bootstrap pareado por utterance (n=919, B=10.000) dá 2,71 p.p. com **IC95% [2,11 · 3,31], que exclui 0** e P(Conformer melhor)=0,0% — não é ruído do test set (`m4-decision-161h-results.md`, fecha §3 #12 no número que decide o finalista).
 - **Acurácia é o eixo primário do projeto** (modelo especializado e preciso). Uma arquitetura que perde em WER *e* CER no eixo primário não é finalista, independentemente da velocidade.
 - **RTFx do Conformer em CPU = `[DESCONHECIDO]`** — não exportado nem medido na i7-1355U. Registrado como **não-decisivo, não como medição**: o Conformer já perde no eixo primário, e a arquitetura Zipformer é desenhada para ser mais rápida (stack de downsampling agressivo), tornando improvável que o Conformer compre velocidade suficiente para compensar 2,71pp de WER. **Não afirmamos velocidade do Conformer sem número** — apenas registramos que medi-la não reverteria a perda de acurácia (não concluir além da evidência, § 2).
 
@@ -48,7 +48,8 @@ Todos os números abaixo: corpus train = MLS-PT ~161h (CC-BY humano), test = FLE
 - **Não decide o WER de produção** (falácia § 3 #6). O WER medido é **wideband FLEURS limpo**, não 8 kHz call center. A penalidade telefônica de deploy e o WER final são de **M5** (augmentação + dados). Este ADR decide **arquitetura e tamanho**, não o número de produção.
 - **Não é o FastConformer exato.** O finalista de M2 era FastConformer-CTC (NeMo). Foi substituído por Conformer-CTC-icefall após **4+ falhas honestas de provisionamento do NeMo na vast.ai** (`[MEDIDO — 4+ tentativas]`, documentadas em `m4-decision-161h-results.md`). A troca **serve melhor a intenção científica** (elimina confounds de framework), mas o ADR herda o limite: a família Conformer foi representada pelo Conformer-icefall, não pelo FastConformer exato.
 - **Não prova a equivalência batch≡streaming nem o WER causal.** A equivalência está de-riscada **por construção** no blueprint `knowledge-base/discoveries/blueprints/m6-streaming-causal-blueprint.md`, mas o treino causal (`--causal 1`) e a medição de WER por chunk + p99 sob carga são trabalho de M4-fase-3/M6 — **próximo passo, não medido aqui**.
-- **Não fecha a ablação da supervisão fonética auxiliar** (mantida só se ≥3% relativo de WER) — pendente (DoD M4, fase 3).
+- **O ranking arquitetural foi medido só no `medium` (params casados); o finalista é o `small`.** O eixo "arquitetura" (Zipformer vs Conformer) foi decidido em medium×medium para isolar params; o eixo "tamanho" foi decidido só dentro do Zipformer. A composição **Zipformer∩small nunca foi confrontada com Conformer∩small** — a superioridade arquitetural é **transferida do medium por extrapolação intra-família, não medida no ponto de tamanho escolhido**. Inferência forte (a vantagem arquitetural do Zipformer tende a se manter ou crescer com menos capacidade), mas registrada como limite, não medição.
+- **A ablação da supervisão fonética (fase 3) CONCLUIU** — a cabeça de fonema auxiliar dá **−4,63% relativo de WER** (29,97% → 28,58%, IC95% [2,63%, 6,63%]); DoD ≥3% **atingida no ponto** (PASS com nota, IC fronteiriço). O modelo efetivamente entregue passa a ser o `small` COM cabeça de fonema (a cabeça sai do grafo na inferência). Evidência: `training/results/m4-phoneme-ablation-results.md`.
 
 ## Consequências
 
@@ -61,9 +62,14 @@ Todos os números abaixo: corpus train = MLS-PT ~161h (CC-BY humano), test = FLE
 ## Limites e pendências (Regra 3 / § 2)
 
 - RTFx do Conformer em CPU: `[DESCONHECIDO]` — não-decisivo (ver acima), mas não afirmado.
+- **RTFx 41-90× é de clip único, offline, sem soak** — herda o caveat de `m4-decision-161h-results.md`: NÃO é o soak sustentado de 10 min sob throttle térmico (RNF-04), nem streaming. Para o critério bloqueante RNF-07 a folga (6,8× no pior caso) torna o risco prático baixo, mas a qualificação de §3 #4/#5 é obrigatória neste artefato de registro.
+- **RTFx e int8-lossless foram medidos no `small` SEM a cabeça de fonema** (`model.int8.onnx`, `runtime-eval-findings.md`); o deliverable é o `small` COM cabeça. A cabeça é +0,07% params e **verificadamente ausente do grafo ONNX de decode**, então RTFx/int8-lossless **herdam** a medição do variante-sem-cabeça — isto é `[ESTIMATIVA/FONTE-REPO]` (justificada pela ausência no grafo), **não `[MEDIDO]`** no variante-fonema. "Custo zero em produção" deve ser lido com esse rótulo.
+- **CER do `small` (~11%) vem do runtime** (`runtime-eval-findings.md`, 10,99%), não do decode icefall (recogs do small sobrescritos pelo experimento telefônico) — metodologia distinta da coluna medium/large; não-decisivo (small escolhido na curva plana), mas registrado.
+- **"int8 essencialmente lossless"** (Δ0,24pp WER, `runtime-eval-findings.md`) é a n=100 **sem IC** nesse delta — direção favorável ao int8, escala pequena, não-decisiva; "dentro do ruído" é medido a n=100, IC não computado.
+- **Large decodado avg=9** (não avg=10): o `epoch-20.pt` foi apagado no conserto do crash de disco. "avg=9 ≈ avg=10, diferença desprezível" é `[ESTIMATIVA]` (o checkpoint p/ avg=10 não existe mais), não `[MEDIDO]`; não-decisivo (large rejeitado por retornos decrescentes de qualquer forma).
 - WER telefônico 8 kHz real (resolução nativa, ruído acústico, codecs além de A-law): não medido; o 1,29× é piso.
 - Equivalência int8 vs fp32 em modo **causal/streaming**: o blueprint alerta que a equivalência fp32 batch≡streaming não transfere automaticamente ao int8 — verificar nos dois em M6.
-- Ablação fonética e treino causal: pendentes.
+- Treino causal: pendente (M4-fase-3/M6).
 
 ## Referências
 

@@ -41,17 +41,7 @@ def normalize_ptbr(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def word_edit_distance(ref: list[str], hyp: list[str]) -> int:
-    """Levenshtein de palavras (S+D+I) — o numerador do WER."""
-    m, n = len(ref), len(hyp)
-    prev = list(range(n + 1))
-    for i in range(1, m + 1):
-        cur = [i] + [0] * n
-        for j in range(1, n + 1):
-            cost = 0 if ref[i - 1] == hyp[j - 1] else 1
-            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
-        prev = cur
-    return prev[n]
+from wer_core import word_edit_distance  # Levenshtein puro, reusado (Regra 9 / DRY)
 
 
 def find_test_parquet() -> Path:

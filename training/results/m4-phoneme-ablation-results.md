@@ -26,8 +26,13 @@ fonema (patch determinístico). Load do checkpoint do candidato: `load_state_dic
 
 | Config | WER | CER | params |
 |---|---|---|---|
-| Baseline small (sem cabeça) | **29,97%** (avg=10) | ~11,0% | 22.118.179 |
+| Baseline small (sem cabeça) | **29,97%** (avg=10) | **11,42%** | 22.118.179 |
 | **+ cabeça de fonema** | **28,58%** (avg=10) | **10,85%** | 22.134.213 (+16.034, +0,07%) |
+
+> CER de ambos medido pelo mesmo `cer_from_recogs.py` sobre os recogs full-test
+> (baseline `training/results/m4-small-baseline/recogs-clean-avg10.txt`; candidato em
+> `m4-phoneme-ablation/`). O ~11,0% de versões anteriores deste doc era estimativa a olho
+> — o valor medido é 11,42%.
 | Baseline (avg=1) | 33,99% | — | — |
 | + cabeça (avg=1) | 33,74% | — | — |
 
@@ -41,13 +46,25 @@ fonema (patch determinístico). Load do checkpoint do candidato: `load_state_dic
 | P(melhora > 0%) | **100,0%** | — |
 | P(melhora ≥ 3% da DoD) | **94,1%** | — |
 
+> **Proveniência das probabilidades:** P(>0) e P(≥3%) são emitidas pelo próprio
+> `bootstrap_wer_ci.py` (da mesma distribuição, seed=42, B=10.000) — o comando de
+> reprodução na seção final as imprime; não vêm de cálculo à parte.
+
+**Critério de aprovação da DoD (declarado explicitamente).** A DoD do ROADMAP ("ablação
+≥3%") é avaliada pela **estimativa pontual** da melhora relativa: **4,63% ≥ 3% → atingida**.
+O IC 95% é reportado como **qualificação obrigatória**, não como a régua de passagem — e o
+qualificador é honesto: o limite inferior (2,63%) fica abaixo de 3% e P(≥3%)=94,1% < 95%,
+então a passagem é **no ponto, com evidência fronteiriça** (não folgada). Se em algum
+momento o projeto exigir o critério mais estrito (IC-inferior ≥ 3%), esta ablação **não**
+o satisfaz a 0,3 de peso — precisaria da varredura de `phoneme_loss_scale` (follow-up).
+
 ## Conclusão (apenas o que a evidência sustenta)
 
 **A cabeça de fonema auxiliar melhora o WER de forma inequivocamente significativa**
 (P(Δ>0)=100%; IC da diferença exclui 0). A **DoD de ≥3% relativo é atingida no ponto**
 (4,63%) e a supervisão fonética do § 8.1 do PRD está **empiricamente validada** para o
-Zipformer-CTC small. O CER também cai (11,0% → 10,85%), consistente com regularização
-que reduz erro fino, não só fronteira de palavra.
+Zipformer-CTC small. O CER também cai (**11,42% → 10,85%, −0,57 p.p.**), consistente com
+regularização que reduz erro fino, não só fronteira de palavra.
 
 **Caveat honesto (§ 2 — conclusão não excede a evidência):** o limite inferior do IC 95%
 da melhora relativa (2,63%) fica **ligeiramente abaixo** do limiar de 3% — a confiança de

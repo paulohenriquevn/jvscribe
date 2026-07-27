@@ -34,3 +34,12 @@ def test_falha_alto_quando_padrao_nao_bate_1x(tmp_path):
     f.write_text("y = 1\n")
     with pytest.raises(SystemExit):
         apply_patch(f, [("z = 9", "z = 0")], already_applied_marker="MARKER_AUSENTE")
+
+
+def test_falha_alto_quando_padrao_bate_2x(tmp_path):
+    # Caso negativo mais perigoso: padrão ambíguo (2×) → SystemExit, nunca patcheia o
+    # site errado. `count != 1` cobre 0 E >1; este exercita o >1.
+    f = tmp_path / "mod.py"
+    f.write_text("x = 1\nx = 1\n")
+    with pytest.raises(SystemExit):
+        apply_patch(f, [("x = 1", "x = 2")], already_applied_marker="MARKER_AUSENTE")

@@ -40,3 +40,10 @@ def test_falha_alto_quando_ref_sem_hyp_correspondente():
     text = "u1:\tref=['casa']\nu1:\thyp=['casa']\nu2:\tref=['carro']\n"
     with pytest.raises(ValueError, match="desemparelhados"):
         score_recogs(text)
+
+
+def test_falha_alto_em_recogs_vazio():
+    # Caso negativo: arquivo vazio / formato errado (0 linhas ref=/hyp=) NÃO pode
+    # virar WER 0,00% silencioso (era o defeito do review M4).
+    with pytest.raises(ValueError, match="vazio"):
+        score_recogs("lixo sem ref nem hyp\ntimestamp_hyp=[(0,1)]\n")

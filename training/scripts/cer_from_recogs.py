@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from eval_runtime_wer import word_edit_distance  # reuso, não reinventa (Regra 9)
+from wer_core import word_edit_distance  # reuso, dep-light (Regra 9)
 
 # `<utt>:\tref=['a', 'b', ...]` — captura o rótulo (ref|hyp) e a lista literal.
 LINE = re.compile(r":\t(ref|hyp)=(\[.*\])$")
@@ -37,6 +37,8 @@ def parse_recogs(text: str) -> dict[str, tuple[list[str], list[str]]]:
         words = ast.literal_eval(m.group(2))
         (refs if m.group(1) == "ref" else hyps)[utt] = words
 
+    if not refs and not hyps:
+        raise ValueError("recogs vazio — nenhuma linha ref=/hyp= (arquivo corrompido/formato errado?)")
     unpaired = set(refs) ^ set(hyps)
     if unpaired:
         raise ValueError(f"ref/hyp desemparelhados em {len(unpaired)} utterances: {sorted(unpaired)[:3]}")
@@ -77,7 +79,7 @@ def main() -> None:
         raise SystemExit(f"recogs ausente: {path}")
     try:
         r = score_recogs(path.read_text(encoding="utf-8"))
-    except ValueError as e:
+    except (ValueError, SyntaxError) as e:
         raise SystemExit(str(e)) from e
     print(f"[MEDIDO] {path.name}")
     print(f"  utterances={r['utterances']}  palavras={r['words']}  caracteres={r['chars']}")

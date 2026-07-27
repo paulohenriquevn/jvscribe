@@ -67,6 +67,15 @@ avg=10 no **mesmo** FLEURS test (919 cuts, 21.471 palavras), **mesma** máquina 
 | **Zipformer-CTC medium** | 64,25M | **28,86%** | **10,94%** | — (baseline) |
 | Conformer-CTC medium | 64,72M | 31,57% | 11,90% | **+2,71pp WER · +0,96pp CER** |
 
+**IC do delta arquitetural `[MEDIDO]`** (bootstrap pareado por utterance, n=919, B=10.000,
+seed=42, `training/scripts/bootstrap_wer_ci.py` sobre os recogs full-test de ambos —
+`m4-zipformer-medium/recogs-clean-avg10.txt` vs `m4-conformer-ctc-medium/recogs-...avg-10...txt`):
+a vantagem de WER do Zipformer é **2,71 p.p., IC95% [2,11 · 3,31]** — **exclui 0**, e
+P(Conformer ser melhor) = **0,0%**. A superioridade arquitetural do Zipformer sobre o
+Conformer, com params casados e protocolo idêntico, é **estatisticamente robusta** (não é
+ruído de test set de 20 min — fecha a exigência de IC de `asr-evidence-discipline.md` §3 #12
+no número que decide o finalista).
+
 **Zipformer domina em ambos os eixos de acurácia** com params equivalentes (+0,7%), mesmo
 corpus, mesma época, mesmo decode, mesma máquina — a diferença de 2,71pp de WER é
 **atribuível à arquitetura**, não a confound de framework (foi exatamente por isso que se

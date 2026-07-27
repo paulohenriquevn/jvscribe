@@ -35,14 +35,15 @@ selecionou a família CTC/transducer e descartou Moonshine-AED antes do piloto d
 **Ainda a-medir (não travado pelo ADR 0002):** WER 8 kHz call center (penalidade 2-3×) e
 o WER final são de **M5** (augmentação + dados); a **equivalência batch≡streaming** e o
 treino causal são **M4-fase-3/M6** (de-riscados por construção no blueprint
-`m6-streaming-causal-blueprint.md`, mas não medidos). A cabeça de fonema (M4 fase 3) está
-em curso.
+`m6-streaming-causal-blueprint.md`, mas não medidos). A cabeça de fonema (M4 fase 3)
+**concluiu**: −4,63% relativo de WER (29,97% → 28,58%), DoD ≥3% atingida no ponto (PASS
+com nota, IC fronteiriço [2,63%, 6,63%]).
 
 | Desbloqueado pelo ADR 0002 | Ainda a-medir (M4-fase-3 / M5 / M6) |
 |---|---|
 | Encoder/decoder final = **Zipformer-CTC small** — backend, export ONNX, formato de cache | WER 8 kHz call center (M5) + WER final |
 | Runtime v0 (decoder CTC greedy em Rust) sobre o modelo travado | Equivalência batch≡streaming + treino causal (M4-fase-3/M6) |
-| Hotwords / word spotter afinados ao decoder CTC escolhido | Ablação da supervisão fonética ≥3% (M4 fase 3, em curso) |
+| Hotwords / word spotter afinados ao decoder CTC escolhido | Ablação da supervisão fonética: **concluída** (−4,63% rel, PASS com nota) |
 
 > **Nota de manutenção:** `.claude/rules/asr-evidence-discipline.md` § 0 (LOCKED) ainda
 > descreve o estado pré-M4 ("nada de arquitetura escolhido"). Sua pré-condição —

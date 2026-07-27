@@ -22,6 +22,17 @@ def test_ponto_e_ic_de_caso_conhecido_e_deterministico():
     assert r["rel_impr_pct"] == pytest.approx(50.0)
     # seed fixo → resultado idêntico entre execuções (determinismo, testing.md § 6)
     assert paired_bootstrap(rows, n_boot=1000, seed=42) == r
+    # probabilidades emitidas pelo próprio script (proveniência fechada, review M4):
+    # melhora relativa é sempre 50% neste caso → P(>0)=P(>=3%)=100%.
+    assert r["p_gt0_pct"] == pytest.approx(100.0)
+    assert r["p_ge_thr_pct"] == pytest.approx(100.0)
+    assert r["dod_threshold"] == 3.0
+
+
+def test_falha_alto_com_rows_vazio():
+    # Caso negativo: sem utterances pareadas NÃO pode virar IC [0,0] silencioso.
+    with pytest.raises(ValueError, match="nenhuma utterance"):
+        paired_bootstrap([])
 
 
 def test_per_utterance_falha_alto_em_test_sets_diferentes():
