@@ -217,10 +217,27 @@ de forma aproximadamente uniforme, mas o conhecimento de 40 idiomas está
 entrelaçado nos pesos — não há como podar "as outras 39". Um modelo podado
 preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 
-#### ⏸ PENDENTE — encoder, decoder e tamanho
+#### ✅ Decidido (M4) — encoder, decoder e tamanho
 
-> **A escolha de arquitetura NÃO está tomada.** Ela é output de um ciclo
-> `cycle-discover` (blueprint + ADR) seguido de piloto medido, **não deste PRD**.
+> **Decidido por medição: Zipformer-CTC `small` (22M), int8** —
+> `knowledge-base/adrs/0002-m4-architecture-finalist.md` (Aceito, 2026-07-27). A
+> escolha foi output do ciclo `cycle-discover` + piloto medido de M4 (o que este PRD
+> sempre exigiu), **não deste documento**.
+
+> **Atualização M4 (2026-07-27).** O piloto de M4 fechou a pendência que o ADR 0001
+> deixou a-medir. Head-to-head entre os dois finalistas, params equivalentes e
+> **protocolo idêntico** (mesmo corpus 161h / mesmo test FLEURS / mesmo decode
+> `ctc-greedy-search` / mesma máquina): **Zipformer-CTC medium domina os dois eixos
+> de acurácia** — WER 28,86% vs 31,57%, CER 10,94% vs 11,90% `[MEDIDO]`. A curva
+> WER×RTFx decide o tamanho: **small (22M) domina** (mesmo CER ~11% do large 7×
+> maior, RTFx 49-90× na i7-1355U vs piso 6× do RNF-07; retornos decrescentes —
+> regime data-bound R9). int8 lossless. **Substituição registrada:** o 2º finalista
+> efetivamente medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo —
+> un-provisionable neste ambiente (4+ falhas), trocado para eliminar confounds de
+> framework (`training/results/m4-decision-161h-results.md`). Limites honestos no
+> ADR: WER é wideband FLEURS (não 8 kHz call center — M5); treino causal/equivalência
+> streaming são M4-fase-3/M6. Restam da § 8.1 `✅ Decidido` acima: BPE, supervisão
+> fonética (M4 fase 3, em curso), timestamps e cache-aware — herdados dos invariantes.
 
 > **Atualização M2 (2026-07-24).** O ciclo de descoberta produziu o blueprint
 > `knowledge-base/discoveries/blueprints/m2-architecture-decision-blueprint.md`
@@ -234,10 +251,11 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 > medidos no piloto de M4. A tabela abaixo permanece como registro dos trade-offs
 > conhecidos; a avaliação completa 5×8 está no blueprint.
 
-**Por que está pendente.** A decisão oscilou três vezes durante o levantamento —
-FastConformer (para herdar inicialização) → Zipformer (ao decidir treinar do zero)
-→ Moonshine (ao surgirem benchmarks em CPU x86). Uma decisão que oscila assim não
-tem maturidade para ser travada. Pior: versões anteriores deste PRD fixavam
+**Por que esteve pendente até M4 (registro histórico).** A decisão oscilou três
+vezes durante o levantamento — FastConformer (para herdar inicialização) → Zipformer
+(ao decidir treinar do zero) → Moonshine (ao surgirem benchmarks em CPU x86). Uma
+decisão que oscilava assim não tinha maturidade para ser travada por documento — só
+por medição, que foi o que M4 fez. Pior: versões anteriores deste PRD fixavam
 Zipformer **usando benchmarks do Moonshine como evidência** — extrapolação entre
 arquiteturas sem parentesco (Moonshine é AED com RoPE; Zipformer é encoder U-Net
 com CTC). É o mesmo erro de método que invalidou os números da pesquisa original.

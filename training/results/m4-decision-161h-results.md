@@ -12,7 +12,7 @@ DECISÃO (não o piloto de 10h) — corpus adequado, comparação justa das arqu
 | Zipformer-CTC | **small (22,1M)** | **29,97%** (avg=10) | **~11,0%**¹ | 1× |
 | Zipformer-CTC | medium (64,3M) | **28,86%** (avg=10) | **10,94%** | 3× |
 | Zipformer-CTC | large (147M) | **28,87%** (avg=9)² | **11,14%** | 7× |
-| **Conformer-CTC (icefall)** | (a treinar) | ⏳ | ⏳ | **2º finalista** — ver nota de divergência |
+| **Conformer-CTC (icefall)** | medium (64,7M) | **31,57%** (avg=10) | **11,90%** | **2º finalista** — perde nos DOIS eixos |
 
 ¹ CER do small vem do runtime (`runtime-eval-findings.md`, 10,99%) porque os recogs
 icefall do small foram sobrescritos pelo experimento telefônico (mesmo exp-dir).
@@ -55,6 +55,32 @@ do epoch-27 até 30). avg=9 (baseline epoch-21) ≈ avg=10 — diferença despre
 >   --language pt --cv-manifest-dir data/pt --lang-dir data/pt/lang_bpe_500 --max-duration 300
 > ```
 > Depois: adaptar `ctc_decode.py` (mínimo, análogo ao zipformer) → WER held-out FLEURS.
+
+### Head-to-head Zipformer-CTC vs Conformer-CTC (mesmo param, mesmo protocolo) `[MEDIDO — 2026-07-27]`
+
+Conformer-CTC medium treinou 30 épocas (64,718M params) e decodou `ctc-greedy-search`
+avg=10 no **mesmo** FLEURS test (919 cuts, 21.471 palavras), **mesma** máquina (RTX 3090),
+**mesmo** corpus (`data/pt` 161h) — protocolo idêntico ao Zipformer-medium.
+
+| Arquitetura | params | WER (avg=10) | CER | Δ vs Zipformer |
+|---|---|---|---|---|
+| **Zipformer-CTC medium** | 64,25M | **28,86%** | **10,94%** | — (baseline) |
+| Conformer-CTC medium | 64,72M | 31,57% | 11,90% | **+2,71pp WER · +0,96pp CER** |
+
+**Zipformer domina em ambos os eixos de acurácia** com params equivalentes (+0,7%), mesmo
+corpus, mesma época, mesmo decode, mesma máquina — a diferença de 2,71pp de WER é
+**atribuível à arquitetura**, não a confound de framework (foi exatamente por isso que se
+escolheu Conformer-icefall em vez de FastConformer-NeMo: eliminar os confounds). O parser
+de CER (`training/scripts/cer_from_recogs.py`) foi **validado** reproduzindo o WER oficial
+do icefall exatamente (31,57%), então o CER de 11,90% é confiável.
+
+**RTFx do Conformer em CPU: `[DESCONHECIDO]` — e não-decisivo.** Não foi exportado/medido na
+i7-1355U. Não muda o veredito: o Conformer já perde nos dois eixos de **acurácia** (o eixo
+primário do projeto — modelo especializado e preciso); e a arquitetura Zipformer é desenhada
+para ser **mais rápida** que Conformer (stack de downsampling agressivo), então é
+improvável que o Conformer compre velocidade suficiente para compensar 2,71pp de WER. O ADR
+de M4 registra isto como limite honesto, não como medição. Recogs/errs/logs de ambos os
+`avg` em `training/results/m4-conformer-ctc-medium/`.
 
 ## Curva WER × RTFx (o tradeoff que decide o finalist) `[MEDIDO]`
 

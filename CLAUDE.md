@@ -11,33 +11,43 @@ frota, compliance LGPD e UI estão fora (`PRD.md` § 3.2).
 
 ---
 
-## ⏸ Estado: M2 concluído — 2 finalistas, vencedor em M4 (discover contínuo)
+## ✅ Estado: M4 decidiu o finalista — Zipformer-CTC small (22M), int8 [ADR 0002]
 
-**M2 (Decisão de arquitetura) foi concluído (v0.3.0).** O ciclo discover produziu
-blueprint + ADR (`knowledge-base/adrs/0001-m2-architecture-finalists.md`): a família
-**CTC/transducer** venceu o critério de RTFx em CPU, e há **2 finalistas a pilotar
-em M4** — **Zipformer+CTC** e **FastConformer+CTC** — com Moonshine-AED como controle.
+**M4 (piloto de decisão) fechou a arquitetura por medição.** O ADR
+`knowledge-base/adrs/0002-m4-architecture-finalist.md` (Aceito, 2026-07-27) trava
+encoder/decoder/tamanho: **Zipformer-CTC `small` (22M), int8**. Fecha o que o ADR 0001
+(M2) deixou a-medir. A escolha é output de ciclo (discover + piloto medido), não de
+documento — exatamente como `.claude/rules/asr-evidence-discipline.md` § 0 exige.
 
-**O vencedor NÃO está travado.** Encoder específico, decoder, tokenização e tamanho
-seguem `PENDENTE` (`PRD.md` § 8.1) até **M4** medir WER 8 kHz + RTFx sob carga +
-equivalência batch≡streaming. Escrever "vamos de X" (um finalista único) antes do ADR
-de M4 é violação de `.claude/rules/asr-evidence-discipline.md` § 0 — mesmo que X venha
-a ganhar depois. O default de qualquer sessão continua sendo **investigar e medir**.
+**Como venceu `[MEDIDO]`** (mesmo corpus 161h / test FLEURS / decode `ctc-greedy-search`
+/ máquina): head-to-head com params equivalentes → **Zipformer domina os dois eixos de
+acurácia** (WER 28,86% vs Conformer 31,57%; CER 10,94% vs 11,90%). Curva WER×RTFx decide
+o tamanho → **small domina** (mesmo CER ~11% do large 7× maior, RTFx 49-90× na i7-1355U
+vs piso 6× do RNF-07; retornos decrescentes — regime data-bound R9). O 2º finalista
+medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo (un-provisionable, 4+
+falhas; trocado para eliminar confounds de framework). Evidência:
+`training/results/m4-decision-161h-results.md`.
 
-**Conclusão `[MEDIDO]` de M2:** transducer/CTC é **~2× mais rápido que AED em CPU**
-(Zipformer 20M = 15,90 ± 2,06× vs Moonshine tiny 27M = 7,93 ± 0,72×, n=10, mesma clip,
-separação limpa). A razão é arquitetural — AED custa ∝ tokens (autoregressivo),
-transducer ∝ frames. A re-medição com dispersão corrigiu a magnitude de ~3× para ~2×
-(a diferença era carga de CPU): a **direção** é robusta, a **magnitude** exige soak em
-M4. Isto inverteu o viés do PRD que favorecia Moonshine por um benchmark `[LITERATURA]`
-de outra CPU que não transferia.
+**Histórico `[MEDIDO]` de M2:** transducer/CTC é ~2× mais rápido que AED em CPU
+(Zipformer 20M = 15,90 ± 2,06× vs Moonshine tiny 27M = 7,93 ± 0,72×, n=10) — a razão que
+selecionou a família CTC/transducer e descartou Moonshine-AED antes do piloto de M4.
 
-| Liberado hoje | Bloqueado até M4 (o piloto escolhe o vencedor entre os 2 finalistas) |
+**Ainda a-medir (não travado pelo ADR 0002):** WER 8 kHz call center (penalidade 2-3×) e
+o WER final são de **M5** (augmentação + dados); a **equivalência batch≡streaming** e o
+treino causal são **M4-fase-3/M6** (de-riscados por construção no blueprint
+`m6-streaming-causal-blueprint.md`, mas não medidos). A cabeça de fonema (M4 fase 3) está
+em curso.
+
+| Desbloqueado pelo ADR 0002 | Ainda a-medir (M4-fase-3 / M5 / M6) |
 |---|---|
-| Captura mic + loopback, VAD, ring buffers, log-mel, afinidade de threads | Encoder/decoder final (Zipformer vs FastConformer) |
-| Harness de medição dos RNFs | Formato de estado/cache do modelo (difere por finalista) |
-| Corpus, augmentação, manifests (M3, paralelo) | Hotwords / word spotter afinado ao decoder escolhido |
-| Test set de call center e protocolo de avaliação | Backend de inferência do encoder escolhido |
+| Encoder/decoder final = **Zipformer-CTC small** — backend, export ONNX, formato de cache | WER 8 kHz call center (M5) + WER final |
+| Runtime v0 (decoder CTC greedy em Rust) sobre o modelo travado | Equivalência batch≡streaming + treino causal (M4-fase-3/M6) |
+| Hotwords / word spotter afinados ao decoder CTC escolhido | Ablação da supervisão fonética ≥3% (M4 fase 3, em curso) |
+
+> **Nota de manutenção:** `.claude/rules/asr-evidence-discipline.md` § 0 (LOCKED) ainda
+> descreve o estado pré-M4 ("nada de arquitetura escolhido"). Sua pré-condição —
+> "M4 produza medição própria" — foi satisfeita pelo ADR 0002; atualizá-la exige um ADR
+> próprio (protocolo de mudança de regra LOCKED). Pendente.
 
 ---
 
