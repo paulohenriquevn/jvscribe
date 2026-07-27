@@ -106,7 +106,10 @@ pub fn transcribe_wav(
     // modelo carrega uma vez e processa muitas utterances. Incluir o load aqui
     // inflaria o tempo e mediria algo que não é o RTFx (honestidade — Regra 3).
     let cache = KaldiFbankCache::new();
-    let mut engine = AsrEngine::load(&model_dir.join("model.int8.onnx"))
+    // Modelo padrão int8; override via MACAW_MODEL (usado pelo EXP-01 int8-vs-fp32).
+    let model_name =
+        std::env::var("MACAW_MODEL").unwrap_or_else(|_| "model.int8.onnx".to_string());
+    let mut engine = AsrEngine::load(&model_dir.join(&model_name))
         .map_err(|e| TranscribeError::Asr(e.to_string()))?;
     let vocab =
         Vocab::load(&model_dir.join("tokens.txt")).map_err(|e| TranscribeError::Asr(e.to_string()))?;

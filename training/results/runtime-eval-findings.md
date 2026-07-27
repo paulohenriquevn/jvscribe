@@ -81,3 +81,18 @@ cargo build -p macaw-cli --release
 export ORT_DYLIB_PATH=$PWD/vendor/onnxruntime-linux-x64-1.23.0/lib/libonnxruntime.so
 python3 training/scripts/eval_runtime_wer.py --n 40   # WER do runtime
 ```
+
+## EXP-01 — int8 vs fp32 (lição T-Mimi) `[MEDIDO]`
+
+Small finalista, MESMA engine Rust (`macaw-cli transcribe`, override `MACAW_MODEL`), n=100:
+
+| Modelo | tamanho | WER | CER |
+|---|---|---|---|
+| int8 (`model.int8.onnx`) | 27 MB | 28,21% | 10,99% |
+| fp32 (`model.onnx`) | 92 MB | 28,45% | 10,93% |
+
+**int8 NÃO degrada acurácia** — Δ 0,24pp WER / 0,06pp CER, dentro do ruído (n=100). A
+quantização int8 é essencialmente **lossless** aqui. **Deploy do int8 (3,4× menor) tem
+custo zero de acurácia.** Refuta a hipótese de quantização mista/QAT (T-Mimi) para o
+nosso caso: não há acurácia a recuperar. Reprodução: `MACAW_MODEL=model.fp32.onnx
+python3 training/scripts/eval_runtime_wer.py --n 100` (com ORT_DYLIB_PATH setado).
