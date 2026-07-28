@@ -219,19 +219,22 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 
 #### ✅ Decidido (M4) — encoder, decoder e tamanho
 
-> **Decidido por medição: Zipformer-CTC `small` (22M), int8** —
-> `knowledge-base/adrs/0002-m4-architecture-finalist.md` (Aceito, 2026-07-27). A
-> escolha foi output do ciclo `cycle-discover` + piloto medido de M4 (o que este PRD
-> sempre exigiu), **não deste documento**.
+> **Decidido por medição: Zipformer-CTC `medium` (64M), int8, + cabeça de fonema** —
+> `knowledge-base/adrs/0003-m4-finalist-medium.md` (Aceito), que supersede o eixo tamanho
+> do `knowledge-base/adrs/0002-m4-architecture-finalist.md` (`small`) após soak/carga. A
+> escolha foi output do ciclo `cycle-discover` + piloto medido + soak de M4, **não deste
+> documento**.
 
 > **Atualização M4 (2026-07-27).** O piloto de M4 fechou a pendência que o ADR 0001
 > deixou a-medir. Head-to-head entre os dois finalistas, params equivalentes e
 > **protocolo idêntico** (mesmo corpus 161h / mesmo test FLEURS / mesmo decode
 > `ctc-greedy-search` / mesma máquina): **Zipformer-CTC medium domina os dois eixos
-> de acurácia** — WER 28,86% vs 31,57%, CER 10,94% vs 11,90% `[MEDIDO]`. A curva
-> WER×RTFx decide o tamanho: **small (22M) domina** (mesmo CER ~11% do large 7×
-> maior, RTFx 49-90× na i7-1355U vs piso 6× do RNF-07; retornos decrescentes —
-> regime data-bound R9). int8 lossless. **Substituição registrada:** o 2º finalista
+> de acurácia** — WER 28,86% vs 31,57%, CER 10,94% vs 11,90% `[MEDIDO]`. O **tamanho**
+> foi decidido por **soak RNF-04 + carga RNF-05** (ADR 0003): sob carga concorrente
+> small e medium **empatam** em RTFx (min 7,1× vs 7,6×, ambos ≥6×); isolado o small é só
+> 1,15× mais rápido (o RTFx do medium no ADR 0002 estava subestimado ~2×). Empatado o
+> RTFx, o desempate vai para acurácia → **medium (−1,11pp WER)**. int8 lossless.
+> **Substituição registrada:** o 2º finalista
 > efetivamente medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo —
 > un-provisionable neste ambiente (4+ falhas), trocado para eliminar confounds de
 > framework (`training/results/m4-decision-161h-results.md`). Limites honestos no
