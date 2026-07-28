@@ -80,6 +80,36 @@ def wer(refs: list[list[str]], hyps: list[list[str]]) -> float:
     return 100.0 * e / w
 
 
+def build_dataset(n: int) -> tuple[list[list[str]], list[np.ndarray], list[np.ndarray]]:
+    """Extrai (refs, fbanks_wideband, fbanks_telefone) de N utterances do FLEURS test.
+
+    Reutilizável entre probes (DISC-05 alinhamento, DISC-06 blank-penalty). Telefone =
+    round-trip de deploy: 16k → 8k (banda 300-3400 + G.711) → 16k → mesmo fbank do treino.
+    """
+    refs, wb, tel = [], [], []
+    pf = pq.ParquetFile(find_test_parquet())
+    done = 0
+    for batch in pf.iter_batches(batch_size=64, columns=["audio", "transcription"]):
+        for row in batch.to_pylist():
+            if done >= n:
+                break
+            data, sr = sf.read(io.BytesIO(row["audio"]["bytes"]))
+            if data.ndim > 1:
+                data = data[:, 0]
+            if sr != 16000:
+                g = np.gcd(sr, 16000)
+                data = resample_poly(data, 16000 // g, sr // g)
+            t8, _ = apply_telephone_channel(data.astype(np.float32), 16000)
+            t16 = resample_poly(t8, 2, 1).astype(np.float32)
+            refs.append(normalize_ptbr(row["transcription"]).split())
+            wb.append(fbank16k(data))
+            tel.append(fbank16k(t16))
+            done += 1
+        if done >= n:
+            break
+    return refs, wb, tel
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=150)
@@ -89,30 +119,7 @@ def main() -> None:
     id2tok = load_id2tok(Path(args.tokens))
     sess = ort.InferenceSession(args.model, providers=["CPUExecutionProvider"])
     in_names = [i.name for i in sess.get_inputs()]
-
-    # Passo 1: extrai fbanks wideband + telefone, acumula stats globais por bin
-    refs, wb, tel = [], [], []
-    pf = pq.ParquetFile(find_test_parquet())
-    done = 0
-    for batch in pf.iter_batches(batch_size=64, columns=["audio", "transcription"]):
-        for row in batch.to_pylist():
-            if done >= args.n:
-                break
-            data, sr = sf.read(io.BytesIO(row["audio"]["bytes"]))
-            if data.ndim > 1:
-                data = data[:, 0]
-            if sr != 16000:
-                g = np.gcd(sr, 16000)
-                data = resample_poly(data, 16000 // g, sr // g)
-            # telefone: 16k -> 8k (banda+G.711) -> volta a 16k (round-trip de deploy)
-            t8, _ = apply_telephone_channel(data.astype(np.float32), 16000)
-            t16 = resample_poly(t8, 2, 1).astype(np.float32)
-            refs.append(normalize_ptbr(row["transcription"]).split())
-            wb.append(fbank16k(data))
-            tel.append(fbank16k(t16))
-            done += 1
-        if done >= args.n:
-            break
+    refs, wb, tel = build_dataset(args.n)
 
     def stats(fbanks):
         allf = np.concatenate(fbanks, axis=0)

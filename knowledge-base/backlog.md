@@ -127,5 +127,27 @@ Itens de investigação registrados para não se perderem. Cada um vira um ciclo
   `[DESCONHECIDO]`. Pré-condição a verificar: como o recipe icefall normalizou as features (se
   espera fbank cru, alinhar tem de ser EM DIREÇÃO às stats de treino, senão descasa e piora).
   **Probe barato (sem GPU):** `training/scripts/tta_feature_align_probe.py` — mede ΔWER de um
-  alinhamento global telefone→wideband no test telefônico. Pré-req de build: M5 + finalista.
-  `[LITERATURA/ESTIMATIVA]`.
+  alinhamento global telefone→wideband no test telefônico. **RESULTADO `[MEDIDO]` (n=150):
+  REFUTADO** — alinhamento piora −24,6pp (IC95% [−27,2, −22,0], P(ajuda)=0%); gap telefônico
+  real ~31% rel (28,6%→37,4%). Raiz: canal irreversível+não-afim invertido por op afim no
+  espaço errado. Pré-req de build: M5 + finalista. `[LITERATURA/MEDIDO]`.
+
+- **DISC-06 — "TTA do decoder": adaptar o DECODER, não o modelo (a inovação / IP).** Nasce do
+  achado do DISC-05: para um CTC int8 de **pesos congelados** em CPU, a superfície adaptável NÃO
+  são os pesos (backprop, caro) nem as features (o modelo está calibrado a elas; canal telefônico
+  é irreversível → alinhar piora), **é o DECODER**. Reframe: um **controlador online fast-slow**
+  (estrutura do DSUTA) que ajusta os *hiperparâmetros de decode* — blank penalty, peso do LM
+  (EXP-02), largura do beam, agressividade do biasing/léxico (DISC-04) — em resposta a um **sinal
+  de dificuldade de domínio forward-only** (blank-ratio + peak-posterior do CTC, o mesmo do
+  DISC-03; z-score>2 → reseta os knobs para o default, o dynamic-reset do DSUTA). Os "meta-params"
+  do fast-slow deixam de ser pesos e viram **knobs de decode**, atualizáveis forward-only por EMA.
+  **Duas propriedades que fazem disso IP, não truque:** (1) **muda o objeto adaptável** (decoder,
+  não modelo) — a única superfície que faz sentido para pesos congelados em CPU; (2) **acopla
+  dificuldade→esforço de compute**: domínio fácil (wideband) → greedy barato; domínio difícil
+  (8kHz ruidoso detectado) → sobe LM/beam/léxico. Adapta o CUSTO à condição → casa com o orçamento
+  de CPU (gasta beam só quando precisa). **Unifica** DISC-03 (sinal) + DISC-04 (léxico) + EXP-02
+  (LM) + o dynamic-reset do DSUTA num framework. Nota de rigor: temperature é no-op no greedy
+  (monotônica); as alavancas que mudam o argmax são blank penalty e prior (por-classe) + o beam+LM.
+  Pré-req: EXP-02 (beam+LM) no runtime + DISC-03 (sinal). **Probe da hipótese central:**
+  `blank_penalty_probe.py` — testa se um ajuste no decoder (blank penalty) ajuda no telefone onde
+  a feature falhou. `[ESTIMATIVA — a validar]`.
