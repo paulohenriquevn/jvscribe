@@ -45,6 +45,24 @@ mais robusto no critério. O CER também cai (10,94% → 10,53%). O **deliverabl
 é o **Zipformer-CTC medium (64M) + cabeça de fonema, int8 = 27,49% WER / 10,53% CER**
 (wideband FLEURS, avg=10).
 
+## Validação em CPU — o deliverable roda em CPU, então o número que importa é o do runtime `[MEDIDO]`
+
+O WER de 27,49% acima é o **decode Python (fp32) na GPU**. O produto roda **int8 em CPU**
+(runtime Rust `macaw-cli transcribe`). Eval na i7-1355U de referência, test FLEURS completo:
+
+| Fonte | WER | CER |
+|---|---|---|
+| **Runtime Rust CPU (int8, full 919)** | **27,46%** | **10,54%** |
+| Decode Python (fp32, full 919) | 27,49% | 10,53% |
+
+**Δ 0,03pp — o runtime CPU NÃO degrada** vs o decode de treino (cadeia `kaldi_fbank → int8
+ONNX → ctc_greedy` funcionalmente equivalente ao decode icefall; mesmo resultado do small).
+**int8 lossless no medium** confirmado por desconfundir com fp32 no mesmo n=300 (int8 28,56%
+vs fp32 28,66%, Δ dentro do ruído — o +1pp do n=300 era subconjunto, não quantização).
+**RTFx ≈ 35-64×** na i7-1355U (cabeça de fonema fora do grafo → igual ao medium puro; ADR
+0003) — real-time com folga sobre o piso RNF-07 (6×). Reprodução:
+`MACAW_MODEL=model.medium-phoneme.int8.onnx python3 training/scripts/eval_runtime_wer.py --n 919`.
+
 **Limites honestos (§2):**
 - **WER wideband FLEURS**, não 8 kHz call center — a penalidade telefônica (o probe do
   DISC-05 mediu ~31% rel de gap simulado, piso) e o WER de produção são de **M5**.
