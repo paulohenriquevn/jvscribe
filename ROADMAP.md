@@ -193,7 +193,7 @@ referência exige — este é o **risco dominante do projeto**.
 
 ---
 
-### M4 — [ ] Piloto comparativo
+### M4 — [x] Piloto comparativo
 
 **Objective:** Decidir arquitetura, tamanho e supervisão fonética com dado próprio,
 por uma fração do custo do treino completo.

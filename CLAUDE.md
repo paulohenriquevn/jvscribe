@@ -11,22 +11,26 @@ frota, compliance LGPD e UI estão fora (`PRD.md` § 3.2).
 
 ---
 
-## ✅ Estado: M4 decidiu o finalista — Zipformer-CTC small (22M), int8 [ADR 0002]
+## ✅ Estado: M4 decidiu o finalista — Zipformer-CTC medium (64M), int8 [ADR 0003 supersede 0002]
 
-**M4 (piloto de decisão) fechou a arquitetura por medição.** O ADR
-`knowledge-base/adrs/0002-m4-architecture-finalist.md` (Aceito, 2026-07-27) trava
-encoder/decoder/tamanho: **Zipformer-CTC `small` (22M), int8**. Fecha o que o ADR 0001
-(M2) deixou a-medir. A escolha é output de ciclo (discover + piloto medido), não de
-documento — exatamente como `.claude/rules/asr-evidence-discipline.md` § 0 exige.
+**M4 (piloto de decisão) fechou a arquitetura por medição.** O finalista é
+**Zipformer-CTC `medium` (64M), int8, + cabeça de fonema auxiliar** —
+`knowledge-base/adrs/0003-m4-finalist-medium.md` (Aceito), que **supersede o eixo tamanho**
+do ADR 0002 (`small`) após medição de soak/carga. Fecha o que o ADR 0001 (M2) deixou
+a-medir. A escolha é output de ciclo (discover + piloto medido + soak), não de documento.
 
-**Como venceu `[MEDIDO]`** (mesmo corpus 161h / test FLEURS / decode `ctc-greedy-search`
-/ máquina): head-to-head com params equivalentes → **Zipformer domina os dois eixos de
-acurácia** (WER 28,86% vs Conformer 31,57%; CER 10,94% vs 11,90%). Curva WER×RTFx decide
-o tamanho → **small domina** (mesmo CER ~11% do large 7× maior, RTFx 49-90× na i7-1355U
-vs piso 6× do RNF-07; retornos decrescentes — regime data-bound R9). O 2º finalista
-medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo (un-provisionable, 4+
-falhas; trocado para eliminar confounds de framework). Evidência:
-`training/results/m4-decision-161h-results.md`.
+**Como venceu `[MEDIDO]`** (mesmo corpus 161h / test FLEURS / decode `ctc-greedy-search`):
+head-to-head com params equivalentes → **Zipformer domina Conformer nos dois eixos de
+acurácia** (WER 28,86% vs 31,57%, IC95% do delta [2,11, 3,31] exclui 0). O **tamanho** foi
+decidido por **soak RNF-04 + carga RNF-05** na i7-1355U: sob a condição-alvo (carga
+concorrente) small e medium **empatam** em RTFx (min 7,1× vs 7,6×, ambos ≥6×); isolado o
+small é só 1,15× mais rápido (não 2× — o RTFx do medium no ADR 0002 estava subestimado
+~2×). Empatado o RTFx, o desempate migra para acurácia → **medium ganha −1,11pp WER**.
+A cabeça de fonema **transferiu ao medium** `[MEDIDO]`: WER 28,86% → **27,49%** (−4,74%
+rel, IC95% [2,79, 6,72], P(≥3%)=95,7%) — o **deliverable final de M4** é o medium+fonema,
+27,49% WER / 10,53% CER wideband (`training/results/m4-medium-phoneme-ablation-results.md`,
+modelo em `models/m4-final-medium-phoneme/`). Evidência de decisão:
+`training/results/m4-decision-161h-results.md`, `soak-small-vs-medium-results.md`.
 
 **Histórico `[MEDIDO]` de M2:** transducer/CTC é ~2× mais rápido que AED em CPU
 (Zipformer 20M = 15,90 ± 2,06× vs Moonshine tiny 27M = 7,93 ± 0,72×, n=10) — a razão que
