@@ -107,3 +107,47 @@ Itens de investigação registrados para não se perderem. Cada um vira um ciclo
   (Regra 9). **Fazer:** treinar um n-gram PT-BR (ou reusar) + beam + shallow fusion; medir a
   queda de WER. Barato, independente de biasing, e destrava o beam que DISC-04 também precisa.
   Pré-req: finalista de M4 + beam no runtime. `[LITERATURA/MEDIDO]`.
+
+- **DISC-05 — TTA forward-only para CPU real-time (nosso algoritmo, inspirado no DSUTA).**
+  Motivado pelo paper Dynamic-SUTA (`arXiv` Lin/Huang/Lee, TTA contínua). **Veredito da análise:
+  TTA com backprop está DESCARTADA para inferência CPU** (N=10 forward+backward/utterance mata o
+  RTFx — mesma classe do GER offline+LLM). Mas dá para fazer TTA **forward-only** adaptando o que
+  NÃO é peso: **(1) alinhamento de features** (transforma afim por mel-bin: stats do stream de
+  teste → stats de treino que o modelo espada — o fix clássico de channel shift, e telefonia É
+  channel shift); **(2) correção de prior de saída** (subtrai log-prior corrido dos logits — muda
+  o argmax do greedy, ≠ monotônico); **(3) reset dinâmico** por sinal CTC forward-only (blank-ratio
+  + peak-posterior, z-score>2 → reseta stats corridas para origem — o "domain shift detection" do
+  DSUTA transfere direto). Estrutura fast-slow do DSUTA mantida (meta-params = normalização/prior,
+  não pesos → atualizáveis forward-only por EMA). **Tudo front-end/pós-logit → runtime-only, não
+  toca o grafo int8, não re-treina, streaming-compatível, custo O(1)/frame.** Ponto de rigor:
+  **temperature scaling é no-op no greedy** (monotônica não muda argmax) — só serve ao sinal de
+  confiança, conecta ao DISC-03. **É refinamento de 2ª ordem sobre M5** (augmentação offline é o
+  lever primário de domain shift; TTA só ganha no long tail não coberto pelo treino) → **YAGNI:
+  não construir antes de M5 medir e mostrar gap residual.** Magnitude no nosso 8kHz PT-BR
+  `[DESCONHECIDO]`. Pré-condição a verificar: como o recipe icefall normalizou as features (se
+  espera fbank cru, alinhar tem de ser EM DIREÇÃO às stats de treino, senão descasa e piora).
+  **Probe barato (sem GPU):** `training/scripts/tta_feature_align_probe.py` — mede ΔWER de um
+  alinhamento global telefone→wideband no test telefônico. **RESULTADO `[MEDIDO]` (n=150):
+  REFUTADO** — alinhamento piora −24,6pp (IC95% [−27,2, −22,0], P(ajuda)=0%); gap telefônico
+  real ~31% rel (28,6%→37,4%). Raiz: canal irreversível+não-afim invertido por op afim no
+  espaço errado. Pré-req de build: M5 + finalista. `[LITERATURA/MEDIDO]`.
+
+- **DISC-06 — "TTA do decoder": adaptar o DECODER, não o modelo (a inovação / IP).** Nasce do
+  achado do DISC-05: para um CTC int8 de **pesos congelados** em CPU, a superfície adaptável NÃO
+  são os pesos (backprop, caro) nem as features (o modelo está calibrado a elas; canal telefônico
+  é irreversível → alinhar piora), **é o DECODER**. Reframe: um **controlador online fast-slow**
+  (estrutura do DSUTA) que ajusta os *hiperparâmetros de decode* — blank penalty, peso do LM
+  (EXP-02), largura do beam, agressividade do biasing/léxico (DISC-04) — em resposta a um **sinal
+  de dificuldade de domínio forward-only** (blank-ratio + peak-posterior do CTC, o mesmo do
+  DISC-03; z-score>2 → reseta os knobs para o default, o dynamic-reset do DSUTA). Os "meta-params"
+  do fast-slow deixam de ser pesos e viram **knobs de decode**, atualizáveis forward-only por EMA.
+  **Duas propriedades que fazem disso IP, não truque:** (1) **muda o objeto adaptável** (decoder,
+  não modelo) — a única superfície que faz sentido para pesos congelados em CPU; (2) **acopla
+  dificuldade→esforço de compute**: domínio fácil (wideband) → greedy barato; domínio difícil
+  (8kHz ruidoso detectado) → sobe LM/beam/léxico. Adapta o CUSTO à condição → casa com o orçamento
+  de CPU (gasta beam só quando precisa). **Unifica** DISC-03 (sinal) + DISC-04 (léxico) + EXP-02
+  (LM) + o dynamic-reset do DSUTA num framework. Nota de rigor: temperature é no-op no greedy
+  (monotônica); as alavancas que mudam o argmax são blank penalty e prior (por-classe) + o beam+LM.
+  Pré-req: EXP-02 (beam+LM) no runtime + DISC-03 (sinal). **Probe da hipótese central:**
+  `blank_penalty_probe.py` — testa se um ajuste no decoder (blank penalty) ajuda no telefone onde
+  a feature falhou. `[ESTIMATIVA — a validar]`.

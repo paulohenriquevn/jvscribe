@@ -1,0 +1,13 @@
+[MEDIDO] probe DISC-06 — blank penalty (decoder-space), n=150
+     β | WER wideband | WER telefone
+   0.0 |       28.59% |       37.43%
+   0.5 |       29.29% |       38.10%
+   1.0 |       30.22% |       38.90%
+   2.0 |       32.61% |       41.72%
+   3.0 |       35.84% |       46.99%
+   4.0 |       41.67% |       54.93%
+   6.0 |       63.74% |       82.00%
+
+  melhor β no telefone = 0.0 (WER 37.43%) vs β=0 cru
+  ganho: Δ 0.00 p.p.  IC95% [0.00, 0.00]  (rel 0.00%, P(melhora>0)=0.0%)
+  veredito: nulo/inconclusivo (IC inclui 0)  (contraste: alinhamento de features do DISC-05 = −24,6pp)
