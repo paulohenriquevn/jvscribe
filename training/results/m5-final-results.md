@@ -22,7 +22,8 @@ completo (12.676 utts, 11,24 h de áudio). Comando: `decode_onnx_local.py --thre
 |---|---|---|---|---|
 | **Wideband espontâneo** (modelo médio) | **23,31%** | 11,28% | ≤25% / < M4 27,46% | ✅ PASSA |
 | **Real-time (RTFx CPU)** | **34,69×** | — | RNF-07 ≥6× | ✅ PASSA (5,8×) |
-| **Telefônico-proxy 8 kHz** (single, pré-D2) | **31,97%** | 16,46% | ≤25% | ⏳ pendente da continuação D2 |
+| **Telefônico-proxy 8 kHz** (bandpass, single) | **31,97%** | 16,46% | ≤25% | ❌ não bate — e o proxy era otimista |
+| **Call center REAL 8 kHz** (áudio humano-transcrito) | **40,13%** | — | ≤25% | ❌ gap real ~15 pp (ver caveats) |
 
 **Contexto:** o wideband 23,31% já está **abaixo do M4 (27,46%)**, que era em fala **lida**
 (FLEURS, mais fácil); M5 mede fala **espontânea** (mais difícil). O averaging levou o single
@@ -46,9 +47,15 @@ eager-load + num-workers 2, encoder do M4 + heads frescos (bpe.model do M4 perdi
 
 - **DoD wideband espontâneo:** ✅ 23,31% (bate M4 e ≤25%).
 - **DoD real-time CPU (RNF-07):** ✅ 34,69× (o requisito central — cabe no notebook do atendente).
-- **DoD#3 telefônico 8 kHz ≤25%:** ⏳ 31,97% no run sem augmentação; **continuação D2**
-  (warm-start + `Reverb→Ruído→Telefone` on-the-fly, fp32) em curso para atacar o canal 8 kHz.
-  Evidência de que a augmentação afeta: ctc_loss inicial saltou para 2,3 (áudio degradado).
+- **DoD#3 telefônico 8 kHz ≤25%:** ❌ **em aberto.** Baseline honesto no **call center REAL** =
+  **40,13% [MEDIDO]** (`measure_callcenter.py`, greedy, modelo entregue) — pior que o proxy
+  bandpass (31,97%), que subestimava o canal (falácia § 3 #6). A **continuação D2**
+  (warm-start + augmentação on-the-fly) **FALHOU** `[MEDIDO]`: colapsou o modelo para near-blank
+  (WER ~98% em wideband e telefônico; `ctc_output.norm` 245→108) por LR alto (0,006 vs ~0,0045
+  recomendado) + choque de augmentação a 100% sobre um modelo convergido. Caminho corrigido em
+  `knowledge-base/discoveries/blueprints/m5-8khz-telephone-wer-blueprint.md`.
+  **Caveats do 40,13%** (direciona, não conclui — § 3 #12): 9 min → IC largo; 2 interlocutores
+  no mono; granularidade de 30s; máscaras de PII contam como erro.
 
 ## Validação real-world (qualitativa)
 

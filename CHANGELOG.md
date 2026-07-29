@@ -22,6 +22,13 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Harness de medição de WER em call center real 8 kHz (`training/measure_callcenter.py`) —
+  segmenta pela transcrição humana timestampada, normaliza, WER via jiwer; dado fica local
+  (LGPD). Baseline REAL do modelo entregue = 40,13% [MEDIDO] (pior que o proxy 31,97%).
+- Blueprint de deep research para WER 8 kHz telefônico
+  (`knowledge-base/discoveries/blueprints/m5-8khz-telephone-wer-blueprint.md`) — ranking de
+  alavancas (n-gram LM, pool de codecs realistas, adaptação gentil, dev/test real), com
+  divergência entre cientistas registrada (8kHz-nativo vs upsample).
 - App de transcrição em tempo real do microfone (`training/mic_transcribe.py`) — captura mic
   16 kHz → VAD de energia (RMS+histerese, calibra ruído de fundo, zero deps de ML) → fbank →
   ONNX int8 M5 → transcrição ao vivo no terminal, por frase (M5 é não-streaming). Mostra
