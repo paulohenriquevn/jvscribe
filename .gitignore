@@ -47,3 +47,12 @@ models/
 tmp_*.txt
 training/**/*.pt
 system-design-output/
+
+# Áudio real de call-center (voz de pessoas reais — LGPD/privacidade, NUNCA versionar)
+callcenter/
+
+# Logs de treino volumosos + áudio de eval (evidência fica em resultados .md, não no git)
+training/results/**/*train*.log
+training/results/**/_eval_wavs/
+*.wav
+*.f32

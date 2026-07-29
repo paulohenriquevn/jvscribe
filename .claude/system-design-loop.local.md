@@ -1,11 +1,11 @@
 ---
-active: true
+active: false
 target: /home/paulo/Projetos/jvscribe/training
 scope: ''
-current_phase: 3
-phase_name: data_flow
-phase_iteration: 4
-global_iteration: 11
+current_phase: 6
+phase_name: report
+phase_iteration: 1
+global_iteration: 80
 max_global_iterations: 80
 completion_promise: SYSTEM DESIGN AUDIT COMPLETE
 started_at: '2026-07-25T14:47:21Z'

@@ -14,6 +14,49 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Diagnóstico de M5 documentado no `CLAUDE.md` § "Contexto que evita erros repetidos" —
+  a arquitetura está correta `[MEDIDO]`: o finetune faz *overfitting* (train ctc ≈ val ctc
+  no melhor ponto de cada época, val sobe acima da train dentro da época), o que **prova
+  capacidade de encoder suficiente**; o gargalo é dado/generalização (ruído dos pseudo-rótulos
+  Whisper do TAGARELA). Registra 3 alavancas grátis contra o mesmo overfitting antes de
+  colher dado novo: augmentação ligada (Reverb→Noise→Telephone + SpecAugment/weight decay,
+  ADR D2, também ataca DoD#3), checkpoint averaging (`--avg`), e beam+LM no decode (hoje greedy).
+- Ciclo de M5 (discover→plan) — blueprint `m5-scale-model-wer-blueprint.md`
+  (`/discover-confidence` SHIPPABLE) trava o recipe de fine-tune (`do_finetune` do icefall,
+  não resume) + augmentação `cut_transforms`; plano `m5-scale-model-wer-plan.md`
+  (`/plan-confidence` SHIPPABLE 97,6). Corpus (ADR D4): mux CORAA humano + TAGARELA pseudo
+  pesado 1:1 (`--use-mux`), test sempre no CORAA humano (pseudo nunca no test).
+- Patch de fine-tune de M5 — `training/prep_finetune.py` porta o mecanismo `do_finetune`
+  (flags `--do-finetune/--init-modules/--finetune-ckpt` + `load_model_params`) para o
+  `zipformer/train.py` do icefall, reusando `apply_patch` (Regra 9/DRY); 5 testes de
+  contrato verdes (`training/tests/test_prep_finetune.py` — injeção, compilação,
+  idempotência, fail-fast).
+- Prep do TAGARELA para o mux de M5 — `training/prep_tagarela.py` (molde `prep_coraa.py`,
+  reusa `normalize_ptbr`+Fbank, Regra 9) adaptado ao schema parquet real (FLAC embutido em
+  `audio.bytes`, filtra `accent=="pt-br"`); sem flag de split dev/test por construção
+  (garantia estrutural de não-vazamento). Revisão de corpus (speech-data-scientist) →
+  correções: downmix mono + decode via `Recording.from_file` (bounda RAM, garante mono, F4/F5);
+  filtro determinístico de alucinação de pseudo-label (repetição n-grama + bound char/segundo,
+  F3); relatório de cobertura por show (F7); 18 testes comportamentais verdes.
+  `training/scripts/tagarela_coraa_leak_check.py` cruza paths do TAGARELA × videoIDs do TEDx no
+  test CORAA (vazamento cross-corpus = BLOCKER; F2). Subset ~600h baixado na instância. Infra:
+  consolidada em 1 instância vast.ai (RTX 3090, 600GB, $0,313/h); modelo M4 preservado local (SHA).
+- Augmentação on-the-fly de M5 — adapter `scripts/corpus/telephone_channel_transform.py`
+  (`TelephoneChannel(AudioTransform)`) torna o canal telefônico de M3 aplicável como
+  transform lhotse lazy (precedente `Recording.narrowband()`, trata `MonoCut`/`MixedCut`),
+  reusando `apply_telephone_channel` sem duplicar DSP (Regra 9); patch
+  `training/prep_augment_datamodule.py` injeta Reverb + flags `--enable-telephone-aug`/
+  `--rir-manifest` + telephone no `asr_datamodule.py` na ordem física Reverb→ruído→telefone
+  (ADR D2); 15 testes de contrato verdes; canal telefônico é on-the-fly no treino (não
+  materializado em disco), offline só nos test sets.
+- Fase de dados de M5 — CORAA-v1.1 (fala espontânea PT-BR) preparado no formato do
+  datamodule icefall: `training/prep_coraa.py` reusa `normalize_ptbr` + Fbank 80-bin do
+  treino (Regra 9), emite `cv-pt_cuts_{dev,test}` com dev=5,91h/7522 cuts e
+  test=11,24h/12676 cuts [MEDIDO] na instância vast.ai (`training/tests/test_prep_coraa.py`).
+- Prova de ausência de vazamento de locutor no CORAA (PRD §7.3):
+  `training/scripts/coraa_speaker_overlap.py` — disjunção train↔dev↔test provada por
+  script nas 3 fontes com chave de locutor no path (CORAL/NURC/TEDx ≈78% das horas de
+  train, 0 chaves em comum); ALIP+SP2010 (≈22%) reportados como não-verificáveis.
 
 ### Changed
 
