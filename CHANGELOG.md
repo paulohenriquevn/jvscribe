@@ -14,6 +14,14 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Deliverable medido de M5 `[MEDIDO]` — Zipformer-CTC medium+fonema fine-tunado (CORAA+TAGARELA),
+  int8 ONNX, avaliado **no hardware-alvo (notebook CPU, ONNX Runtime)**, full-test CORAA humano
+  12.676 utts: **WER wideband espontâneo 23,31%** (CER 11,28%; abaixo do M4 27,46% que era fala
+  lida) e **RTFx 34,69×** (RNF-07 ≥6× ✅). Modelo médio (averaging de checkpoint-124000+112000).
+  Telefônico-proxy 8 kHz 31,97% (continuação com augmentação D2 em curso para o DoD#3 ≤25%).
+  Resultados + metodologia em `training/results/m5-final-results.md`; harness de medição em
+  `training/decode_onnx_local.py`; prep da clip real em `training/make_callcenter_cuts.py`;
+  auditoria de ruído de pseudo-rótulo em `training/scripts/tagarela_noise_audit.py`.
 - Diagnóstico de M5 documentado no `CLAUDE.md` § "Contexto que evita erros repetidos" —
   a arquitetura está correta `[MEDIDO]`: o finetune faz *overfitting* (train ctc ≈ val ctc
   no melhor ponto de cada época, val sobe acima da train dentro da época), o que **prova
