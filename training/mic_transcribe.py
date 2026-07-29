@@ -1,15 +1,23 @@
 """Transcrição em tempo real do microfone com o modelo M5 (ONNX int8, CPU).
 
-Captura o mic (16 kHz mono) → VAD de energia (RMS + histerese, calibra o ruído de fundo)
-detecta fala → ao fim de cada frase (pausa) computa fbank → ONNX greedy CTC → mostra a
-transcrição ao vivo no terminal.
+Pseudo-streaming de um modelo OFFLINE (o M5 é não-causal) via janela deslizante +
+LocalAgreement-2 (Macháček et al., ACL 2023 — o método do `whisper_streaming`):
 
-O M5 é NÃO-streaming (causal=False), então a transcrição sai por FRASE (a cada pausa),
-não palavra-a-palavra. Com RTFx ~34× em CPU, a latência após a pausa é ~100ms.
-VAD de energia (sem deps de ML) — ajuste --sens se disparar com ruído / não pegar fala.
+  - a cada HOP (~0,5s) re-decodifica uma janela CONTÍNUA com sobreposição → NÃO corta
+    palavras (o defeito da v1, que cortava nas pausas);
+  - o texto TENTATIVO (cinza) aparece na hora (~HOP de latência) = efeito real-time;
+  - uma palavra vira FINAL (branca, travada) quando DUAS decodificações consecutivas
+    concordam no prefixo (LocalAgreement-2) → ~1–1,5s, estável, sem mudar depois de travar;
+  - o áudio já confirmado é descartado por timestamp do CTC → janela pequena, custo baixo.
 
-Uso:  python3 mic_transcribe.py
-      python3 mic_transcribe.py --sens 3.5 --min-sil-ms 600
+Real-time em DOIS sentidos, ambos preservados:
+  * throughput: RTFx ~34× em CPU → re-decodar 12s a cada 0,5s usa <50% de um core;
+  * latência: tentativo ~HOP (quase instantâneo); final ~1–1,5s.
+Latência sub-200ms de verdade exige modelo causal (M6). Aqui é o melhor possível com o M5.
+
+Uso:  python3 mic_transcribe.py                 # mic, defaults
+      python3 mic_transcribe.py --hop 0.4       # menor latência (mais flicker no tentativo)
+      python3 mic_transcribe.py --device N      # escolher input (ver sd.query_devices())
 Ctrl+C para sair.
 """
 from __future__ import annotations
@@ -20,7 +28,10 @@ import sounddevice as sd
 from lhotse import Fbank, FbankConfig
 
 SR = 16000
-CHUNK = 512  # ~32ms @ 16kHz
+CHUNK = 512          # ~32ms @ 16kHz
+BLANK = 0
+WORD_START = "▁"  # ▁ (marca início de palavra no BPE)
+DIM, RESET, CLR = "\033[2m", "\033[0m", "\033[K"
 
 
 def load_tokens(path):
@@ -33,27 +44,109 @@ def load_tokens(path):
     return id2tok
 
 
-def ids_to_text(ids, id2tok):
-    return "".join(id2tok.get(i, "") for i in ids).replace("▁", " ").strip()
+def longest_common_prefix(a, b):
+    """Nº de elementos iguais no início de duas listas — núcleo do LocalAgreement-2."""
+    k = 0
+    while k < len(a) and k < len(b) and a[k] == b[k]:
+        k += 1
+    return k
 
 
-def greedy(log_probs, id2tok):
-    ids = log_probs.argmax(-1)[0]
-    toks, prev = [], -1
-    for t in ids:
-        t = int(t)
-        if t != prev and t != 0:
-            toks.append(t)
-        prev = t
-    return ids_to_text(toks, id2tok)
+def ctc_words(path, id2tok, stride, t0):
+    """Colapsa o caminho greedy do CTC em (palavras, tempos_abs_de_início).
+
+    path: argmax por frame (iterável de ints). stride: segundos por frame de saída.
+    t0: tempo absoluto (s) do frame 0. Colapso CTC padrão: remove repetições, depois
+    remove blanks; ``▁`` marca início de palavra. Retorna (list[str], list[float]).
+    """
+    words, times = [], []
+    cur, cur_f, prev = "", None, -1
+    for i, tt in enumerate(path):
+        tt = int(tt)
+        if tt == prev:
+            continue
+        prev = tt
+        if tt == BLANK:
+            continue
+        s = id2tok.get(tt, "")
+        if s.startswith(WORD_START):
+            if cur:
+                words.append(cur)
+                times.append(t0 + cur_f * stride)
+            cur, cur_f = s[len(WORD_START):], i
+        else:
+            if cur_f is None:
+                cur_f = i
+            cur += s
+    if cur:
+        words.append(cur)
+        times.append(t0 + cur_f * stride)
+    return words, times
+
+
+class StreamingCTC:
+    """Janela deslizante + LocalAgreement-2 sobre um modelo CTC offline.
+
+    Estado mínimo: buffer de áudio (desde o último trim), tempo abs do buf[0],
+    palavras já confirmadas (com tempo) e o tail não-confirmado da rodada anterior.
+    """
+
+    def __init__(self, sess, id2tok, hop_s=0.5, window_s=12.0, left_ctx_s=2.0):
+        self.sess, self.id2tok = sess, id2tok
+        self.fbank = Fbank(FbankConfig(num_mel_bins=80))
+        self.hop_s, self.window_s, self.left_ctx_s = hop_s, window_s, left_ctx_s
+        self.buf = np.zeros(0, dtype=np.float32)
+        self.t0 = 0.0            # tempo abs (s) do buf[0]
+        self.committed = []      # [(palavra, tempo_abs)] final/travado
+        self.prev_unc = []       # tail não-confirmado (texto) da atualização anterior
+
+    def _decode(self):
+        feats = self.fbank.extract(self.buf, SR)
+        x = feats[None].astype(np.float32)
+        xl = np.array([feats.shape[0]], dtype=np.int64)
+        lp, _ = self.sess.run(["log_probs", "log_probs_len"], {"x": x, "x_lens": xl})
+        path = lp[0].argmax(-1)
+        stride = (len(self.buf) / SR) / max(1, len(path))
+        return ctc_words(path, self.id2tok, stride, self.t0)
+
+    def update(self, new_audio):
+        """Adiciona áudio, re-decodifica a janela e confirma via LocalAgreement-2.
+
+        Retorna (novas_finais: list[str], tentativo_atual: list[str]).
+        """
+        self.buf = np.concatenate([self.buf, new_audio])
+        if len(self.buf) < int(0.3 * SR):   # < 300ms: sem contexto p/ decodar
+            return [], list(self.prev_unc)
+        words, times = self._decode()
+        lc = self.committed[-1][1] if self.committed else -1e9
+        unc = [(w, t) for w, t in zip(words, times) if t > lc + 1e-6]
+        unc_w = [w for w, _ in unc]
+        k = longest_common_prefix(unc_w, self.prev_unc)  # prefixo que 2 rodadas concordam
+        newly = unc[:k]
+        self.committed.extend(newly)
+        self.prev_unc = unc_w[k:]
+        self._trim()
+        return [w for w, _ in newly], list(self.prev_unc)
+
+    def _trim(self):
+        """Descarta o áudio antes da última palavra confirmada (menos left-context)."""
+        if len(self.buf) / SR <= self.window_s or not self.committed:
+            return
+        cut_t = self.committed[-1][1] - self.left_ctx_s
+        drop = int((cut_t - self.t0) * SR)
+        if drop > 0:
+            self.buf = self.buf[drop:]
+            self.t0 = cut_t
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="m5_avg.int8.onnx")
     ap.add_argument("--tokens", default="tokens.txt")
-    ap.add_argument("--min-sil-ms", type=int, default=600, help="silêncio p/ fechar a frase")
-    ap.add_argument("--sens", type=float, default=3.0, help="fala = RMS > sens × ruído de fundo")
+    ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode (s) — menor = menos latência, mais flicker")
+    ap.add_argument("--window", type=float, default=12.0, help="janela máx (s) antes do trim")
+    ap.add_argument("--nl-sil", type=float, default=1.2, help="silêncio (s) sem texto novo p/ quebrar linha")
+    ap.add_argument("--max-line-words", type=int, default=16, help="quebra a linha ao atingir N palavras finais")
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--device", default=None, help="índice do device de input")
     a = ap.parse_args()
@@ -64,14 +157,7 @@ def main():
     so.enable_cpu_mem_arena = False
     sess = ort.InferenceSession(a.model, so, providers=["CPUExecutionProvider"])
     id2tok = load_tokens(a.tokens)
-    fbank = Fbank(FbankConfig(num_mel_bins=80))
-
-    def transcribe(samples: np.ndarray) -> str:
-        feats = fbank.extract(samples, SR)
-        x = feats[None].astype(np.float32)
-        xl = np.array([feats.shape[0]], dtype=np.int64)
-        lp, _ = sess.run(["log_probs", "log_probs_len"], {"x": x, "x_lens": xl})
-        return greedy(lp, id2tok)
+    dec = StreamingCTC(sess, id2tok, hop_s=a.hop, window_s=a.window)
 
     audio_q: "queue.Queue[np.ndarray]" = queue.Queue()
 
@@ -80,54 +166,46 @@ def main():
             print(f"[audio] {status}", file=sys.stderr, flush=True)
         audio_q.put(indata[:, 0].copy())
 
-    sil_chunks = max(1, int(a.min_sil_ms / 1000 * SR / CHUNK))
-    start_chunks = 3  # ~100ms acima do limiar p/ iniciar
-
-    # calibração do ruído de fundo (~0.5s)
+    hop_samples = int(a.hop * SR)
     dev = int(a.device) if a.device is not None else None
-    print("[init] calibrando ruído de fundo — fique em silêncio ~1s...", flush=True)
-    noise = []
+    print("=" * 64)
+    print("🎤  transcrição M5 ao vivo — streaming (Ctrl+C p/ sair)")
+    print(f"    hop={a.hop}s · janela={a.window}s · cinza=tentativo, branco=confirmado")
+    print("=" * 64, flush=True)
+
     with sd.InputStream(samplerate=SR, channels=1, dtype="float32",
                         blocksize=CHUNK, callback=callback, device=dev):
-        t0 = time.time()
-        while time.time() - t0 < 1.0:
-            noise.append(np.sqrt(np.mean(audio_q.get() ** 2)))
-        noise_floor = max(1e-5, float(np.median(noise)))
-        thresh = noise_floor * a.sens
-        print("=" * 60)
-        print(f"🎤  FALE — transcrição M5 ao vivo (Ctrl+C p/ sair)")
-        print(f"    ruído={noise_floor:.4f} · limiar={thresh:.4f} · sens={a.sens} · pausa={a.min_sil_ms}ms")
-        print("=" * 60)
-        print("🟢 escutando...", flush=True)
-
-        seg, in_speech, sil_run, n = [], False, 0, 0
+        pending, buffered = [], 0
+        line_words = []            # palavras finais na linha de exibição atual
+        last_change = time.time()
         while True:
-            chunk = audio_q.get()
-            rms = np.sqrt(np.mean(chunk ** 2))
-            loud = rms > thresh
-            if in_speech:
-                seg.append(chunk)
-                sil_run = 0 if loud else sil_run + 1
-                if sil_run >= sil_chunks:  # fim da frase
-                    in_speech = False
-                    samples = np.concatenate(seg); seg = []
-                    if len(samples) < SR // 4:
-                        continue
-                    t = time.perf_counter()
-                    text = transcribe(samples)
-                    dt = time.perf_counter() - t
-                    dur = len(samples) / SR
-                    if text:
-                        n += 1
-                        print(f"[{n:02d}] {text}   ({dur:.1f}s→{dt*1000:.0f}ms, {dur/dt:.0f}×)", flush=True)
-            else:
-                if loud:
-                    seg.append(chunk)
-                    if len(seg) >= start_chunks:
-                        in_speech = True
-                        sil_run = 0
-                else:
-                    seg = []
+            c = audio_q.get()
+            pending.append(c)
+            buffered += len(c)
+            if buffered < hop_samples:
+                continue
+            chunk = np.concatenate(pending)
+            pending, buffered = [], 0
+
+            newly, tentative = dec.update(chunk)
+            if newly:
+                line_words.extend(newly)
+                last_change = time.time()
+
+            committed_str = " ".join(line_words)
+            tent_str = " ".join(tentative)
+            sep = " " if committed_str and tent_str else ""
+            line = committed_str + sep + (DIM + tent_str + RESET if tent_str else "")
+            sys.stdout.write("\r" + CLR + line)
+            sys.stdout.flush()
+
+            # congela a linha (newline) em pausa sem tentativo, ou quando fica longa
+            quiet = (time.time() - last_change) > a.nl_sil
+            if line_words and not tentative and (quiet or len(line_words) >= a.max_line_words):
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                line_words = []
+                last_change = time.time()
 
 
 if __name__ == "__main__":

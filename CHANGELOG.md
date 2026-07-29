@@ -13,6 +13,14 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- App do microfone (`training/mic_transcribe.py`) reescrito de segmentação-por-pausa (VAD)
+  para **pseudo-streaming**: janela deslizante com sobreposição + LocalAgreement-2
+  (Macháček et al., ACL 2023) — não corta mais palavras na fronteira, exibe texto tentativo
+  (cinza) com latência ~hop e trava a palavra (branco) quando 2 decodificações concordam.
+  Trim por timestamp do CTC mantém a janela pequena. Testes do núcleo em
+  `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
+
 ### Added
 - App de transcrição em tempo real do microfone (`training/mic_transcribe.py`) — captura mic
   16 kHz → VAD de energia (RMS+histerese, calibra ruído de fundo, zero deps de ML) → fbank →
