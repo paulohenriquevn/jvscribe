@@ -85,6 +85,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Removed
 
 ### Fixed
+- Corrige dois artefatos do app de streaming (`training/mic_transcribe.py`): duplicação de
+  palavra na costura da janela pós-trim (dedup no `commit_localagreement`) e a linha que não
+  quebrava em fala contínua (quebra por tamanho independe de texto tentativo). Núcleo do
+  LocalAgreement extraído para função pura testável (+4 testes).
 
 ### Security
 

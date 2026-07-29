@@ -84,6 +84,27 @@ def ctc_words(path, id2tok, stride, t0):
     return words, times
 
 
+def commit_localagreement(words, times, committed, prev_unc):
+    """Núcleo puro do LocalAgreement-2 (testável, sem I/O).
+
+    Dado o resultado do decode atual (words+times), o que já foi confirmado
+    (committed=[(palavra, tempo)]) e o tail não-confirmado da rodada anterior
+    (prev_unc=list[str]), retorna (newly, new_prev_unc):
+      - descarta palavras já confirmadas (tempo <= último confirmado);
+      - dedup de costura: a última confirmada reaparece no left-context re-decodado
+        pós-trim com tempo ligeiramente > lc → não re-emitir;
+      - confirma o maior prefixo comum entre o tail atual e o anterior.
+    """
+    lc = committed[-1][1] if committed else -1e9
+    last_w = committed[-1][0] if committed else None
+    unc = [(w, t) for w, t in zip(words, times) if t > lc + 1e-6]
+    if unc and last_w is not None and unc[0][0] == last_w and unc[0][1] - lc < 0.5:
+        unc = unc[1:]
+    unc_w = [w for w, _ in unc]
+    k = longest_common_prefix(unc_w, prev_unc)
+    return unc[:k], unc_w[k:]
+
+
 class StreamingCTC:
     """Janela deslizante + LocalAgreement-2 sobre um modelo CTC offline.
 
@@ -118,13 +139,9 @@ class StreamingCTC:
         if len(self.buf) < int(0.3 * SR):   # < 300ms: sem contexto p/ decodar
             return [], list(self.prev_unc)
         words, times = self._decode()
-        lc = self.committed[-1][1] if self.committed else -1e9
-        unc = [(w, t) for w, t in zip(words, times) if t > lc + 1e-6]
-        unc_w = [w for w, _ in unc]
-        k = longest_common_prefix(unc_w, self.prev_unc)  # prefixo que 2 rodadas concordam
-        newly = unc[:k]
+        newly, self.prev_unc = commit_localagreement(
+            words, times, self.committed, self.prev_unc)
         self.committed.extend(newly)
-        self.prev_unc = unc_w[k:]
         self._trim()
         return [w for w, _ in newly], list(self.prev_unc)
 
@@ -199,9 +216,10 @@ def main():
             sys.stdout.write("\r" + CLR + line)
             sys.stdout.flush()
 
-            # congela a linha (newline) em pausa sem tentativo, ou quando fica longa
+            # congela a linha (newline): por tamanho (mesmo com tentativo pendente,
+            # senão em fala contínua a linha nunca quebra) ou em pausa sem tentativo.
             quiet = (time.time() - last_change) > a.nl_sil
-            if line_words and not tentative and (quiet or len(line_words) >= a.max_line_words):
+            if line_words and (len(line_words) >= a.max_line_words or (not tentative and quiet)):
                 sys.stdout.write("\n")
                 sys.stdout.flush()
                 line_words = []

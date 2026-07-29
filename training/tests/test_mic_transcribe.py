@@ -7,7 +7,7 @@ palavra começa no tempo. Determinístico; não abre mic nem carrega ONNX.
 import numpy as np
 import pytest
 
-from mic_transcribe import longest_common_prefix, ctc_words
+from mic_transcribe import longest_common_prefix, ctc_words, commit_localagreement
 
 
 # --- LocalAgreement-2: prefixo comum entre duas hipóteses ------------------
@@ -63,3 +63,39 @@ def test_ctc_subpalavra_sem_word_start_anexa_a_anterior():
     # "la" (sem ▁) no início vira parte da 1ª palavra emitida
     words, _ = ctc_words(np.array([3, 0, 4]), _id2tok(), 0.04, 0.0)
     assert words == ["la", "bom"]
+
+
+# --- commit_localagreement: confirmação + dedup de costura ------------------
+
+def test_commit_confirma_prefixo_comum_sem_committed():
+    # 2ª rodada concorda em "o lula"; "é" ainda não confirma
+    newly, prev = commit_localagreement(
+        ["o", "lula", "é"], [0.1, 0.5, 0.9], committed=[], prev_unc=["o", "lula"])
+    assert [w for w, _ in newly] == ["o", "lula"]
+    assert prev == ["é"]
+
+
+def test_commit_dedup_costura_nao_reemite_ultima_confirmada():
+    # "de" já confirmada em t=1.0 reaparece no left-context re-decodado (t=1.03)
+    newly, prev = commit_localagreement(
+        ["de", "colocação", "funcionava"], [1.03, 1.4, 1.9],
+        committed=[("de", 1.0)], prev_unc=["colocação"])
+    assert [w for w, _ in newly] == ["colocação"]   # NÃO re-emite "de"
+    assert prev == ["funcionava"]
+
+
+def test_commit_nao_dedup_quando_palavra_difere():
+    # palavra na fronteira difere da última confirmada → sem dedup, nada confirma
+    newly, prev = commit_localagreement(
+        ["outro", "colocação"], [1.1, 1.5],
+        committed=[("de", 1.0)], prev_unc=["colocação"])
+    assert newly == []
+    assert prev == ["outro", "colocação"]
+
+
+def test_commit_descarta_palavras_antes_do_ultimo_confirmado():
+    # palavras com tempo <= último confirmado são ignoradas
+    newly, prev = commit_localagreement(
+        ["ja", "confirmado", "novo"], [0.2, 0.6, 1.5],
+        committed=[("confirmado", 0.6)], prev_unc=["novo"])
+    assert [w for w, _ in newly] == ["novo"]
