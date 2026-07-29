@@ -14,6 +14,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- App de transcrição em tempo real do microfone (`training/mic_transcribe.py`) — captura mic
+  16 kHz → VAD de energia (RMS+histerese, calibra ruído de fundo, zero deps de ML) → fbank →
+  ONNX int8 M5 → transcrição ao vivo no terminal, por frase (M5 é não-streaming). Mostra
+  latência + RTFx por frase. Roda no notebook em CPU.
 - Deliverable medido de M5 `[MEDIDO]` — Zipformer-CTC medium+fonema fine-tunado (CORAA+TAGARELA),
   int8 ONNX, avaliado **no hardware-alvo (notebook CPU, ONNX Runtime)**, full-test CORAA humano
   12.676 utts: **WER wideband espontâneo 23,31%** (CER 11,28%; abaixo do M4 27,46% que era fala
