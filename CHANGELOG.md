@@ -13,6 +13,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- Transcrição em LOTE de pasta de áudios (`training/batch_transcribe.py`) — lê qualquer formato
+  via ffmpeg → 16 kHz → VAD por silêncio → inferência ONNX **em batch** com decode paralelo.
+  Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
+  11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
+
 ## [0.7.0] - 2026-07-30
 
 ### Changed
