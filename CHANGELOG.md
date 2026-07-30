@@ -74,6 +74,16 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- **A suíte Python nunca foi reprodutível fora da máquina do dono** (M9, achado do CI): dez
+  dependências eram usadas sem estar declaradas (`scipy`, `sounddevice`, `onnxruntime`,
+  `lhotse`, `sentencepiece`, `torch`, `datasets`, `phonemizer`, `pytest`, `yaml`), e quatro
+  módulos quebravam na **coleta** — o que derruba a suíte inteira, não só o teste afetado.
+  Novo `scripts/requirements-test.txt` declara o que os **testes** precisam (distinto do
+  `requirements-eval.txt`, que declara o que a **avaliação** precisa — a diferença nunca tinha
+  sido explicitada). A stack pesada de treino usa `pytest.importorskip`, virando SKIP visível
+  em vez de erro de coleta.
+- CI passou a usar `venv`: distribuições recentes marcam o Python do sistema como
+  externally-managed (PEP 668) e recusam `pip install` global.
 - **Um handler do dashboard derrubava o servidor** (M9, achado do CI): `run_fixture_test`
   fazia `.expect("engine acabou de ser carregado")`. Num ambiente sem o modelo, o `expect`
   entrava em panic **segurando o mutex do cache de engine**, envenenando-o — e endpoints não
