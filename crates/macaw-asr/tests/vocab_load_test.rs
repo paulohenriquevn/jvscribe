@@ -140,3 +140,52 @@ fn artefatos_reais_tem_500_tokens_e_fingerprints_distintos() {
         "vocabulários de mesmo tamanho e conteúdo divergente DEVEM ter fingerprints distintos"
     );
 }
+
+// --- T1.2 (M9) — recusa do par (modelo, vocabulário) incoerente ----------------
+
+#[test]
+#[ignore = "requer o model.int8.onnx real (não versionado)"]
+fn transcribe_falha_quando_vocab_nao_bate_com_saida_do_modelo() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let model = root.join("training/results/onnx/model.int8.onnx");
+    if !model.exists() {
+        eprintln!("SKIP: modelo ausente em {model:?}");
+        return;
+    }
+    let mut engine = AsrEngine::load(&model).expect("modelo real deve carregar");
+
+    // Vocabulário com 499 tokens reais contra um modelo de 500 classes.
+    let mut body = String::new();
+    for i in 0..499 {
+        body.push_str(&format!("t{i} {i}\n"));
+    }
+    let vocab = Vocab::load(&tmp("mismatch499", &body)).unwrap();
+    assert_eq!(vocab.real_len(), 499);
+
+    let mel = vec![0.0f32; 80 * 40];
+    let err = engine.transcribe(&mel, 40, &vocab).unwrap_err();
+    assert!(
+        matches!(err, AsrError::VocabModelMismatch { model_dim: 500, vocab_real: 499, .. }),
+        "esperado VocabModelMismatch{{500,499}}, veio {err:?}"
+    );
+    let msg = format!("{err}");
+    assert!(msg.contains("model_dim=500"), "mensagem deve citar model_dim=500: {msg}");
+    assert!(msg.contains("vocab_real=499"), "mensagem deve citar vocab_real=499: {msg}");
+}
+
+#[test]
+#[ignore = "requer o artefato canônico real (não versionado)"]
+fn transcribe_aceita_o_artefato_canonico_real() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = root.join("training/results/onnx");
+    if !dir.join("model.int8.onnx").exists() {
+        eprintln!("SKIP: artefato ausente");
+        return;
+    }
+    let mut engine = AsrEngine::load(&dir.join("model.int8.onnx")).unwrap();
+    let vocab = Vocab::load(&dir.join("tokens.txt")).unwrap();
+    // 502 linhas, 500 reais — a regra D2 NÃO pode gerar falso positivo aqui.
+    let mel = vec![0.0f32; 80 * 40];
+    let r = engine.transcribe(&mel, 40, &vocab);
+    assert!(r.is_ok(), "artefato canônico deve ser aceito, veio {r:?}");
+}

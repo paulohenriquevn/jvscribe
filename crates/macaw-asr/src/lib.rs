@@ -37,6 +37,16 @@ pub enum AsrError {
     InferenceFailed { reason: String },
     /// Operação de inferência pedida a um motor sem sessão carregada.
     NoSession,
+    /// O vocabulário não corresponde à saída do modelo — par (modelo, `tokens.txt`) incoerente.
+    ///
+    /// Falhar aqui é deliberado: sem esta checagem o decode produz texto **silenciosamente
+    /// errado**, porque um id fora de faixa (ou mapeado para outro token) não levanta erro.
+    VocabModelMismatch {
+        /// Última dimensão de `log_probs` — nº de classes que o modelo pode emitir.
+        model_dim: usize,
+        /// Tokens emitíveis do vocabulário (exclui símbolos de desambiguação).
+        vocab_real: usize,
+    },
 }
 
 impl fmt::Display for AsrError {
@@ -52,6 +62,14 @@ impl fmt::Display for AsrError {
             }
             Self::InferenceFailed { reason } => write!(f, "forward pass falhou: {reason}"),
             Self::NoSession => write!(f, "motor sem sessão carregada"),
+            Self::VocabModelMismatch {
+                model_dim,
+                vocab_real,
+            } => write!(
+                f,
+                "vocabulário incompatível com o modelo: model_dim={model_dim} vocab_real={vocab_real} \
+                 — o tokens.txt não pertence a este modelo (transcrição seria silenciosamente errada)"
+            ),
         }
     }
 }
@@ -64,6 +82,8 @@ impl std::error::Error for AsrError {}
 #[derive(Debug)]
 pub struct Vocab {
     tokens: Vec<String>,
+    /// Contagem de tokens emitíveis, computada UMA vez na carga (validação é O(1)).
+    real_len: usize,
 }
 
 impl Vocab {
@@ -95,7 +115,8 @@ impl Vocab {
             });
         }
 
-        Ok(Self { tokens })
+        let real_len = tokens.iter().filter(|t| !Self::is_disambig(t)).count();
+        Ok(Self { tokens, real_len })
     }
 
     /// Número de tokens carregados.
@@ -129,7 +150,7 @@ impl Vocab {
     /// [`Vocab::len`] conta linhas do arquivo e **não** serve para essa comparação.
     #[must_use]
     pub fn real_len(&self) -> usize {
-        self.tokens.iter().filter(|t| !Self::is_disambig(t)).count()
+        self.real_len
     }
 
     /// Fingerprint de **identidade** do vocabulário: SHA-256 sobre a sequência ordenada
@@ -180,6 +201,14 @@ impl Vocab {
 pub struct AsrEngine {
     model_path: String,
     session: Option<ort::session::Session>,
+    /// Nº de classes que o modelo pode emitir — última dimensão de `log_probs`.
+    ///
+    /// Lido **uma vez, na carga**, do type-info da sessão: `[MEDIDO]` 2026-07-30 o export
+    /// do icefall declara `log_probs` como `['N','T',500]`, ou seja, a dimensão de vocabulário
+    /// é **estática** e não exige inferência para ser conhecida. `None` quando a saída não
+    /// existe ou a dimensão é dinâmica (`-1`) — nesse caso a validação degrada para no-op,
+    /// em vez de rejeitar um modelo legítimo.
+    output_vocab_dim: Option<usize>,
 }
 
 impl AsrEngine {
@@ -219,10 +248,45 @@ impl AsrEngine {
             .commit_from_file(model_path)
             .map_err(|e| session_err(e.to_string()))?;
 
+        // Dimensão de vocabulário lida do type-info, SEM rodar inferência (D1 do plano de
+        // M9). Só a última dimensão de `log_probs` importa; `-1` = dinâmica → None.
+        let output_vocab_dim = session
+            .outputs()
+            .iter()
+            .find(|o| o.name() == "log_probs")
+            .and_then(|o| o.dtype().tensor_shape())
+            .and_then(|shape| shape.iter().last().copied())
+            .and_then(|d| usize::try_from(d).ok());
+
         Ok(Self {
             model_path: model_path.display().to_string(),
             session: Some(session),
+            output_vocab_dim,
         })
+    }
+
+    /// Nº de classes emitíveis pelo modelo, quando a dimensão é estática no grafo.
+    #[must_use]
+    pub fn output_vocab_dim(&self) -> Option<usize> {
+        self.output_vocab_dim
+    }
+
+    /// Recusa o par (modelo, vocabulário) incoerente.
+    ///
+    /// Compara a dimensão de saída do modelo com os tokens **emitíveis** do vocabulário
+    /// ([`Vocab::real_len`]). O custo é O(1): a dimensão foi lida na carga e `real_len` é
+    /// cacheado em [`Vocab::load`].
+    ///
+    /// # Erros
+    /// [`AsrError::VocabModelMismatch`] quando as duas grandezas divergem.
+    pub fn validate_vocab(&self, vocab: &Vocab) -> Result<(), AsrError> {
+        match self.output_vocab_dim {
+            Some(model_dim) if model_dim != vocab.real_len() => Err(AsrError::VocabModelMismatch {
+                model_dim,
+                vocab_real: vocab.real_len(),
+            }),
+            _ => Ok(()),
+        }
     }
 
     /// Nomes das entradas do grafo carregado.
@@ -349,6 +413,9 @@ impl AsrEngine {
         n_frames: usize,
         vocab: &Vocab,
     ) -> Result<String, AsrError> {
+        // Fail-fast ANTES de gastar a inferência: par incoerente produziria texto
+        // silenciosamente errado (M9/T1.2).
+        self.validate_vocab(vocab)?;
         let (logits, t, v) = self.ctc_logits(mel, n_frames)?;
         let ids = crate::decode::ctc_greedy(&logits, t, v, ICEFALL_BLANK_ID);
         Ok(crate::decode::detok(&ids, vocab))
