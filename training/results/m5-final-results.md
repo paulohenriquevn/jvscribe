@@ -84,3 +84,14 @@ viabilidade ≤25% em espontâneo é `[LITERATURA]` (Parakeet-TDT 0.6B + TAGAREL
 degradado pelo codec-pool GSM/Opus/G.711): **36,88% WER**. Contexto: bandpass-proxy dava 31,97%
 (otimista — codec inócuo); call real mono-misto 40,13%. O codec-pool realista é a condição de
 deploy honesta (D1). O FT (Phase 4) precisa cobrir ~12 pp para o alvo ≤25%.
+
+## Phase 4 — full-FT colapsa (2× MEDIDO) → pivô para encoder-freeze `[MEDIDO]`
+
+FT gentil corrigido (single-ckpt, LR 0,002, codec-pool p=0,5, fp32) **colapsou igual ao D2**:
+`checkpoint-4000 D1 = 97,83%` · `checkpoint-8000 D1 = 98,58%` (near-blank, piorando). Confirma
+que **full-FT deste CTC convergido + codec-aug colapsa o greedy** (2 runs independentes), apesar
+de `ctc_loss` de treino saudável (~1,1). **Full-FT descartado como método.**
+
+**Pivô (collapse-proof):** encoder profundo (63,4M) **CONGELADO**, treina só encoder_embed
+(0,61M) + ctc_output (0,26M) + fonema (0,035M) = ~0,9M (~1,4%, equivalente a adapter). Runbook
+`training/run_ft_freeze.sh` (patch `FREEZE_ENCODER=1` em train.py da instância). Em curso.

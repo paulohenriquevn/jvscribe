@@ -28,6 +28,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Pivô do FT telefônico: full-FT + codec-aug colapsa o greedy p/ ~98% (2× medido, D2 + run
+  gentil). Novo runbook `training/run_ft_freeze.sh` — encoder congelado (63M), treina só
+  frontend+cabeças (~0,9M, collapse-proof). Patch de freeze via env var no train.py da instância.
 - Baseline D1 real-codec + runbook do FT gentil corrigido: `training/measure_realcodec.py`
   (WER em CORAA mono-falante degradado pelo codec-pool = **36,88% [MEDIDO]**) e
   `training/run_ft_codec.sh` (FT single-ckpt + LR 0,002 + codec-pool p=0,5 + fp32 — corrige o
