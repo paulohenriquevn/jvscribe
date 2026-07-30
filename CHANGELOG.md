@@ -14,6 +14,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Benchmark público reprodutível (`training/eval_public_hf.py`, `training/results/public-benchmarks.md`): **16,14% WER** no FLEURS pt_br (fala lida banda-larga), RTFx 24,6x em batch (CPU). Confirma o modelo forte em áudio de boa qualidade; o gargalo telefônico é canal/dado. [MEDIDO]
 - Transcrição em LOTE de pasta de áudios (`training/batch_transcribe.py`) — lê qualquer formato
   via ffmpeg → 16 kHz → VAD por silêncio → inferência ONNX **em batch** com decode paralelo.
   Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
