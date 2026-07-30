@@ -16,6 +16,10 @@ Inventário medido em 2026-07-30 — 5 implementações Python + 1 Rust:
 import numpy as np
 import pytest
 
+# `lhotse` puxa a stack de treino e não está no requirements-test.txt (deliberado:
+# é pesada e o CI model-free não precisa dela). SKIP visível > erro de coleta.
+pytest.importorskip("lhotse")
+
 BLANK = 0
 
 

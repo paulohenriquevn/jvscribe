@@ -74,6 +74,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- Suíte validada em **ambiente limpo** (M9): instalando só o `requirements-test.txt` num venv virgem, a suíte roda com **91 passed / 14 skipped / 0 failed**; na máquina completa, 192 passed. Os 14 SKIPs declaram honestamente quais testes exigem a stack de treino (`lhotse`/`torch`) — antes eles derrubavam a coleta inteira e ninguém via nada.
 - **A suíte Python nunca foi reprodutível fora da máquina do dono** (M9, achado do CI): dez
   dependências eram usadas sem estar declaradas (`scipy`, `sounddevice`, `onnxruntime`,
   `lhotse`, `sentencepiece`, `torch`, `datasets`, `phonemizer`, `pytest`, `yaml`), e quatro

@@ -4,6 +4,12 @@ basename duplicado). Ver knowledge-base/plans/repo-faang-reorg-plan.md."""
 import ast
 import pathlib
 
+import pytest
+
+# `lhotse` puxa a stack de treino e não está no requirements-test.txt (deliberado:
+# é pesada e o CI model-free não precisa dela). SKIP visível > erro de coleta.
+pytest.importorskip("lhotse")
+
 TRAIN = pathlib.Path(__file__).resolve().parents[1]
 PIPES = ("finetune", "batch", "realtime", "eval")
 # `common` é o shared kernel (M9/T3.1): é o ÚNICO destino permitido para import
@@ -157,5 +163,12 @@ def test_entrypoints_de_pipeline_rodam_standalone():
             cwd=TRAIN.parent,
         )
         if r.returncode != 0 and "ModuleNotFoundError" in r.stderr:
-            falhas.append(f"{rel}: {r.stderr.strip().splitlines()[-1]}")
+            ultima = r.stderr.strip().splitlines()[-1]
+            faltante = ultima.split("'")[1] if "'" in ultima else ""
+            # Só é defeito de LAYOUT quando o módulo ausente é NOSSO — aí o caminho de import
+            # está errado (foi o caso do `ctc` em M9/T3.1). Dependência de terceiro ausente é
+            # ambiente, não layout, e o teste não pode confundir os dois.
+            nossos = set(_module_home()) | {f.stem for f in (TRAIN / SHARED).glob("*.py")}
+            if faltante in nossos:
+                falhas.append(f"{rel}: {ultima}")
     assert not falhas, "entrypoint não roda standalone: " + "; ".join(falhas)

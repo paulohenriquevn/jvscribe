@@ -15,6 +15,12 @@ pressupõe a mesma normalização.
 import sys
 from pathlib import Path
 
+import pytest
+
+# `lhotse` puxa a stack de treino e não está no requirements-test.txt (deliberado:
+# é pesada e o CI model-free não precisa dela). SKIP visível > erro de coleta.
+pytest.importorskip("lhotse")
+
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "training" / "scripts"))
