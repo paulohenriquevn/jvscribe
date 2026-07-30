@@ -18,20 +18,30 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 
 | Milestone | Estado |
 |---|---|
-| M0 — Fundação do runtime | ✅ concluído |
-| M1 — Instrumentação e régua de medição | ✅ concluído (v0.2.1) |
-| **M2 — Decisão de arquitetura** | ✅ **concluído (v0.3.0)** |
-| M3 — Corpus (paralelo) · M4 — Piloto comparativo | ⏳ próximos |
+| M0 — Fundação do runtime · M1 — Instrumentação | ✅ concluídos |
+| M2 — Decisão de arquitetura · M3 — Corpus | ✅ concluídos |
+| M4 — Piloto comparativo | ✅ concluído |
+| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](training/results/m5-final-results.md)) |
+| M6 — Runtime otimizado · M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
+| M9 — Governança de artefato e reprodutibilidade | 🔄 em curso |
 
-### O que M2 concluiu
+> A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
+> ([`test_readme_links.py`](training/tests/test_readme_links.py)) garante que todo link interno
+> daqui resolve — em 2026-07-30, 5 de 5 apontavam para arquivos removidos por engano.
 
-Dos 5 candidatos avaliados contra 8 critérios, a família **CTC/transducer** venceu o
-critério de velocidade em CPU. M2 nomeia **2 finalistas a pilotar em M4** —
-**Zipformer+CTC** e **FastConformer+CTC** — com **Moonshine-AED** como braço de
-controle. **O vencedor não está travado**: WER em 8 kHz de call center, RTFx sob carga
-e equivalência batch≡streaming são medidos no piloto de M4.
+### A arquitetura, decidida por medição
 
-**Achado que sustentou a decisão** `[MEDIDO]`: em CPU, na mesma máquina e na mesma
+Dos 5 candidatos avaliados contra 8 critérios, a família **CTC/transducer** venceu o critério
+de velocidade em CPU (M2). O piloto comparativo de M4 então **travou o finalista**:
+**Zipformer-CTC `medium` (64M), int8, com cabeça de fonema auxiliar** —
+[ADR 0003](knowledge-base/adrs/0003-m4-finalist-medium.md), que supersede o eixo de tamanho do
+[ADR 0002](knowledge-base/adrs/0002-m4-architecture-finalist.md) após medição de soak e carga.
+
+`[MEDIDO]` head-to-head com parâmetros equivalentes: Zipformer domina Conformer nos dois eixos
+de acurácia (WER 28,86% vs 31,57%, IC95% do delta excluindo 0). A cabeça de fonema levou o
+medium a **27,49% WER** ([evidência](training/results/m4-medium-phoneme-ablation-results.md)).
+
+**O achado de M2 que orientou a escolha da família** `[MEDIDO]`: em CPU, na mesma máquina e na mesma
 clip de 12 s, o transducer é **~2× mais rápido** que o AED em tamanho comparável —
 Zipformer 20M = 15,90 ± 2,06× tempo real vs Moonshine tiny 27M = 7,93 ± 0,72×
 (n=10, separação estatística limpa;

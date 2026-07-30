@@ -73,6 +73,11 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- README corrigido (M9/T4.3): os 5 links internos voltaram a resolver (4 pelas restaurações de
+  `c7c67b9~1`, 1 pela recuperação de `m2-rtfx-candidates.md`), a tabela de milestones foi
+  sincronizada com o `ROADMAP.md`, e a seção de arquitetura deixou de afirmar que **"o vencedor
+  não está travado"** — M4 travou o finalista (Zipformer-CTC medium 64M + fonema, ADR 0003).
+  Um teste (`test_readme_links.py`) impede a reincidência.
 - Rota `/m1` do dashboard devolvia `200 OK` vazio para sempre (M9/T4.1): `m1_measurements_json`
   lia `knowledge-base/measurements` — removido em `c7c67b9` — e engolia o ENOENT com
   `unwrap_or_default()`, o que o dashboard exibia como "relatório ainda não gerado",
