@@ -385,7 +385,14 @@ fn run_fixture_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
         Ok(g) => g,
         Err(e) => return e,
     };
-    let engine = guard.as_mut().expect("engine acabou de ser carregado");
+    // M9: era `.expect("engine acabou de ser carregado")`. O panic acontecia SEGURANDO o
+    // mutex do cache, envenenando-o — e endpoints não relacionados (`/metrics`) passavam a
+    // falhar com ConnectionReset. Um handler derrubava o servidor. Descoberto rodando o CI
+    // num ambiente sem o modelo. `error-handling.md` § 2: nunca panic, sempre erro tipado.
+    let Some(engine) = guard.as_mut() else {
+        return "{\"ok\":false,\"msg\":\"Modelo indisponível — rode scripts/setup_model.sh\"}"
+            .to_string();
+    };
     let t = Instant::now();
     match engine.encode(&flat, MEL_BINS, n) {
         Ok(shape) => {

@@ -74,6 +74,11 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- **Um handler do dashboard derrubava o servidor** (M9, achado do CI): `run_fixture_test`
+  fazia `.expect("engine acabou de ser carregado")`. Num ambiente sem o modelo, o `expect`
+  entrava em panic **segurando o mutex do cache de engine**, envenenando-o — e endpoints não
+  relacionados (`/metrics`) passavam a falhar com `ConnectionReset`. Agora devolve resposta
+  tipada indicando o que falta. Só apareceu porque o CI roda num container sem os artefatos.
 - **CI não rodava — três defeitos que só a execução expôs** (M9/H-5 do `/review`). O critério
   original ("o YAML parseia") era um proxy que não distinguia workflow válido de workflow
   funcional. Rodando com `act`:
