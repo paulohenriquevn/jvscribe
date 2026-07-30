@@ -76,7 +76,7 @@ mesmo nessa clip.
 
 Todos os WER/RTFx acima são `[MEDIDO]` (comando + hardware + full-test). A referência de
 viabilidade ≤25% em espontâneo é `[LITERATURA]` (Parakeet-TDT 0.6B + TAGARELA, 10-21%, porém
-600M = 9× o nosso 64M). Backup dos artefatos: `models/m5-final-medium-phoneme/backup/`.
+600M = 9× o nosso 64M). Backup dos artefatos: `models/m5-final-medium-phoneme/finetune/`.
 
 ## Phase 2 — baseline D1 (real-codec mono-falante) `[MEDIDO]`
 

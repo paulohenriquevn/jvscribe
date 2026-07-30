@@ -13,6 +13,26 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **`models/finetune/` — tudo para retomar o treino dos dois modelos M5, em um lugar só.**
+  Renomeado de `backup/` (nome que não dizia para que servia) e completado com `tokens.txt` +
+  dois READMEs: `models/README.md` (qual é o oficial e por quê) e
+  `models/m5-final-medium-phoneme/finetune/README.md` (comandos de retomada, as quatro flags
+  de arquitetura obrigatórias, e as armadilhas já pagas — LR de cabeça fresca, fp16 colapsando,
+  full-FT com codec-aug colapsando o greedy).
+
+### Fixed
+- **O `.pt` do modelo oficial estava corrompido — recuperado.** `avg_124_112.pt`, o checkpoint
+  que gerou o `m5_avg.int8.onnx` (WER 15,99%), não abria: `PytorchStreamReader failed reading
+  zip archive`. Tinha 80 MB onde 64M parâmetros em fp32 ocupam ~257 MB — truncado a ~31%,
+  provavelmente por disco cheio na vast.ai durante o salvamento. Regenerado como a média dos
+  `model` state dicts de `checkpoint-124000.pt` e `checkpoint-112000.pt`, ambos íntegros (735
+  tensores cada, com `optimizer`/`scheduler`). O arquivo truncado foi **mantido** como
+  `avg_124_112.CORROMPIDO.pt` — peso não se apaga.
+  Limite honesto: a equivalência bit a bit com o original **não** foi verificada (o script de
+  export ONNX rodava na instância remota). Rotulado `[ESTIMATIVA]` no README.
+
+
 ### Changed
 - **O modelo oficial passou a ser `m5_avg.int8.onnx` — decidido por medição, não por nome.**
   Os dois pesos M5 que coabitam o artefato canônico foram medidos no mesmo conjunto
