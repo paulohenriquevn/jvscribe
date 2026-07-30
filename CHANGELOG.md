@@ -33,6 +33,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
 ### Fixed
+- `.gitignore` deixava as fixtures determinísticas fora do versionamento (M9/T2.1): as linhas 57-58 repetiam `*.wav`/`*.f32` **depois** da exceção `!tests/fixtures/*.wav`, e em `.gitignore` o último padrão que casa vence. As fixtures sobreviviam só por já estarem no index; qualquer fixture nova sumiria em silêncio, e o CI perderia o golden do `kaldi_fbank`. A regra geral agora precede a exceção, e 4 testes cobrem os dois sentidos — inclusive que o dump de eval `fleurs_one.f32` (214 K) **continua** ignorado.
+
 - Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
 
 ### Removed
