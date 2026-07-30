@@ -77,3 +77,10 @@ mesmo nessa clip.
 Todos os WER/RTFx acima são `[MEDIDO]` (comando + hardware + full-test). A referência de
 viabilidade ≤25% em espontâneo é `[LITERATURA]` (Parakeet-TDT 0.6B + TAGARELA, 10-21%, porém
 600M = 9× o nosso 64M). Backup dos artefatos: `models/m5-final-medium-phoneme/backup/`.
+
+## Phase 2 — baseline D1 (real-codec mono-falante) `[MEDIDO]`
+
+`measure_realcodec.py --checkpoint avg_124_112 --n 500 --codec pool` (CORAA test mono-falante
+degradado pelo codec-pool GSM/Opus/G.711): **36,88% WER**. Contexto: bandpass-proxy dava 31,97%
+(otimista — codec inócuo); call real mono-misto 40,13%. O codec-pool realista é a condição de
+deploy honesta (D1). O FT (Phase 4) precisa cobrir ~12 pp para o alvo ≤25%.

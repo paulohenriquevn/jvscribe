@@ -22,6 +22,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Baseline D1 real-codec + runbook do FT gentil corrigido: `training/measure_realcodec.py`
+  (WER em CORAA mono-falante degradado pelo codec-pool = **36,88% [MEDIDO]**) e
+  `training/run_ft_codec.sh` (FT single-ckpt + LR 0,002 + codec-pool p=0,5 + fp32 — corrige o
+  colapso do D2). Phase 2/4 do plano m5-8khz.
 - Cadeia telefônica de treino agora sorteia o codec do pool por-cut
   (`scripts/corpus/telephone_channel_transform.py` + `apply_band` em `telephone_channel.py`),
   substituindo o G.711-fixo. Default do pool = codecs realistas (GSM/Opus/G.711); `{"g711a":1.0}`
