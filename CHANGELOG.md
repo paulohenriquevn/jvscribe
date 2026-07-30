@@ -32,6 +32,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
+### Security
+- Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
+
 ### Fixed
 - `.gitignore` deixava as fixtures determinísticas fora do versionamento (M9/T2.1): as linhas 57-58 repetiam `*.wav`/`*.f32` **depois** da exceção `!tests/fixtures/*.wav`, e em `.gitignore` o último padrão que casa vence. As fixtures sobreviviam só por já estarem no index; qualquer fixture nova sumiria em silêncio, e o CI perderia o golden do `kaldi_fbank`. A regra geral agora precede a exceção, e 4 testes cobrem os dois sentidos — inclusive que o dump de eval `fleurs_one.f32` (214 K) **continua** ignorado.
 
