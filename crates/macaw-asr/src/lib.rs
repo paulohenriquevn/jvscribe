@@ -47,6 +47,17 @@ pub enum AsrError {
         /// Tokens emitíveis do vocabulário (exclui símbolos de desambiguação).
         vocab_real: usize,
     },
+    /// O vocabulário tem o tamanho certo mas **não é o vocabulário deste modelo**.
+    ///
+    /// Este é o caso que a checagem de cardinalidade NÃO pega. `[MEDIDO]` 2026-07-30: os dois
+    /// artefatos em disco têm 500 tokens emitíveis cada e 492 dos 500 ids mapeiam tokens
+    /// diferentes — trocá-los produz transcrição integralmente errada sem nenhum erro.
+    VocabFingerprintMismatch {
+        /// Fingerprint declarado no `model_card.json` do artefato.
+        expected: String,
+        /// Fingerprint computado sobre o `tokens.txt` carregado.
+        actual: String,
+    },
 }
 
 impl fmt::Display for AsrError {
@@ -69,6 +80,12 @@ impl fmt::Display for AsrError {
                 f,
                 "vocabulário incompatível com o modelo: model_dim={model_dim} vocab_real={vocab_real} \
                  — o tokens.txt não pertence a este modelo (transcrição seria silenciosamente errada)"
+            ),
+            Self::VocabFingerprintMismatch { expected, actual } => write!(
+                f,
+                "vocabulário de tamanho correto mas IDENTIDADE divergente: \
+                 model_card declara {expected} e o tokens.txt carregado é {actual} \
+                 — cardinalidade não distingue estes casos; o conteúdo sim"
             ),
         }
     }
@@ -394,7 +411,7 @@ impl AsrEngine {
             .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
         if shape.len() != 3 {
             return Err(AsrError::InferenceFailed {
-                reason: format!("log_probs esperado 3-D, veio {:?}", shape),
+                reason: format!("log_probs esperado 3-D, veio {shape:?}"),
             });
         }
         let t = shape[1] as usize;
@@ -425,5 +442,43 @@ impl AsrEngine {
     #[must_use]
     pub fn model_path(&self) -> &str {
         &self.model_path
+    }
+}
+
+/// Valida a **identidade** do vocabulário contra o `model_card.json` do diretório do artefato.
+///
+/// Complementa [`AsrEngine::validate_vocab`], que compara apenas cardinalidade. A cardinalidade
+/// pega o erro fácil (vocabulário de tamanho errado); esta função pega o difícil — `[MEDIDO]`
+/// 2026-07-30, os dois artefatos do repositório têm 500 tokens emitíveis **cada** e 492 dos 500
+/// ids mapeiam tokens diferentes. Trocá-los produz transcrição integralmente errada e **nenhum**
+/// erro de dimensão.
+///
+/// Degrada para `Ok(())` quando não há `model_card.json` ou quando ele não declara o campo —
+/// o card é um complemento humano, não um pré-requisito de carga (D1 do plano de M9).
+///
+/// # Erros
+/// [`AsrError::VocabFingerprintMismatch`] quando o card declara um fingerprint diferente.
+pub fn validate_against_model_card(artifact_dir: &Path, vocab: &Vocab) -> Result<(), AsrError> {
+    let card = artifact_dir.join("model_card.json");
+    let Ok(raw) = std::fs::read_to_string(&card) else {
+        return Ok(()); // sem card: valida só cardinalidade
+    };
+    // Extração mínima do campo — evita puxar um parser de JSON só para ler uma string
+    // (escada de parcimônia, rung 6). O card é gerado por `scripts/make_model_card.py`.
+    let Some(expected) = raw
+        .split("\"vocab_fingerprint\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').nth(1))
+    else {
+        return Ok(()); // card presente mas sem o campo: degrada
+    };
+    let actual = vocab.fingerprint();
+    if expected == actual {
+        Ok(())
+    } else {
+        Err(AsrError::VocabFingerprintMismatch {
+            expected: expected.to_string(),
+            actual,
+        })
     }
 }

@@ -189,3 +189,57 @@ fn transcribe_aceita_o_artefato_canonico_real() {
     let r = engine.transcribe(&mel, 40, &vocab);
     assert!(r.is_ok(), "artefato canônico deve ser aceito, veio {r:?}");
 }
+
+// --- T1.2b (M9) — o caso CENTRAL: mesmo tamanho, vocabulário trocado -------------
+//
+// `[MEDIDO]` os dois artefatos em disco têm 500 tokens emitíveis CADA e 492 dos 500 ids
+// mapeiam tokens diferentes. A checagem de cardinalidade passa nos dois — só a identidade
+// distingue. Sem esta validação, M9 detectaria o erro fácil e deixaria passar o difícil.
+
+#[test]
+fn valida_fingerprint_contra_model_card_quando_presente() {
+    let dir = std::env::temp_dir().join(format!("macaw_card_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+
+    // Vocabulário A e um card que declara o fingerprint de OUTRO vocabulário do mesmo tamanho.
+    let vocab_path = dir.join("tokens.txt");
+    std::fs::write(&vocab_path, "<blk> 0\n\u{2581}a 1\nr 2\n").unwrap();
+    let outro = Vocab::load(&tmp("card_outro", "<blk> 0\nr 1\n\u{2581}a 2\n")).unwrap();
+    std::fs::write(
+        dir.join("model_card.json"),
+        format!("{{\"vocab_fingerprint\": \"{}\"}}", outro.fingerprint()),
+    )
+    .unwrap();
+
+    let vocab = Vocab::load(&vocab_path).unwrap();
+    let err = macaw_asr::validate_against_model_card(&dir, &vocab).unwrap_err();
+    assert!(
+        matches!(err, AsrError::VocabFingerprintMismatch { .. }),
+        "esperado VocabFingerprintMismatch, veio {err:?}"
+    );
+}
+
+#[test]
+fn card_ausente_degrada_para_ok_sem_falhar() {
+    let dir = std::env::temp_dir().join(format!("macaw_nocard_{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let vocab = Vocab::load(&tmp("nocard", "<blk> 0\na 1\n")).unwrap();
+    assert!(
+        macaw_asr::validate_against_model_card(&dir, &vocab).is_ok(),
+        "sem card, a validação de identidade degrada — não falha"
+    );
+}
+
+#[test]
+#[ignore = "requer o artefato canônico com model_card.json gerado"]
+fn artefato_canonico_passa_na_validacao_de_identidade() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = root.join("training/results/onnx");
+    if !dir.join("model_card.json").exists() {
+        eprintln!("SKIP: model_card.json ausente");
+        return;
+    }
+    let vocab = Vocab::load(&dir.join("tokens.txt")).unwrap();
+    let r = macaw_asr::validate_against_model_card(&dir, &vocab);
+    assert!(r.is_ok(), "o artefato canônico deve casar com seu próprio card: {r:?}");
+}
