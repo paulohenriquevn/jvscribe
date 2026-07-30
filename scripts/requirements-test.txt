@@ -1,0 +1,15 @@
+# Dependências para RODAR A SUÍTE em ambiente limpo (M9).
+#
+# `requirements-eval.txt` declara o que a avaliação precisa; este arquivo declara o que os
+# TESTES precisam — e a diferença não era óbvia: rodando o CI num container, 4 módulos de
+# teste quebravam na coleta por dependência não declarada (`scipy`, `sounddevice`, …). Na
+# máquina do dono tudo estava instalado globalmente, então a suíte nunca foi reprodutível.
+#
+# Stack pesada de treino (torch, lhotse, icefall, sentencepiece) NÃO entra aqui: os testes que
+# a exigem usam `pytest.importorskip`, o que os torna SKIP visível em vez de erro de coleta.
+-r requirements-eval.txt
+
+pytest>=8.0
+pyyaml>=6.0
+scipy>=1.10
+onnxruntime>=1.16

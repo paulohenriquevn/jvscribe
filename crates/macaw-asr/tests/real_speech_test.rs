@@ -58,7 +58,6 @@ fn transcreve_fala_real_do_fleurs() {
     // WER medido ~30% em FLEURS → esperamos ~70% de palavras certas; piso conservador 0,45.
     assert!(
         overlap >= 0.45,
-        "overlap {:.2} < 0.45 — features/decode desalinhados",
-        overlap
+        "overlap {overlap:.2} < 0.45 — features/decode desalinhados"
     );
 }

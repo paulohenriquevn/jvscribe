@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from text_normalize_ptbr import normalize_ptbr  # noqa: E402
+from text_normalize_ptbr import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 
 
 def pairwise_cer(hyp1: str, hyp2: str) -> float:

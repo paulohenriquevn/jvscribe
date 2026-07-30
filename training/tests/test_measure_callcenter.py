@@ -3,6 +3,14 @@
 Cobre parse_transcript (timestamps HH:MM:SS e MM:SS, blocos, descarte de ⚠️) e
 normalize (lowercase, máscaras de PII, pontuação, acentos). Não abre áudio/ONNX.
 """
+import pytest
+
+# Dependência de ambiente, não do produto: em runner limpo o módulo pode faltar.
+# `importorskip` transforma isso em SKIP VISÍVEL em vez de erro de coleta, que
+# derrubaria a suíte inteira (M9 — descoberto rodando o CI).
+pytest.importorskip("scipy")
+pytest.importorskip("lhotse")
+
 import tempfile, os
 from measure_callcenter import parse_transcript, normalize
 

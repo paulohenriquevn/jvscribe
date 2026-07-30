@@ -113,3 +113,23 @@ fn test_slow_endpoint_does_not_block_metrics() {
         );
     }
 }
+
+// --- M9/T4.1 — a rota /m1 não pode devolver 200 vazio em silêncio ----------------
+//
+// Defeito medido em 2026-07-30: `m1_measurements_json` lia
+// `../../knowledge-base/measurements` (removido no commit c7c67b9) e engolia o ENOENT com
+// `unwrap_or_default()`. A rota respondia `200 OK` com `{"baseline":"","harness":""}` para
+// sempre, e o dashboard renderizava o placeholder — indistinguível de "medição zero".
+// Viola `.claude/rules/error-handling.md` § 2 (erro engolido).
+
+#[test]
+fn m1_measurements_sinaliza_ausencia_em_vez_de_devolver_vazio() {
+    let json = macaw_cli::app::m1_measurements_json();
+    // Ou traz conteúdo real, ou diz explicitamente que não encontrou — nunca string vazia
+    // silenciosa.
+    let vazio_silencioso = json.contains("\"baseline\":\"\"") && !json.contains("\"error\"");
+    assert!(
+        !vazio_silencioso,
+        "a rota devolveu payload vazio sem sinalizar a causa: {json}"
+    );
+}

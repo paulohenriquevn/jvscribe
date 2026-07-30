@@ -114,6 +114,13 @@ pub fn transcribe_wav(
     let vocab =
         Vocab::load(&model_dir.join("tokens.txt")).map_err(|e| TranscribeError::Asr(e.to_string()))?;
 
+    // Identidade do vocabulário, não só cardinalidade (M9/T1.2b). `[MEDIDO]` os dois artefatos
+    // do repositório têm 500 tokens emitíveis CADA e 492 dos 500 ids mapeiam tokens diferentes:
+    // a checagem de dimensão passa nos dois e a transcrição sai integralmente errada. Degrada
+    // silenciosamente quando não há `model_card.json`.
+    macaw_asr::validate_against_model_card(model_dir, &vocab)
+        .map_err(|e| TranscribeError::Asr(e.to_string()))?;
+
     let t0 = Instant::now();
     let (mel, n_frames) =
         extract_utterance(&cache, &samples).map_err(|e| TranscribeError::Features(e.to_string()))?;

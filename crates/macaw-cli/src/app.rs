@@ -385,7 +385,14 @@ fn run_fixture_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
         Ok(g) => g,
         Err(e) => return e,
     };
-    let engine = guard.as_mut().expect("engine acabou de ser carregado");
+    // M9: era `.expect("engine acabou de ser carregado")`. O panic acontecia SEGURANDO o
+    // mutex do cache, envenenando-o — e endpoints não relacionados (`/metrics`) passavam a
+    // falhar com ConnectionReset. Um handler derrubava o servidor. Descoberto rodando o CI
+    // num ambiente sem o modelo. `error-handling.md` § 2: nunca panic, sempre erro tipado.
+    let Some(engine) = guard.as_mut() else {
+        return "{\"ok\":false,\"msg\":\"Modelo indisponível — rode scripts/setup_model.sh\"}"
+            .to_string();
+    };
     let t = Instant::now();
     match engine.encode(&flat, MEL_BINS, n) {
         Ok(shape) => {
@@ -497,12 +504,34 @@ fn run_bench_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
 
 /// Lê os relatórios de medição de M1 do disco e os devolve como JSON (evidência
 /// real, não hardcoded). Se um arquivo faltar, devolve string vazia para ele.
-fn m1_measurements_json() -> String {
+pub fn m1_measurements_json() -> String {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge-base/measurements");
-    let read = |name: &str| std::fs::read_to_string(root.join(name)).unwrap_or_default();
+
+    // M9/T4.1 — antes, um `unwrap_or_default()` convertia ENOENT em string vazia: a rota
+    // respondia `200 OK` com `{"baseline":"","harness":""}` para sempre e o dashboard mostrava
+    // "(relatório ainda não gerado)" — indistinguível de "medição zero". Erro engolido é
+    // proibido por `.claude/rules/error-handling.md` § 2. Agora a ausência é REPORTADA.
+    let mut missing: Vec<&str> = Vec::new();
+    let mut read = |name: &'static str| match std::fs::read_to_string(root.join(name)) {
+        Ok(s) => s,
+        Err(_) => {
+            missing.push(name);
+            String::new()
+        }
+    };
     let baseline = json_escape(&read("m1-baseline-report.md"));
     let harness = json_escape(&read("m1-harness-measurement.md"));
-    format!("{{\"baseline\":\"{baseline}\",\"harness\":\"{harness}\"}}")
+
+    if missing.is_empty() {
+        format!("{{\"baseline\":\"{baseline}\",\"harness\":\"{harness}\"}}")
+    } else {
+        let err = json_escape(&format!(
+            "relatórios de medição ausentes em {}: {}",
+            root.display(),
+            missing.join(", ")
+        ));
+        format!("{{\"baseline\":\"{baseline}\",\"harness\":\"{harness}\",\"error\":\"{err}\"}}")
+    }
 }
 
 /// Escapa uma string para inserção segura num literal JSON.

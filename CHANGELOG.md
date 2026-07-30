@@ -13,6 +13,149 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-30
+
+> **Nota de versionamento.** A regra de derivação do `cycle-release.md` dispara MAJOR quando
+> `§ Removed` não está vazio, o que daria v1.0.0. Desvio deliberado para MINOR: nenhuma API
+> pública foi removida (verificado no diff — zero `-pub fn|struct|enum`); o `§ Removed` lista
+> dumps de experimento, examples sem caller e uma dependência duplicada. Além disso, v1.0
+> neste projeto tem gate próprio (`dogfood-golden-rule.md`: evidência de uso sustentado, que é
+> o M8 ainda não feito). Cortar v1.0.0 aqui seria alegação falsa de maturidade.
+
+
+### Added
+- `scripts/make_model_card.py` e artefato canônico `models/current` (M9/T1.3): gera `model_card.json` com sha256 do modelo, fingerprint e contagem de tokens emitíveis. O fingerprint Python reproduz bit a bit o do Rust (teste de conformidade cross-language). `models/current` é **symlink** — nenhum peso é movido ou copiado. `eval_public_hf.py` deixa de usar caminho absoluto e honra `MACAW_MODEL_DIR`.
+- Validação de **identidade** de vocabulário contra o `model_card.json` (M9/T1.2b): `validate_against_model_card`, ligada no caller de produção. Complementa a checagem de cardinalidade, que pega o erro fácil — este pega o difícil: `[MEDIDO]`, os dois artefatos do repositório têm 500 tokens emitíveis **cada** e 492 dos 500 ids mapeiam tokens diferentes, então trocá-los produz transcrição integralmente errada sem nenhum erro de dimensão. Degrada para no-op quando não há card.
+- Fail-fast de par (modelo, vocabulário) incoerente (M9/T1.2): `AsrEngine` lê a dimensão de saída do grafo na carga (sem inferência) e `transcribe` recusa vocabulário incompatível com `AsrError::VocabModelMismatch`, citando os dois números. Antes, apontar para o `tokens.txt` errado produzia transcrição silenciosamente errada.
+- `Vocab::real_len()` e `Vocab::fingerprint()` (M9/T1.1): contagem de tokens emitíveis (excluindo símbolos de desambiguação `#N` do lexicon FST) e fingerprint SHA-256 de identidade do vocabulário. Medido nos dois artefatos reais: ambos com 500 tokens emitíveis (502 e 503 linhas) e fingerprints distintos — cardinalidade não os distingue, identidade sim.
+- Restaurado `knowledge-base/references/_catalog.md` (fonte: `c7c67b9~1`, onde foi removido junto com o resto do knowledge-base) — catálogo dos 8 peers SOTA clonados em 2026-07-24, necessário como contrato de fonte para o ciclo DISCOVER de M9. Bootstrap autorizado via marcador `.references-bootstrap` conforme `hooks/boundary-check.sh`.
+- Plano de M9 (SHIPPABLE 99,2/100, 32/32 critérios executáveis, zero hard caps) em `knowledge-base/plans/`. Medição durante o planejamento **corrigiu** o achado da auditoria: os dois artefatos têm 500 classes cada (a diferença 502/503 no tokens.txt são símbolos de desambiguação do FST), mas **492 dos 500 ids mapeiam tokens diferentes** — logo validar cardinalidade seria insuficiente e M9 valida identidade (fingerprint SHA-256). `/deps-audit`: zero CVEs em Rust e Python.
+- Ciclo DISCOVER de M9 concluído: plano de pesquisa (SHIPPABLE 100/100) e blueprint (SHIPPABLE 99,4/100) em `knowledge-base/discoveries/`, com 8 questões respondidas por evidência `[FONTE-REPO]` do peer sherpa-onnx no SHA 116a44e7. Achado central: o padrão de validação vocabulário×modelo que M9 precisa já existe e é copiável (`offline-recognizer-canary-impl.h:246`).
+- Roadmap amendado: adicionado M9 Governança de artefato e reprodutibilidade (`/roadmap-feature governanca-artefato-reprodutibilidade`) — fecha as lacunas de integridade encontradas na auditoria de system design de 2026-07-30 (artefato de modelo canônico, fail-fast de vocabulário, shared kernel do decode CTC, CI, licença). Depende de M5.
+- Auditoria de system design (`/loop-system-design`, modo full): 51 achados em 14 módulos, 4 quality gates aprovados, relatório e plano de reorganização em `system-design-output/`.
+- `CLAUDE.md` na raiz: guia de onboarding para o Claude Code — comandos de build/teste das duas metades (Rust e Python), camadas do workspace, as duas armadilhas que custaram tempo (as duas convenções de fbank que coexistem; o ONNX Runtime carregado por `dlopen`) e o aviso de que `PRD.md`/`ROADMAP.md`/`knowledge-base/` citados no código foram removidos em `c7c67b9`.
+- Reorganização FAANG (fase 3): `training/README.md` mapeia as 3 pipelines (problema→entrada); refs de path atualizadas no paper (EN+PT-BR §10) e no `PRD.md`.
+- Edição PT-BR do paper (`docs/paper/macaw-voice-cpu-asr.pt-br.md`): cada componente do modelo, do sistema e das decisões de método explicado no formato "Problema que resolve → Como resolve".
+- Paper técnico/experience (`docs/paper/macaw-voice-cpu-asr.md`) — relato rigoroso e honesto de todo o percurso de pesquisa (seleção de arquitetura por medição, treino, e o case study do bug de config que simulou um limite fundamental). Guia "construa o seu" + checklist para praticantes. Cada número com rótulo de proveniência. Inclui 7 figuras Mermaid (arquitetura, system design, árvore de decisão do debug, gráficos de WER/RTFx) + versão HTML autocontida das figuras (`docs/paper/figuras.html`, `arquitetura.html`) que renderiza em qualquer navegador.
+- Benchmark público reprodutível (`training/eval_public_hf.py`, `training/results/public-benchmarks.md`): **16,14% WER** no FLEURS pt_br (fala lida banda-larga), RTFx 24,6x em batch (CPU). Confirma o modelo forte em áudio de boa qualidade; o gargalo telefônico é canal/dado. [MEDIDO]
+- Transcrição em LOTE de pasta de áudios (`training/batch_transcribe.py`) — lê qualquer formato
+  via ffmpeg → 16 kHz → VAD por silêncio → inferência ONNX **em batch** com decode paralelo.
+  Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
+  11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
+
+### Added
+- `training/common/text.py` (M9/T3.2): as duas semânticas de normalização PT-BR com nomes que
+  revelam o contrato — `normalize_for_wer_compare` (remove acento) e `normalize_train_target`
+  (preserva). Medido: das 5 funções chamadas `normalize_ptbr`, há **2 semânticas** e 3 cópias
+  byte-idênticas de uma delas. O defeito não era a duplicação, era o **nome compartilhado por
+  comportamentos opostos** — enquanto durasse, comparar dois WERs do projeto pressupunha uma
+  igualdade de régua que ninguém tinha verificado.
+- `training/common/` — shared kernel das pipelines (M9/T3.1). `ctc.py` consolida o colapso CTC
+  greedy que estava replicado em 5 arquivos. A consolidação só foi feita **depois de medir** a
+  equivalência (`training/tests/test_ctc_equivalence.py`): o laço de colapso é idêntico entre
+  as cópias; o que divergia era a detokenização — 4 usam `join + replace("▁"," ")` e
+  `measure_realcodec` usa `sp.decode()`. As duas convenções ficaram como funções distintas e
+  nomeadas, em vez de uma unificação cega que mudaria um número publicado.
+- Guarda de layout mais forte (M9/T3.3): import cross-pipeline agora é permitido **apenas** a
+  partir de `common/`, e a varredura passou a cobrir todo arquivo versionado — antes ela via
+  só `training/`, e por isso não enxergava as cópias que escaparam para fora da árvore.
+- CI com dois jobs (M9/T2.3): `test-model-free` (obrigatório, runner limpo, sem nenhum
+  artefato de modelo) e `test-with-artifact` (condicional, roda os testes `#[ignore]`).
+  Separar as camadas elimina o falso verde por **design** em vez de detectá-lo por relatório —
+  padrão observado em sherpa-onnx, onde nenhum dos 22 `*-test.cc` toca modelo.
+- `rust-toolchain.toml` fixando a toolchain (M9/T2.4).
+
+### Fixed
+- **`rust-version` do workspace estava errado** (M9/T2.4): declarava `1.75`, mas o projeto
+  nunca buildou nessa versão — buildava com o rustc da máquina. Fixar a toolchain em 1.75
+  quebrou o build na hora (`ort 2.0.0-rc.12` exige `edition2024`). O MSRV real, lido da
+  própria dependência, é **1.88**; corrigido e verificado com a suíte completa.
+- **Teste flaky em `capture_test`** (M9/T2.3): `[MEDIDO]` 2 falhas em 5 execuções (40%) em
+  `test_capture_thread_terminates_cleanly_on_drop`. Causa: o teste de captura dupla soltava o
+  lock de serialização **antes** de suas threads morrerem (elas só encerram na próxima leitura
+  após o canal fechar, ~32 ms), deixando o contador global sujo para o teste seguinte.
+  Corrigido com limpeza determinística; `[MEDIDO]` 0 falhas em 8 execuções.
+- **`test_report.sh` reportava sucesso com o build quebrado** (M9/T2.3): imprimia
+  "testes 'ok': 0 / SKIPs: 0" e saía 0 quando `cargo test` falhava — a ferramenta feita para
+  impedir falso verde produzindo o falso verde mais puro. Agora propaga o código de saída e
+  trata zero-testes-executados como erro.
+
+### Security
+- Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
+
+### Fixed
+- Suíte validada em **ambiente limpo** (M9): instalando só o `requirements-test.txt` num venv virgem, a suíte roda com **91 passed / 14 skipped / 0 failed**; na máquina completa, 192 passed. Os 14 SKIPs declaram honestamente quais testes exigem a stack de treino (`lhotse`/`torch`) — antes eles derrubavam a coleta inteira e ninguém via nada.
+- **A suíte Python nunca foi reprodutível fora da máquina do dono** (M9, achado do CI): dez
+  dependências eram usadas sem estar declaradas (`scipy`, `sounddevice`, `onnxruntime`,
+  `lhotse`, `sentencepiece`, `torch`, `datasets`, `phonemizer`, `pytest`, `yaml`), e quatro
+  módulos quebravam na **coleta** — o que derruba a suíte inteira, não só o teste afetado.
+  Novo `scripts/requirements-test.txt` declara o que os **testes** precisam (distinto do
+  `requirements-eval.txt`, que declara o que a **avaliação** precisa — a diferença nunca tinha
+  sido explicitada). A stack pesada de treino usa `pytest.importorskip`, virando SKIP visível
+  em vez de erro de coleta.
+- CI passou a usar `venv`: distribuições recentes marcam o Python do sistema como
+  externally-managed (PEP 668) e recusam `pip install` global.
+- **Um handler do dashboard derrubava o servidor** (M9, achado do CI): `run_fixture_test`
+  fazia `.expect("engine acabou de ser carregado")`. Num ambiente sem o modelo, o `expect`
+  entrava em panic **segurando o mutex do cache de engine**, envenenando-o — e endpoints não
+  relacionados (`/metrics`) passavam a falhar com `ConnectionReset`. Agora devolve resposta
+  tipada indicando o que falta. Só apareceu porque o CI roda num container sem os artefatos.
+- **CI não rodava — três defeitos que só a execução expôs** (M9/H-5 do `/review`). O critério
+  original ("o YAML parseia") era um proxy que não distinguia workflow válido de workflow
+  funcional. Rodando com `act`:
+  1. `rustup: command not found` — o step assumia uma ferramenta que o runner do GitHub traz
+     mas o container não, tornando o workflow não-verificável localmente;
+  2. `cannot find -l:libpulse.so.0` — **a dependência de sistema nunca era instalada**. Não é
+     limitação do `act`: o runner do GitHub também não traz `libpulse-dev`, então o job
+     falharia igual em produção;
+  3. `test_capture_fails_with_typed_error_when_source_does_not_exist` exigia servidor de áudio
+     inexistente no container. A asserção **não foi enfraquecida** — onde há servidor ela
+     continua exigindo `SourceNotFound`; onde não há, degrada com `SKIP` visível no
+     `test_report.sh`.
+- **Regressão de M9/T3.1 corrigida (BLOCKER do `/review`)**: a migração para o shared kernel
+  quebrou a execução standalone dos scripts de pipeline — `python3 training/batch/batch_transcribe.py`
+  falhava com `ModuleNotFoundError: No module named 'ctc'`, porque `import ctc` só resolvia sob
+  pytest (é o `conftest.py` que injeta `common/` no path). Toda a suíte passava. Corrigido com
+  insert explícito de path, e coberto por
+  `test_entrypoints_de_pipeline_rodam_standalone`, que executa cada entrypoint de verdade.
+- Ambiguidade de `normalize_ptbr` eliminada de fato (M9/T3.2): a versão que **remove** acento
+  foi renomeada para `normalize_for_wer_compare` e seus 5 callers atualizados. As definições
+  remanescentes têm todas a mesma semântica — redundância é tolerável, duas semânticas opostas
+  sob o mesmo nome não eram.
+- `LICENSE` passou de stub de 17 linhas para o texto completo (202 linhas, com o apêndice que a
+  Apache-2.0 § 4(a) exige distribuir).
+- README: estado de M9 alinhado ao `ROADMAP.md` e referências a "M0–M8" atualizadas para M0–M9.
+- README corrigido (M9/T4.3): os 5 links internos voltaram a resolver (4 pelas restaurações de
+  `c7c67b9~1`, 1 pela recuperação de `m2-rtfx-candidates.md`), a tabela de milestones foi
+  sincronizada com o `ROADMAP.md`, e a seção de arquitetura deixou de afirmar que **"o vencedor
+  não está travado"** — M4 travou o finalista (Zipformer-CTC medium 64M + fonema, ADR 0003).
+  Um teste (`test_readme_links.py`) impede a reincidência.
+- Rota `/m1` do dashboard devolvia `200 OK` vazio para sempre (M9/T4.1): `m1_measurements_json`
+  lia `knowledge-base/measurements` — removido em `c7c67b9` — e engolia o ENOENT com
+  `unwrap_or_default()`, o que o dashboard exibia como "relatório ainda não gerado",
+  indistinguível de "medição zero". Único caso em que a deriva documental virou defeito de
+  runtime. Agora a ausência é reportada no payload e exibida como causa. Os dois relatórios de
+  medição de M1 foram restaurados de `c7c67b9~1`.
+- `.gitignore` deixava as fixtures determinísticas fora do versionamento (M9/T2.1): as linhas 57-58 repetiam `*.wav`/`*.f32` **depois** da exceção `!tests/fixtures/*.wav`, e em `.gitignore` o último padrão que casa vence. As fixtures sobreviviam só por já estarem no index; qualquer fixture nova sumiria em silêncio, e o CI perderia o golden do `kaldi_fbank`. A regra geral agora precede a exceção, e 4 testes cobrem os dois sentidos — inclusive que o dump de eval `fleurs_one.f32` (214 K) **continua** ignorado.
+
+- Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
+
+### Removed
+- Grupo A da lista de remoção da auditoria (M9/T4.2): 6 dumps `errs-*.txt` (73.368 linhas)
+  cujo `recogs-*.txt` par sobrevive, 6 `wer-summary-*.txt`, 2 `examples` Rust sem caller, a
+  declaração duplicada de `macaw-audio` no `Cargo.toml` do CLI, e o `train.log` de 16.034
+  linhas que o próprio `.gitignore` já mandava ignorar. **Derivabilidade provada antes de
+  remover**: `cer_from_recogs.py` regenera do `recogs-*` o WER = 36,36% declarado no `errs-*`
+  descartado. `m4-pilot-fleurs` foi **arquivado, não apagado** (193 KB) — é o único decode sem
+  `recogs` par, logo seus `errs-*` não são recomputáveis. **Nenhum modelo, peso ou vocabulário
+  removido**: 27 arquivos antes, 27 depois, listagem idêntica.
+- Reorganização FAANG (fase 1): removidos 5 scripts/runbook M4-superseded e one-offs de `training/` (prep_mls, prep_nemo, prep_conformer_ctc_decode, resume_tagarela_feats, run_pilot_icefall) + 3 testes órfãos + 2 arquivos `results/` marcados STALE-DO-NOT-USE.
+
+### Changed
+- Roadmap "out of scope" amendado: removido "versionamento de modelo" do item **Plataforma de frota** (agora em escopo como parte de M9). Distribuição BYOD, telemetria e monitoramento de WER em produção permanecem fora de escopo.
+- Restaurados de `c7c67b9~1`: `PRD.md`, `ROADMAP.md`, `CLAUDE.md` e os 3 ADRs de `knowledge-base/adrs/`, removidos por engano em `c7c67b9` contra a regra `audit-trail-rotation.md § What NEVER rotates`.
+- Reorganização FAANG (fase 2): reestruturado `training/` por pipeline — `finetune/` (prep+treino), `batch/` (transcrição+benchmark), `realtime/` (demo mic), `eval/` (medição telefônica). Um `training/conftest.py` preserva os imports por nome; a suíte agora roda de qualquer diretório (antes exigia `PYTHONPATH=training`).
+
 ## [0.7.0] - 2026-07-30
 
 ### Changed

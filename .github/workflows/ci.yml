@@ -1,0 +1,124 @@
+name: CI
+
+# Dois jobs, deliberadamente separados (M9/D3).
+#
+# O problema que isso resolve: hoje `cargo test --workspace` mistura testes puros com testes
+# que precisam de um modelo ONNX de 27 MB não versionado. Os que não acham o artefato degradam
+# com `eprintln!("SKIP: …")` + return e contam como "ok" — falso verde. O `scripts/test_report.sh`
+# existe justamente para tornar isso visível, mas é paliativo.
+#
+# [FONTE-REPO] sherpa-onnx@116a44e7 não tem esse problema porque nenhum dos 22 `*-test.cc` toca
+# modelo: o falso verde é eliminado por DESIGN, não detectado por relatório. Aqui a separação
+# é em jobs — o obrigatório nunca depende de artefato, o opcional é explicitamente condicional.
+
+on:
+  push:
+    branches: [workspace, develop, main]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # OBRIGATÓRIO — roda em runner limpo, sem nenhum artefato de modelo.
+  # Falhar aqui bloqueia o merge.
+  # ---------------------------------------------------------------------------
+  test-model-free:
+    name: testes sem artefato (obrigatório)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `macaw-audio` linka contra libpulse (a captura por stream que motivou escolher
+      # libpulse sobre cpal). Sem estes pacotes o link falha com
+      # `cannot find -l:libpulse.so.0` — descoberto rodando `act` de verdade (M9). O runner
+      # do GitHub também NÃO traz libpulse-dev por padrão, então isto não é um remendo para
+      # o act: era um defeito real que só a execução expôs.
+      - name: Dependências de sistema (libpulse)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libpulse-dev pkg-config
+
+      # `rustup show` instala a toolchain declarada em rust-toolchain.toml. O runner do GitHub
+      # já traz rustup; a imagem do `act` não — instalar quando ausente é o que torna este
+      # workflow verificável LOCALMENTE, e não só em produção. Descoberto rodando `act` de
+      # verdade (M9): sem isto o job falhava com `rustup: command not found`.
+      - name: Toolchain Rust (fixada em rust-toolchain.toml)
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain none --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          rustup show
+
+      - name: Cache do cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+
+      # O ONNX Runtime é o RUNTIME, não o modelo: 8 MB, verificado por SHA-256, e necessário
+      # porque o crate `ort` usa load-dynamic. Isso NÃO é artefato de modelo.
+      - name: ONNX Runtime (com verificação de integridade)
+        run: ./scripts/setup_onnxruntime.sh
+
+      - name: Fixtures determinísticas presentes
+        run: |
+          test -f tests/fixtures/tone_440hz_16k.wav
+          test -f crates/macaw-audio/tests/fixtures/kaldi_fbank80_golden.f32
+          echo "fixtures versionadas OK — o CI não depende de rede para obtê-las"
+
+      - name: Testes Rust
+        run: cargo test --workspace
+
+      - name: Relatório de SKIPs (torna visível o falso verde)
+        run: ./scripts/test_report.sh
+
+      # venv em vez de pip global: distribuições recentes marcam o Python do sistema como
+      # externally-managed (PEP 668) e recusam `pip install`. Descoberto rodando o CI de
+      # verdade (M9) — o step falhava com "externally-managed-environment".
+      - name: Python (venv)
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --quiet --upgrade pip
+          .venv/bin/python -m pip install --quiet -r scripts/requirements-test.txt
+
+      - name: Testes Python
+        run: .venv/bin/python -m pytest training/tests scripts/tests -q
+
+  # ---------------------------------------------------------------------------
+  # CONDICIONAL — exercita os testes `#[ignore]`, que exigem o modelo real.
+  # Não roda em fork nem sem credencial de artefato; sua ausência NUNCA pinta o
+  # build de verde por omissão, porque o job obrigatório acima é independente.
+  # ---------------------------------------------------------------------------
+  test-with-artifact:
+    name: testes com artefato de modelo (condicional)
+    runs-on: ubuntu-latest
+    needs: test-model-free
+    if: ${{ vars.MACAW_ARTIFACT_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ONNX Runtime
+        run: ./scripts/setup_onnxruntime.sh
+
+      - name: Obter o artefato de modelo
+        env:
+          ARTIFACT_URL: ${{ vars.MACAW_ARTIFACT_URL }}
+        run: |
+          mkdir -p training/results/onnx
+          curl -fsSL "$ARTIFACT_URL" -o /tmp/artifact.tgz
+          tar xzf /tmp/artifact.tgz -C training/results/onnx --strip-components=1
+
+      - name: Validar o par (modelo, vocabulário) antes de medir qualquer coisa
+        run: python3 scripts/make_model_card.py training/results/onnx
+
+      - name: Testes que exigem artefato
+        run: cargo test --workspace -- --ignored
