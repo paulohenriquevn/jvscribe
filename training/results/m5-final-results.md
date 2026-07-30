@@ -158,3 +158,16 @@ Com o bug do `encoder_embed` corrigido, o FT NÃO colapsa mais (produz texto rea
 Leitura honesta: o FT na MESMA base (CORAA+TAGARELA) adiciona robustez a codec, não informação —
 o teto ~36% é **data-limited**. ≤25% parece improvável por esta via (aguardando épocas 2-3 +
 averaging + LM para confirmar). O fix validou o método; o limite agora é DADO, não bug.
+
+## VEREDITO FINAL DoD#3 (2026-07-30) `[MEDIDO]` — data-limited, metodo correto
+
+FT corrigido (sem o bug) rodado ate fim da epoca 1. Trajetoria D1: 42,84 -> 40,50 -> 39,97 ->
+**39,38%**, plato ACIMA do baseline 35,53%, caindo ~0,5pp/4000 batches (<=25% exigiria ~16 epocas).
+O FT overfita a mesma base (CORAA+TAGARELA) e nao supera o modelo entregue. Conclusao medida:
+- DoD#3 (telefonico <=25%): NAO atingivel com o modelo 64M + dados atuais.
+- Melhor telefonico = modelo ENTREGUE ~35,53% real-codec (o FT nao ajuda; +LM ~32% [ESTIMATIVA]).
+- O colapso anterior era um BUG (encoder_embed random), nao a augmentacao — corrigido e entendido.
+  Corrigido, o teto real e DADO, nao metodo. Caminho a <=25%: dado telefonico real (follow-up).
+
+### M5 — placar honesto final
+DoD wideband 23,31% OK · DoD real-time 34,69x RTFx OK · DoD#3 telefonico ~36% (nao <=25%, data-limited).

@@ -28,6 +28,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Veredito final DoD#3 [MEDIDO]: com o bug encoder_embed corrigido, o FT NAO colapsa mas platoa em ~39% (acima do baseline 35,53%) — data-limited. DoD#3 <=25% nao atingivel com o modelo 64M + dados atuais; melhor telefonico = modelo entregue ~36%. <=25% depende de dado real (follow-up).
 - Veredito conclusivo DoD#3 telefônico [MEDIDO]: 4 configs de codec-aug fine-tuning colapsam o
   CTC para blank (~98-100%), enquanto o modelo entregue faz 35,53% no mesmo teste — a augmentação
   dispara o atrator de blank. DoD#3 (≤25%) NÃO atingido; melhor honesto ~36% real-codec. Caminho
