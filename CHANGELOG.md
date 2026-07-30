@@ -33,6 +33,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
 ### Added
+- `training/common/text.py` (M9/T3.2): as duas semânticas de normalização PT-BR com nomes que
+  revelam o contrato — `normalize_for_wer_compare` (remove acento) e `normalize_train_target`
+  (preserva). Medido: das 5 funções chamadas `normalize_ptbr`, há **2 semânticas** e 3 cópias
+  byte-idênticas de uma delas. O defeito não era a duplicação, era o **nome compartilhado por
+  comportamentos opostos** — enquanto durasse, comparar dois WERs do projeto pressupunha uma
+  igualdade de régua que ninguém tinha verificado.
 - `training/common/` — shared kernel das pipelines (M9/T3.1). `ctc.py` consolida o colapso CTC
   greedy que estava replicado em 5 arquivos. A consolidação só foi feita **depois de medir** a
   equivalência (`training/tests/test_ctc_equivalence.py`): o laço de colapso é idêntico entre
