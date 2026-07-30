@@ -6,7 +6,7 @@
 | **Data** | 2026-07-24 |
 | **Escopo** | Modelo ASR + runtime de inferência |
 | **Fora de escopo** | Plataforma de frota, compliance LGPD, produto/UI |
-| **Fontes** | `knowledge-base/grills/asr-ptbr-cpu-realtime-grill.md` (15 decisões), `deep-research-asr-ptbr-cpu-realtime.md`, `sota-techniques-asr-ptbr-cpu.md` |
+| **Fontes** | `knowledge-base/grills/asr-ptbr-cpu-realtime-grill.md` (15 decisões), `docs/research/deep-research-asr-ptbr-cpu-realtime.md`, `docs/research/sota-techniques-asr-ptbr-cpu.md` |
 | **Execução** | Agents em `.claude/agents/` · roteamento em `CLAUDE.md` · milestones em `ROADMAP.md` |
 | **Contrato de evidência** | `.claude/rules/asr-evidence-discipline.md` — rotulagem de números, separação hipótese/evidência/conclusão, 12 falácias que invalidam artefato |
 

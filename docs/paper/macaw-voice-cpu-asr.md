@@ -488,10 +488,10 @@ A distilled checklist for anyone building a CPU-real-time specialized ASR:
 
 Released, tested artifacts (159 unit tests total):
 
-- **`training/batch_transcribe.py`** — folder → transcripts, ffmpeg decode (any format), energy-VAD
+- **`training/batch/batch_transcribe.py`** — folder → transcripts, ffmpeg decode (any format), energy-VAD
   segmentation, batched ONNX inference, parallel decode; 7 tests incl. an end-to-end smoke.
-- **`training/eval_public_hf.py`** — reproducible public benchmark (FLEURS pt_br) with WER + RTFx.
-- **`training/measure_realcodec.py`, `measure_callcenter.py`** — honest telephone WER harnesses.
+- **`training/batch/eval_public_hf.py`** — reproducible public benchmark (FLEURS pt_br) with WER + RTFx.
+- **`training/eval/measure_realcodec.py`, `training/eval/measure_callcenter.py`** — honest telephone WER harnesses.
 - **`scripts/corpus/codec_pool.py`** — realistic codec-pool augmentation (G.711 via audioop; GSM/Opus
   via ffmpeg / torchaudio `AudioEffector` in-process for throughput).
 - **`models/…/mic_transcribe.py`** — real-time mic demo (LocalAgreement-2 pseudo-streaming over the
