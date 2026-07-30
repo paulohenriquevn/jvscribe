@@ -14,6 +14,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Changed
+- `codec_pool` on-the-fly agora usa torchaudio `AudioEffector` (in-process, ~21ms/cut) para
+  opus baixo-bitrate, em vez de ffmpeg-subprocess (que starvava a GPU a 0% util, ~0,45 batch/s).
+  Pool de treino = {G.711 μ/a (audioop), opus_low (torchaudio)}; GSM fica no builder offline.
 - FT gentil (`training/run_ft_codec.sh`): `--num-workers` 2→10 para paralelizar o codec-pool
   (ffmpeg per-cut estava starvando a GPU a 0% util). Lançamento via `nohup setsid` (o `pkill -f`
   com padrão que casava o próprio shell SSH matava o launch — corrigido).

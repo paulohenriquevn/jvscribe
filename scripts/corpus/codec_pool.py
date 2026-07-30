@@ -21,8 +21,10 @@ try:  # PEP 594: audioop removido no Python 3.13+
 except ImportError:  # pragma: no cover
     import audioop_lts as audioop  # type: ignore
 
-# Pesos: tier agressivo (gsm/opus) domina — é o que transfere (APSIPA 2019). G.711 = tier brando.
-POOL_DEFAULT = {"g711a": 0.15, "g711u": 0.15, "gsm": 0.40, "opus_low": 0.30}
+# Pool ON-THE-FLY (treino): só codecs IN-PROCESS rápidos (sem spawn de subprocess, que starva a
+# GPU — medido a ~0,45 batch/s com ffmpeg). opus (torchaudio, ~21ms) = tier agressivo que
+# transfere (APSIPA 2019); G.711 (audioop) = tier brando. GSM fica no builder OFFLINE (ffmpeg).
+POOL_DEFAULT = {"g711a": 0.20, "g711u": 0.20, "opus_low": 0.60}
 
 _FFMPEG_CODECS = {
     # codec -> (args de encode a partir de s16le@sr, args p/ reler o container no decode)
@@ -63,6 +65,17 @@ def _apply_g711(x: np.ndarray, law: str) -> np.ndarray:
     return _from_i16_bytes(dec)
 
 
+def _apply_torchaudio(x: np.ndarray, sr: int, fmt: str, encoder: str, bit_rate: int | None) -> np.ndarray:
+    """Codec roundtrip IN-PROCESS via torchaudio AudioEffector (sem spawn — rápido no treino)."""
+    import torch
+    from torchaudio.io import AudioEffector, CodecConfig
+    t = torch.from_numpy(np.ascontiguousarray(x)).unsqueeze(1)  # (T,1)
+    cfg = CodecConfig(bit_rate=bit_rate) if bit_rate else None
+    eff = AudioEffector(format=fmt, encoder=encoder, codec_config=cfg)
+    y = eff.apply(t, sr)
+    return np.ascontiguousarray(y[:, 0].numpy()).astype(np.float32)
+
+
 def _apply_ffmpeg(x: np.ndarray, sr: int, codec: str) -> np.ndarray:
     if not _ffmpeg_available():
         raise RuntimeError(f"ffmpeg ausente — codec '{codec}' indisponível")
@@ -98,6 +111,12 @@ def apply_codec(samples: np.ndarray, sr: int, codec: str) -> np.ndarray:
         return _apply_g711(x, "a")
     if codec == "g711u":
         return _apply_g711(x, "u")
-    if codec in _FFMPEG_CODECS:
+    if codec == "opus_low":
+        # rápido in-process (torchaudio); fallback ffmpeg (ex.: local sem torchaudio)
+        try:
+            return _apply_torchaudio(x, sr, "ogg", "libopus", bit_rate=6000)
+        except Exception:
+            return _apply_ffmpeg(x, sr, "opus_low")
+    if codec in _FFMPEG_CODECS:      # gsm etc. — offline (builder), não no pool on-the-fly
         return _apply_ffmpeg(x, sr, codec)
-    raise ValueError(f"codec desconhecido: {codec!r} (esperado {list(POOL_DEFAULT)} ou 'identity')")
+    raise ValueError(f"codec desconhecido: {codec!r} (esperado {list(POOL_DEFAULT)}, gsm ou 'identity')")
