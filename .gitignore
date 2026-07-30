@@ -41,6 +41,11 @@ target/
 # ONNX Runtime nativo (baixado por scripts/setup_onnxruntime.sh)
 vendor/
 
+# Backups/arquivos de modelo comprimidos — NUNCA versionar (pesos são artefato caro e
+# irrecuperável; um zip de 1,2 GB no histórico é permanente).
+models.zip
+*.zip
+
 # Modelo emprestado de M0 (artefato de terceiro, grande) — baixado por scripts/setup_model.sh
 models/
 *.onnx.data

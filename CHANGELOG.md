@@ -14,6 +14,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Roadmap amendado: adicionado M9 Governança de artefato e reprodutibilidade (`/roadmap-feature governanca-artefato-reprodutibilidade`) — fecha as lacunas de integridade encontradas na auditoria de system design de 2026-07-30 (artefato de modelo canônico, fail-fast de vocabulário, shared kernel do decode CTC, CI, licença). Depende de M5.
+- Auditoria de system design (`/loop-system-design`, modo full): 51 achados em 14 módulos, 4 quality gates aprovados, relatório e plano de reorganização em `system-design-output/`.
+- `CLAUDE.md` na raiz: guia de onboarding para o Claude Code — comandos de build/teste das duas metades (Rust e Python), camadas do workspace, as duas armadilhas que custaram tempo (as duas convenções de fbank que coexistem; o ONNX Runtime carregado por `dlopen`) e o aviso de que `PRD.md`/`ROADMAP.md`/`knowledge-base/` citados no código foram removidos em `c7c67b9`.
 - Reorganização FAANG (fase 3): `training/README.md` mapeia as 3 pipelines (problema→entrada); refs de path atualizadas no paper (EN+PT-BR §10) e no `PRD.md`.
 - Edição PT-BR do paper (`docs/paper/macaw-voice-cpu-asr.pt-br.md`): cada componente do modelo, do sistema e das decisões de método explicado no formato "Problema que resolve → Como resolve".
 - Paper técnico/experience (`docs/paper/macaw-voice-cpu-asr.md`) — relato rigoroso e honesto de todo o percurso de pesquisa (seleção de arquitetura por medição, treino, e o case study do bug de config que simulou um limite fundamental). Guia "construa o seu" + checklist para praticantes. Cada número com rótulo de proveniência. Inclui 7 figuras Mermaid (arquitetura, system design, árvore de decisão do debug, gráficos de WER/RTFx) + versão HTML autocontida das figuras (`docs/paper/figuras.html`, `arquitetura.html`) que renderiza em qualquer navegador.
@@ -30,6 +33,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Reorganização FAANG (fase 1): removidos 5 scripts/runbook M4-superseded e one-offs de `training/` (prep_mls, prep_nemo, prep_conformer_ctc_decode, resume_tagarela_feats, run_pilot_icefall) + 3 testes órfãos + 2 arquivos `results/` marcados STALE-DO-NOT-USE.
 
 ### Changed
+- Roadmap "out of scope" amendado: removido "versionamento de modelo" do item **Plataforma de frota** (agora em escopo como parte de M9). Distribuição BYOD, telemetria e monitoramento de WER em produção permanecem fora de escopo.
+- Restaurados de `c7c67b9~1`: `PRD.md`, `ROADMAP.md`, `CLAUDE.md` e os 3 ADRs de `knowledge-base/adrs/`, removidos por engano em `c7c67b9` contra a regra `audit-trail-rotation.md § What NEVER rotates`.
 - Reorganização FAANG (fase 2): reestruturado `training/` por pipeline — `finetune/` (prep+treino), `batch/` (transcrição+benchmark), `realtime/` (demo mic), `eval/` (medição telefônica). Um `training/conftest.py` preserva os imports por nome; a suíte agora roda de qualquer diretório (antes exigia `PYTHONPATH=training`).
 
 ## [0.7.0] - 2026-07-30
