@@ -42,6 +42,6 @@ def normalize_for_wer_compare(text: str) -> str:
     coloquialismos). Não é reimplementada aqui: uma segunda cópia recriaria exatamente o
     problema que esta task resolve.
     """
-    from text_normalize_ptbr import normalize_ptbr as _canonical
+    from text_normalize_ptbr import normalize_for_wer_compare as _canonical
 
     return _canonical(text)

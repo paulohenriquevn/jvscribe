@@ -126,3 +126,36 @@ def test_modulo_de_pipeline_nao_pode_viver_fora_da_arvore():
     assert not offenders, (
         "módulo de pipeline duplicado fora de training/: " + "; ".join(sorted(offenders))
     )
+
+
+def test_entrypoints_de_pipeline_rodam_standalone():
+    """A convenção do `training/README.md` é que cada script roda sozinho.
+
+    O `conftest.py` põe as pipelines no `sys.path` **para os testes** — mas um humano
+    executando `python3 training/batch/batch_transcribe.py` só tem o diretório do próprio
+    script no path. Um import que só resolve sob pytest passa em toda a suíte e quebra em
+    produção; foi exatamente o que aconteceu em M9/T3.1 (`ModuleNotFoundError: No module
+    named 'ctc'`), sem que nenhum teste percebesse.
+    """
+    import subprocess
+    import sys
+
+    falhas = []
+    for rel in (
+        "batch/batch_transcribe.py",
+        "batch/decode_onnx_local.py",
+        "batch/bench_rtfx.py",
+    ):
+        script = TRAIN / rel
+        if not script.exists():
+            continue
+        r = subprocess.run(
+            [sys.executable, str(script), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=TRAIN.parent,
+        )
+        if r.returncode != 0 and "ModuleNotFoundError" in r.stderr:
+            falhas.append(f"{rel}: {r.stderr.strip().splitlines()[-1]}")
+    assert not falhas, "entrypoint não roda standalone: " + "; ".join(falhas)

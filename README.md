@@ -14,7 +14,7 @@ frota, compliance LGPD e UI ficam fora (`PRD.md` § 3.2).
 ## Estado do projeto
 
 Projeto em **discover contínuo, orientado por evidência**: a arquitetura não é
-escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0–M8).
+escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0–M9).
 
 | Milestone | Estado |
 |---|---|
@@ -23,7 +23,7 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 | M4 — Piloto comparativo | ✅ concluído |
 | M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](training/results/m5-final-results.md)) |
 | M6 — Runtime otimizado · M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
-| M9 — Governança de artefato e reprodutibilidade | 🔄 em curso |
+| M9 — Governança de artefato e reprodutibilidade | ⏳ próximo |
 
 > A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
 > ([`test_readme_links.py`](training/tests/test_readme_links.py)) garante que todo link interno
@@ -62,7 +62,7 @@ transducer/CTC faz um passe (custo fixo pelos frames de áudio).
 | Documento | Papel |
 |---|---|
 | [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
-| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M8 com Definition of Done |
+| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
 | [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
 | [`knowledge-base/adrs/`](knowledge-base/adrs/) | Decisões de arquitetura com racional |
 | [`knowledge-base/discoveries/blueprints/`](knowledge-base/discoveries/blueprints/) | Blueprints de investigação (prior art) |

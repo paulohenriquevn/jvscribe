@@ -21,8 +21,18 @@ from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 
-import ctc  # shared kernel (training/common)
 from lhotse import Fbank, FbankConfig
+
+import pathlib
+import sys
+
+# `common/` é o shared kernel (M9/T3.1). O `conftest.py` o expõe para os TESTES, mas um
+# humano rodando este script direto só tem o diretório dele no path — por isso o insert
+# explícito, mesma convenção já usada para `scripts/corpus`. Sem ele o script quebra
+# standalone e passa na suíte inteira (regressão real de M9/T3.1).
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+import ctc  # noqa: E402  — shared kernel
+
 
 SR = 16000
 BLANK = 0

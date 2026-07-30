@@ -24,7 +24,7 @@ ACENTUADO = "coração, ATENÇÃO! não é ótimo?"
 
 def test_as_duas_semanticas_divergem_de_fato():
     """Oráculo da ambiguidade: mesmo nome, resultados diferentes."""
-    from text_normalize_ptbr import normalize_ptbr as remove_acento
+    from text_normalize_ptbr import normalize_for_wer_compare as remove_acento
     from prep_icefall import normalize_ptbr as preserva_acento
 
     a, b = remove_acento(ACENTUADO), preserva_acento(ACENTUADO)
@@ -42,7 +42,7 @@ def test_common_text_expoe_as_duas_com_nome_que_revela_o_contrato():
 
 def test_common_reproduz_exatamente_as_implementacoes_originais():
     """Migração sem mudança de comportamento — o que protege os números publicados."""
-    from text_normalize_ptbr import normalize_ptbr as remove_acento
+    from text_normalize_ptbr import normalize_for_wer_compare as remove_acento
     from prep_icefall import normalize_ptbr as preserva_acento
     from text import normalize_for_wer_compare, normalize_train_target
 
@@ -59,3 +59,31 @@ def test_as_tres_copias_da_semantica_de_treino_sao_equivalentes():
 
     for amostra in (ACENTUADO, "ÁÉÍÓÚ ãõ çÇ", "sem acento aqui"):
         assert a(amostra) == b(amostra) == c(amostra), amostra
+
+
+def test_nao_existe_mais_normalize_ptbr_com_semantica_divergente():
+    """O critério que importa não é "zero definições" — é zero AMBIGUIDADE.
+
+    Quatro cópias da mesma semântica são redundância (tolerável). Duas semânticas opostas sob
+    o mesmo nome são uma armadilha: comparar dois WERs pressupõe uma régua que ninguém
+    verificou. A divergente foi renomeada para `normalize_for_wer_compare` em M9/T3.2.
+    """
+    import subprocess
+
+    src = subprocess.run(
+        ["grep", "-rln", "def normalize_ptbr", "scripts", "training", "--include=*.py"],
+        cwd=REPO, capture_output=True, text=True,
+    ).stdout.split()
+    # Todas as definições remanescentes preservam acento (semântica de alvo de treino).
+    for rel in src:
+        # `smoke/` está congelado por auditoria anterior; arquivos de teste citam o nome
+        # em prosa e no próprio grep (auto-referência).
+        if "smoke" in rel or "/tests/" in rel or rel.startswith("tests/"):
+            continue
+        body = (REPO / rel).read_text(encoding="utf-8")
+        i = body.index("def normalize_ptbr")
+        trecho = body[i : i + 400]
+        assert "áàâãéêíóôõúçü" in trecho, (
+            f"{rel} define normalize_ptbr com semântica que NÃO preserva acento — "
+            "a ambiguidade que M9/T3.2 eliminou voltou"
+        )

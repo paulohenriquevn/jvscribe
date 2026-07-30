@@ -74,6 +74,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- **Regressão de M9/T3.1 corrigida (BLOCKER do `/review`)**: a migração para o shared kernel
+  quebrou a execução standalone dos scripts de pipeline — `python3 training/batch/batch_transcribe.py`
+  falhava com `ModuleNotFoundError: No module named 'ctc'`, porque `import ctc` só resolvia sob
+  pytest (é o `conftest.py` que injeta `common/` no path). Toda a suíte passava. Corrigido com
+  insert explícito de path, e coberto por
+  `test_entrypoints_de_pipeline_rodam_standalone`, que executa cada entrypoint de verdade.
+- Ambiguidade de `normalize_ptbr` eliminada de fato (M9/T3.2): a versão que **remove** acento
+  foi renomeada para `normalize_for_wer_compare` e seus 5 callers atualizados. As definições
+  remanescentes têm todas a mesma semântica — redundância é tolerável, duas semânticas opostas
+  sob o mesmo nome não eram.
+- `LICENSE` passou de stub de 17 linhas para o texto completo (202 linhas, com o apêndice que a
+  Apache-2.0 § 4(a) exige distribuir).
+- README: estado de M9 alinhado ao `ROADMAP.md` e referências a "M0–M8" atualizadas para M0–M9.
 - README corrigido (M9/T4.3): os 5 links internos voltaram a resolver (4 pelas restaurações de
   `c7c67b9~1`, 1 pela recuperação de `m2-rtfx-candidates.md`), a tabela de milestones foi
   sincronizada com o `ROADMAP.md`, e a seção de arquitetura deixou de afirmar que **"o vencedor

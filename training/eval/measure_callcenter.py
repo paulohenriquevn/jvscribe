@@ -57,6 +57,12 @@ def load_tokens(path):
 
 def greedy(lp, id2tok):
     """Delega ao shared kernel (M9/T3.1) — equivalência medida antes da migração."""
+    import pathlib
+    import sys
+
+    # Mesmo motivo do insert em batch_transcribe: este script tem de rodar standalone, e o
+    # `conftest.py` só expõe `common/` para os testes.
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
     import ctc
 
     return ctc.greedy_text(lp[0], id2tok)

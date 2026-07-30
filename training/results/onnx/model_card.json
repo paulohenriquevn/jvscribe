@@ -5,7 +5,5 @@
   "tokens_file": "tokens.txt",
   "vocab_real_len": 500,
   "vocab_fingerprint": "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2754140212647",
-  "generated_at": "2026-07-30T17:07:14Z",
-  "wer_measured": 29.92,
-  "wer_source": "training/results/runtime-eval-findings.md"
+  "generated_at": "2026-07-30T18:20:11Z"
 }
