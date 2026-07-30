@@ -13,7 +13,27 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-## [Unreleased]
+### Changed
+- **O modelo oficial passou a ser `m5_avg.int8.onnx` — decidido por medição, não por nome.**
+  Os dois pesos M5 que coabitam o artefato canônico foram medidos no mesmo conjunto
+  (FLEURS pt_br test[0:100], 2.552 palavras, greedy CTC, máquina com load < 2):
+  `model.int8.onnx` WER 17,32% / CER 7,39% contra `m5_avg.int8.onnx` WER **15,99%** / CER 7,30%.
+  Bootstrap pareado de 5.000 reamostragens dá IC95% do delta em **[−2,25, −0,43] pp** — não
+  cruza zero. O `model_card.json` foi regenerado apontando para o vencedor, com o WER medido e
+  a condição da medição no campo `wer_source`.
+  Confirma por medição o que o `CLAUDE.md` registrava como `[ESTIMATIVA]`: checkpoint averaging
+  bate abaixo do melhor checkpoint individual.
+
+### Fixed
+- **`batch_transcribe.py` escolhia o peso pelo nome do arquivo e entregava o pior em silêncio.**
+  Com `model.int8.onnx` e `m5_avg.int8.onnx` no mesmo diretório, a ordem literal de nomes
+  selecionava o de WER 17,32% em vez do de 15,99% — sem erro, sem aviso, só transcrição
+  mensuravelmente pior. O resolvedor agora lê `model_file` do `model_card.json` como autoridade
+  e só cai para os nomes conhecidos quando o card está ausente ou ilegível. Mesma classe de
+  falha que o M9 endereça: artefatos indistinguíveis por metadado superficial.
+  Coberto por dois testes novos em `jvscribe/tests/test_model_dir_contract.py` (o caso feliz e
+  o card apontando para peso inexistente).
+- Cabeçalho `## [Unreleased]` duplicado neste arquivo.
 
 ### Removed
 - **`models/` limpo: 8,1 GB → 4,0 GB.** Mantido apenas `m5-final-medium-phoneme`, o

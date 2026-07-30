@@ -39,6 +39,44 @@ def test_resolvedor_honra_MACAW_MODEL_DIR(monkeypatch, tmp_path):
     assert Path(_default_model_path()).parent == tmp_path
 
 
+def test_o_resolvedor_obedece_ao_model_card_e_nao_ao_nome_do_arquivo(monkeypatch, tmp_path):
+    """O `model_card.json` é a autoridade sobre QUAL peso é o canônico.
+
+    Defeito real de 2026-07-30: dois pesos coabitam o diretório canônico — `model.int8.onnx`
+    (WER 17,32%) e `m5_avg.int8.onnx` (WER 15,99%, IC95 do delta [-2,25, -0,43] pp, medido em
+    FLEURS pt_br test[0:100]). Escolher pelo NOME entrega o pior dos dois em silêncio: nada
+    falha, a transcrição só fica mensuravelmente pior. É a mesma classe de falha do M9 —
+    artefatos indistinguíveis por metadado superficial.
+    """
+    import json
+
+    from batch_transcribe import _default_model_path
+
+    (tmp_path / "model.int8.onnx").write_bytes(b"pior")
+    (tmp_path / "m5_avg.int8.onnx").write_bytes(b"melhor")
+    (tmp_path / "model_card.json").write_text(
+        json.dumps({"model_file": "m5_avg.int8.onnx"}), encoding="utf-8"
+    )
+    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+
+    assert Path(_default_model_path()).name == "m5_avg.int8.onnx"
+
+
+def test_o_resolvedor_ignora_card_que_aponta_para_peso_inexistente(monkeypatch, tmp_path):
+    """Card corrompido/desatualizado não pode derrubar a resolução — degrada para os nomes conhecidos."""
+    import json
+
+    from batch_transcribe import _default_model_path
+
+    (tmp_path / "model.int8.onnx").write_bytes(b"unico")
+    (tmp_path / "model_card.json").write_text(
+        json.dumps({"model_file": "sumiu.onnx"}), encoding="utf-8"
+    )
+    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+
+    assert Path(_default_model_path()).name == "model.int8.onnx"
+
+
 def test_o_artefato_canonico_tem_tokens_e_card():
     current = REPO / "models" / "current"
     if not current.exists():

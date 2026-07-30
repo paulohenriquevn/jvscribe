@@ -58,10 +58,28 @@ def _default_model_path() -> str:
     candidatos_dir += [repo / "models" / "current", Path.cwd()]
 
     for d in candidatos_dir:
+        # O `model_card.json` é a AUTORIDADE sobre qual peso é o canônico. Sem isto, dois
+        # pesos no mesmo diretório são desempatados por nome — e o nome não conhece o WER.
+        declarado = _model_file_do_card(d)
+        if declarado and (d / declarado).exists():
+            return str(d / declarado)
         for nome in ("model.int8.onnx", "m5_avg.int8.onnx"):
             if (d / nome).exists():
                 return str(d / nome)
     return "model.int8.onnx"
+
+
+def _model_file_do_card(d: Path) -> str | None:
+    """Lê `model_file` do model card. Card ausente/ilegível degrada para os nomes conhecidos."""
+    import json
+
+    card = d / "model_card.json"
+    if not card.exists():
+        return None
+    try:
+        return json.loads(card.read_text(encoding="utf-8")).get("model_file")
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def _default_sibling(nome: str) -> str:
