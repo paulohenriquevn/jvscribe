@@ -32,6 +32,12 @@ hound = "3.5"
 # `commit_from_file` por mismatch de versão de ABI — `[MEDIDO]` 2026-07-24.
 ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "api-23", "load-dynamic"] }
 ndarray = "0.17"
+# SHA-256 do fingerprint de vocabulário (M9/T1.1). Escada de parcimônia: a std não
+# oferece hash estável entre versões (`DefaultHasher` é explicitamente instável), e o
+# fingerprint precisa ser persistido no `model_card.json` — logo tem de ser reproduzível
+# entre builds. `sha2` é a implementação de facto; reimplementar violaria a Regra 9.
+sha2 = "0.10"
+
 
 [profile.release]
 opt-level = 3

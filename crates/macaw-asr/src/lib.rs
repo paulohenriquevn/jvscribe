@@ -113,6 +113,57 @@ impl Vocab {
         self.tokens.is_empty()
     }
 
+    /// `true` para símbolo de desambiguação do lexicon FST do icefall (`#0`, `#1`, …).
+    ///
+    /// Esses símbolos existem no `tokens.txt` para a construção do `L.fst` e **nunca são
+    /// emitidos pelo modelo**. `[MEDIDO]` 2026-07-30: o export do runtime tem 2 deles
+    /// (502 linhas para 500 classes) e o de avaliação tem 3 (503 linhas para 500 classes).
+    fn is_disambig(token: &str) -> bool {
+        matches!(token.strip_prefix('#'), Some(rest)
+            if !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+    }
+
+    /// Número de tokens **emitíveis** — exclui os símbolos de desambiguação.
+    ///
+    /// É esta a grandeza comparável com a última dimensão de `log_probs`;
+    /// [`Vocab::len`] conta linhas do arquivo e **não** serve para essa comparação.
+    #[must_use]
+    pub fn real_len(&self) -> usize {
+        self.tokens.iter().filter(|t| !Self::is_disambig(t)).count()
+    }
+
+    /// Fingerprint de **identidade** do vocabulário: SHA-256 sobre a sequência ordenada
+    /// `id\ttoken\n` dos tokens emitíveis.
+    ///
+    /// Cardinalidade não distingue vocabulários: `[MEDIDO]` 2026-07-30, os dois artefatos
+    /// em disco têm 500 tokens reais cada e **492 dos 500 ids mapeiam tokens diferentes**.
+    /// Só o conteúdo distingue — daí o hash sobre `(id, token)`, e não sobre a contagem.
+    ///
+    /// Símbolos de desambiguação são excluídos para que dois lang-dirs equivalentes com
+    /// número diferente de `#N` produzam o mesmo fingerprint (D2 do plano de M9).
+    #[must_use]
+    pub fn fingerprint(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        for (id, token) in self.tokens.iter().enumerate() {
+            if Self::is_disambig(token) {
+                continue;
+            }
+            hasher.update(id.to_string().as_bytes());
+            hasher.update(b"\t");
+            hasher.update(token.as_bytes());
+            hasher.update(b"\n");
+        }
+        hasher
+            .finalize()
+            .iter()
+            .fold(String::with_capacity(64), |mut acc, b| {
+                use std::fmt::Write as _;
+                let _ = write!(acc, "{b:02x}");
+                acc
+            })
+    }
+
     /// Resolve um id de token para o texto correspondente.
     #[must_use]
     pub fn decode(&self, id: usize) -> Option<&str> {
