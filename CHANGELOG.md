@@ -13,6 +13,16 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-30
+
+> **Nota de versionamento.** A regra de derivação do `cycle-release.md` dispara MAJOR quando
+> `§ Removed` não está vazio, o que daria v1.0.0. Desvio deliberado para MINOR: nenhuma API
+> pública foi removida (verificado no diff — zero `-pub fn|struct|enum`); o `§ Removed` lista
+> dumps de experimento, examples sem caller e uma dependência duplicada. Além disso, v1.0
+> neste projeto tem gate próprio (`dogfood-golden-rule.md`: evidência de uso sustentado, que é
+> o M8 ainda não feito). Cortar v1.0.0 aqui seria alegação falsa de maturidade.
+
+
 ### Added
 - `scripts/make_model_card.py` e artefato canônico `models/current` (M9/T1.3): gera `model_card.json` com sha256 do modelo, fingerprint e contagem de tokens emitíveis. O fingerprint Python reproduz bit a bit o do Rust (teste de conformidade cross-language). `models/current` é **symlink** — nenhum peso é movido ou copiado. `eval_public_hf.py` deixa de usar caminho absoluto e honra `MACAW_MODEL_DIR`.
 - Validação de **identidade** de vocabulário contra o `model_card.json` (M9/T1.2b): `validate_against_model_card`, ligada no caller de produção. Complementa a checagem de cardinalidade, que pega o erro fácil — este pega o difícil: `[MEDIDO]`, os dois artefatos do repositório têm 500 tokens emitíveis **cada** e 492 dos 500 ids mapeiam tokens diferentes, então trocá-los produz transcrição integralmente errada sem nenhum erro de dimensão. Degrada para no-op quando não há card.
