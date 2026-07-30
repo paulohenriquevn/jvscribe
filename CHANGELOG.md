@@ -14,6 +14,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- Restaurado `knowledge-base/references/_catalog.md` (fonte: `c7c67b9~1`, onde foi removido junto com o resto do knowledge-base) — catálogo dos 8 peers SOTA clonados em 2026-07-24, necessário como contrato de fonte para o ciclo DISCOVER de M9. Bootstrap autorizado via marcador `.references-bootstrap` conforme `hooks/boundary-check.sh`.
+- Ciclo DISCOVER de M9 concluído: plano de pesquisa (SHIPPABLE 100/100) e blueprint (SHIPPABLE 99,4/100) em `knowledge-base/discoveries/`, com 8 questões respondidas por evidência `[FONTE-REPO]` do peer sherpa-onnx no SHA 116a44e7. Achado central: o padrão de validação vocabulário×modelo que M9 precisa já existe e é copiável (`offline-recognizer-canary-impl.h:246`).
 - Roadmap amendado: adicionado M9 Governança de artefato e reprodutibilidade (`/roadmap-feature governanca-artefato-reprodutibilidade`) — fecha as lacunas de integridade encontradas na auditoria de system design de 2026-07-30 (artefato de modelo canônico, fail-fast de vocabulário, shared kernel do decode CTC, CI, licença). Depende de M5.
 - Auditoria de system design (`/loop-system-design`, modo full): 51 achados em 14 módulos, 4 quality gates aprovados, relatório e plano de reorganização em `system-design-output/`.
 - `CLAUDE.md` na raiz: guia de onboarding para o Claude Code — comandos de build/teste das duas metades (Rust e Python), camadas do workspace, as duas armadilhas que custaram tempo (as duas convenções de fbank que coexistem; o ONNX Runtime carregado por `dlopen`) e o aviso de que `PRD.md`/`ROADMAP.md`/`knowledge-base/` citados no código foram removidos em `c7c67b9`.
