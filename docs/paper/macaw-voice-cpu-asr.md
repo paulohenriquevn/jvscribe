@@ -2,6 +2,11 @@
 
 **Macaw Voice — Technical Report / Experience Paper (v1, 2026-07-30)**
 
+> **Figures.** Diagrams below use Mermaid (rendered on GitHub and Mermaid-capable viewers). A
+> **self-contained, always-rendered HTML companion** with all figures is at
+> [`docs/paper/figuras.html`](./figuras.html) (open in a browser); the model architecture alone is at
+> [`docs/paper/arquitetura.html`](./arquitetura.html).
+
 ---
 
 ## Abstract
