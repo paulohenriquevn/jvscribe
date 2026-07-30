@@ -95,3 +95,19 @@ de `ctc_loss` de treino saudável (~1,1). **Full-FT descartado como método.**
 **Pivô (collapse-proof):** encoder profundo (63,4M) **CONGELADO**, treina só encoder_embed
 (0,61M) + ctc_output (0,26M) + fonema (0,035M) = ~0,9M (~1,4%, equivalente a adapter). Runbook
 `training/run_ft_freeze.sh` (patch `FREEZE_ENCODER=1` em train.py da instância). Em curso.
+
+## Phase 4b/c — encoder-freeze também colapsa; métrica validada `[MEDIDO]`
+
+- **Métrica D1 validada SÃ:** `avg_124_112` (modelo bom) no codec-pool atual (opus60%@6kbps) =
+  **35,53%** (≈ 36,88% do pool antigo). Logo o colapso dos FTs NÃO é artefato de métrica.
+- **Encoder-freeze (corpo 63M fixo, treina frontend+cabeças) COLAPSOU pior:** `checkpoint-4000
+  D1 = 100,00%` (0 corretas, blank puro). O frontend treinável drifta e alimenta blank ao encoder
+  congelado — congelar o corpo não protege.
+- **Veredito (3 configs medidos):** full-FT (LR 0,006/avg ~98%; LR 0,002/single ~98%) e
+  encoder-freeze (100%) — **codec-aug fine-tuning colapsa este CTC para blank de forma robusta**,
+  enquanto o modelo bom dá 35,53% no mesmo teste. Causa: atrator de blank do CTC + augmentação
+  agressiva; encontra blank por qualquer parâmetro treinável.
+- **Último teste em curso:** p=0,15 (85% do batch limpo = âncora), musan off, modelo cheio —
+  isola "intensidade de augmentação" como causa. Decide entre "aug gentil funciona" e o veredito
+  honesto de que a abordagem por FT não fecha o DoD#3 (→ follow-up: curriculum-aug research OU
+  dado telefônico real).
