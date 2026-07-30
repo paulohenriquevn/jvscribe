@@ -1,0 +1,189 @@
+<title>Macaw Voice — Arquitetura Zipformer-CTC</title>
+<style>
+  :root{
+    --bg:#0d1420; --panel:#131c2b; --panel2:#0f1826; --edge:#22304a;
+    --ink:#e8eef7; --muted:#93a4bd; --faint:#5f728f;
+    --enc:#38e0c8;  /* codificação */
+    --dec:#f5b74e;  /* decodificação */
+    --feat:#7aa2ff; /* features */
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:light){
+    :root{ --bg:#eef2f8; --panel:#ffffff; --panel2:#f4f7fc; --edge:#d3dcea;
+      --ink:#111a29; --muted:#4a5a72; --faint:#7688a2;
+      --enc:#0fae95; --dec:#c8871a; --feat:#3f6fe0; }
+  }
+  :root[data-theme="dark"]{ --bg:#0d1420; --panel:#131c2b; --panel2:#0f1826; --edge:#22304a;
+    --ink:#e8eef7; --muted:#93a4bd; --faint:#5f728f; --enc:#38e0c8; --dec:#f5b74e; --feat:#7aa2ff; }
+  :root[data-theme="light"]{ --bg:#eef2f8; --panel:#ffffff; --panel2:#f4f7fc; --edge:#d3dcea;
+    --ink:#111a29; --muted:#4a5a72; --faint:#7688a2; --enc:#0fae95; --dec:#c8871a; --feat:#3f6fe0; }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 20px 56px}
+  header{margin-bottom:8px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--enc);margin:0 0 6px}
+  h1{font-size:clamp(24px,4.4vw,36px);margin:0;line-height:1.1;letter-spacing:-.01em;text-wrap:balance}
+  .sub{color:var(--muted);margin:8px 0 0;max-width:64ch}
+  .mono{font-family:var(--mono)}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+  /* fita vertical de fluxo */
+  .flow{display:flex;flex-direction:column;align-items:stretch;gap:0;margin-top:26px}
+  .stage{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:16px 18px;
+    position:relative}
+  .stage .n{position:absolute;top:-11px;left:16px;font-family:var(--mono);font-size:11px;
+    background:var(--bg);color:var(--faint);padding:0 8px}
+  .stage h3{margin:0;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .stage p{margin:6px 0 0;color:var(--muted);font-size:13.5px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .shape{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--panel2);
+    border:1px solid var(--edge);border-radius:6px;padding:2px 7px;white-space:nowrap}
+  .arrow{align-self:center;color:var(--faint);font-size:20px;line-height:1;padding:7px 0;font-family:var(--mono)}
+  .arrow small{display:block;font-size:10px;letter-spacing:.1em;text-align:center;color:var(--faint)}
+
+  .band{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:7px;padding:3px 10px;border-radius:999px;border:1px solid}
+  .band.enc{color:var(--enc);border-color:color-mix(in srgb,var(--enc) 45%,transparent)}
+  .band.dec{color:var(--dec);border-color:color-mix(in srgb,var(--dec) 45%,transparent)}
+  .bandrow{display:flex;justify-content:center;margin:14px 0 2px}
+
+  /* stacks do encoder */
+  .stacks{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px}
+  .st{background:var(--panel2);border:1px solid var(--edge);border-radius:9px;padding:9px 6px;text-align:center}
+  .st .lab{font-family:var(--mono);font-size:10px;color:var(--faint)}
+  .st .dim{font-family:var(--mono);font-weight:600;font-size:14px;margin-top:2px}
+  .st .ds{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:2px}
+  .st.deep{border-color:color-mix(in srgb,var(--enc) 55%,var(--edge));
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--enc) 30%,transparent) inset}
+  .zblk{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:12px;text-align:center}
+  .zblk b{color:var(--enc)}
+
+  .aux{border-style:dashed;opacity:.85}
+  .aux .dot{background:var(--faint)}
+
+  /* specs grid */
+  .specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:26px}
+  .spec{background:var(--panel);border:1px solid var(--edge);border-radius:12px;padding:13px 14px}
+  .spec .k{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
+  .spec .v{font-size:19px;font-weight:650;margin-top:3px}
+  .spec .v small{font-size:12px;color:var(--muted);font-weight:400}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;font-size:12.5px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .foot{margin-top:26px;color:var(--faint);font-size:12px;font-family:var(--mono)}
+  b.enc{color:var(--enc)} b.dec{color:var(--dec)} b.feat{color:var(--feat)}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Macaw Voice · ASR PT-BR · CPU real-time</p>
+    <h1>Zipformer-CTC <span class="mono" style="color:var(--enc)">medium 64M</span> + cabeça de fonema</h1>
+    <p class="sub">O caminho de um trecho de áudio até o texto. À esquerda dos rótulos, o tensor
+      em cada etapa. <b class="enc">Codificação</b> = entender o áudio (pesado, 64M). <b class="dec">Decodificação</b>
+      = virar texto (leve, greedy). <span class="tag">[MEDIDO/FONTE-REPO]</span></p>
+  </header>
+
+  <div class="bandrow"><span class="band enc">◤ codificação — encoder</span></div>
+
+  <div class="flow">
+
+    <div class="stage">
+      <span class="n">entrada</span>
+      <h3><span class="dot" style="background:var(--feat)"></span> Áudio &nbsp;<span class="shape">16 kHz · mono · float32</span></h3>
+      <p>Telefone 8 kHz é <b class="feat">re-amostrado para 16 kHz</b> antes de tudo (um formato só). Custo do re-sample ≈ 0.</p>
+    </div>
+
+    <div class="arrow">↓<small>resample</small></div>
+
+    <div class="stage">
+      <span class="n">1 · front-end DSP</span>
+      <h3><span class="dot" style="background:var(--feat)"></span> Log-mel Fbank &nbsp;<span class="shape">→ (T, 80)</span></h3>
+      <p>80 bandas mel, janela 25 ms / passo 10 ms → <b class="feat">100 frames/s</b>. Nenhuma rede aqui — pura DSP.</p>
+    </div>
+
+    <div class="arrow">↓<small>features</small></div>
+
+    <div class="stage">
+      <span class="n">2 · encoder_embed &nbsp;·&nbsp; 0,61M</span>
+      <h3><span class="dot" style="background:var(--enc)"></span> Conv2dSubsampling &nbsp;<span class="shape">(T,80) → (T/4, 192)</span></h3>
+      <p>Convolução que comprime o tempo <b class="enc">4×</b>: 100 → <b class="enc">25 frames/s</b> (40 ms por frame).
+        <span class="tag">(era este o módulo do bug do fine-tune — não carregava e colapsava)</span></p>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="stage">
+      <span class="n">3 · Zipformer2 encoder &nbsp;·&nbsp; 63,4M &nbsp;·&nbsp; não-causal</span>
+      <h3><span class="dot" style="background:var(--enc)"></span> 6 stacks · 16 camadas &nbsp;<span class="shape">→ (T/4, 384)</span></h3>
+      <p>O “cérebro”. Cada stack roda numa resolução temporal diferente (downsample interno) e volta —
+        os stacks do meio são mais largos e profundos.</p>
+      <div class="stacks">
+        <div class="st"><div class="lab">S1</div><div class="dim">192</div><div class="ds">2 cam · ds1</div></div>
+        <div class="st"><div class="lab">S2</div><div class="dim">256</div><div class="ds">2 cam · ds2</div></div>
+        <div class="st"><div class="lab">S3</div><div class="dim">384</div><div class="ds">3 cam · ds4</div></div>
+        <div class="st deep"><div class="lab">S4</div><div class="dim">512</div><div class="ds">4 cam · ds8</div></div>
+        <div class="st"><div class="lab">S5</div><div class="dim">384</div><div class="ds">3 cam · ds4</div></div>
+        <div class="st"><div class="lab">S6</div><div class="dim">256</div><div class="ds">2 cam · ds2</div></div>
+      </div>
+      <div class="zblk">cada camada Zipformer = <b>self-attention</b> (4–8 cabeças) + <b>módulo convolucional</b> (kernel 15–31) + <b>2× feed-forward</b></div>
+    </div>
+
+    <div class="arrow">↓<small>hidden states</small></div>
+
+    <div class="bandrow"><span class="band dec">decodificação — CTC ◢</span></div>
+
+    <div class="stage">
+      <span class="n">4 · ctc_output &nbsp;·&nbsp; 0,26M</span>
+      <h3><span class="dot" style="background:var(--dec)"></span> Projeção linear → probabilidades &nbsp;<span class="shape">→ (T/4, 501)</span></h3>
+      <p>Para <b>cada frame</b> (40 ms), a probabilidade de cada um dos <b>500 tokens BPE + 1 blank</b>.
+        É a saída do modelo ONNX (<span class="mono">log_probs</span>).</p>
+    </div>
+
+    <div class="stage aux">
+      <span class="n">aux · só no treino</span>
+      <h3><span class="dot"></span> phoneme_output &nbsp;·&nbsp; 0,035M &nbsp;<span class="shape">removida na inferência</span></h3>
+      <p>Cabeça de fonema auxiliar — melhora o treino (−4,7% rel WER), mas é <b>descartada</b> ao exportar.</p>
+    </div>
+
+    <div class="arrow">↓<small>greedy CTC</small></div>
+
+    <div class="stage">
+      <span class="n">5 · decode</span>
+      <h3><span class="dot" style="background:var(--dec)"></span> Greedy → colapso → texto</h3>
+      <p><span class="mono" style="color:var(--dec)">argmax por frame</span> → remove repetições →
+        remove blank → junta os sub-tokens BPE (▁ = espaço). Sem rede, custo desprezível.</p>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="stage" style="border-color:color-mix(in srgb,var(--dec) 45%,var(--edge))">
+      <span class="n">saída</span>
+      <h3><span class="dot" style="background:var(--dec)"></span> Texto transcrito</h3>
+      <p class="mono" style="color:var(--ink)">“…gerente de relacionamentos, como é que se está, tudo certo…”</p>
+    </div>
+
+  </div>
+
+  <div class="specs">
+    <div class="spec"><div class="k">Parâmetros</div><div class="v">~64 M <small>int8 ONNX · 70 MB</small></div></div>
+    <div class="spec"><div class="k">Taxa de frame</div><div class="v">25 fps <small>100→25 (÷4)</small></div></div>
+    <div class="spec"><div class="k">Vocabulário</div><div class="v">500 <small>BPE + blank</small></div></div>
+    <div class="spec"><div class="k">RTFx (CPU)</div><div class="v">24–48× <small>tempo real</small></div></div>
+    <div class="spec"><div class="k">WER banda-larga</div><div class="v">16–23% <small>FLEURS / CORAA</small></div></div>
+    <div class="spec"><div class="k">WER telefônico</div><div class="v">~36% <small>data-limited</small></div></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--feat)"></span> DSP / features (sem rede)</span>
+    <span><span class="dot" style="background:var(--enc)"></span> codificação (encoder, 64M)</span>
+    <span><span class="dot" style="background:var(--dec)"></span> decodificação (CTC, leve)</span>
+    <span><span class="dot" style="background:var(--faint)"></span> só treino (removido na inferência)</span>
+  </div>
+
+  <p class="foot">Não-causal (batch/offline) — streaming causal palavra-a-palavra é M6. · Números [MEDIDO] no
+    notebook CPU (ONNX int8, greedy). · Arquitetura herdada de M4 (ADR 0003).</p>
+</div>

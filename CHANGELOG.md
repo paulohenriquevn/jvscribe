@@ -13,6 +13,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- Edição PT-BR do paper (`docs/paper/macaw-voice-cpu-asr.pt-br.md`): cada componente do modelo, do sistema e das decisões de método explicado no formato "Problema que resolve → Como resolve".
+- Paper técnico/experience (`docs/paper/macaw-voice-cpu-asr.md`) — relato rigoroso e honesto de todo o percurso de pesquisa (seleção de arquitetura por medição, treino, e o case study do bug de config que simulou um limite fundamental). Guia "construa o seu" + checklist para praticantes. Cada número com rótulo de proveniência. Inclui 7 figuras Mermaid (arquitetura, system design, árvore de decisão do debug, gráficos de WER/RTFx) + versão HTML autocontida das figuras (`docs/paper/figuras.html`, `arquitetura.html`) que renderiza em qualquer navegador.
+- Benchmark público reprodutível (`training/eval_public_hf.py`, `training/results/public-benchmarks.md`): **16,14% WER** no FLEURS pt_br (fala lida banda-larga), RTFx 24,6x em batch (CPU). Confirma o modelo forte em áudio de boa qualidade; o gargalo telefônico é canal/dado. [MEDIDO]
+- Transcrição em LOTE de pasta de áudios (`training/batch_transcribe.py`) — lê qualquer formato
+  via ffmpeg → 16 kHz → VAD por silêncio → inferência ONNX **em batch** com decode paralelo.
+  Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
+  11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
+
+### Fixed
+- Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
+
 ## [0.7.0] - 2026-07-30
 
 ### Changed
