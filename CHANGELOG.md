@@ -13,7 +13,108 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-30
+
+### Changed
+- `codec_pool` on-the-fly agora usa torchaudio `AudioEffector` (in-process, ~21ms/cut) para
+  opus baixo-bitrate, em vez de ffmpeg-subprocess (que starvava a GPU a 0% util, ~0,45 batch/s).
+  Pool de treino = {G.711 μ/a (audioop), opus_low (torchaudio)}; GSM fica no builder offline.
+- FT gentil (`training/run_ft_codec.sh`): `--num-workers` 2→10 para paralelizar o codec-pool
+  (ffmpeg per-cut estava starvando a GPU a 0% util). Lançamento via `nohup setsid` (o `pkill -f`
+  com padrão que casava o próprio shell SSH matava o launch — corrigido).
+- App do microfone (`training/mic_transcribe.py`) reescrito de segmentação-por-pausa (VAD)
+  para **pseudo-streaming**: janela deslizante com sobreposição + LocalAgreement-2
+  (Macháček et al., ACL 2023) — não corta mais palavras na fronteira, exibe texto tentativo
+  (cinza) com latência ~hop e trava a palavra (branco) quando 2 decodificações concordam.
+  Trim por timestamp do CTC mantém a janela pequena. Testes do núcleo em
+  `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
+
 ### Added
+- Veredito final DoD#3 [MEDIDO]: com o bug encoder_embed corrigido, o FT NAO colapsa mas platoa em ~39% (acima do baseline 35,53%) — data-limited. DoD#3 <=25% nao atingivel com o modelo 64M + dados atuais; melhor telefonico = modelo entregue ~36%. <=25% depende de dado real (follow-up).
+- Veredito conclusivo DoD#3 telefônico [MEDIDO]: 4 configs de codec-aug fine-tuning colapsam o
+  CTC para blank (~98-100%), enquanto o modelo entregue faz 35,53% no mesmo teste — a augmentação
+  dispara o atrator de blank. DoD#3 (≤25%) NÃO atingido; melhor honesto ~36% real-codec. Caminho
+  a ≤25% documentado como follow-up (curriculum/label-prior research + dado telefônico real).
+- Pivô do FT telefônico: full-FT + codec-aug colapsa o greedy p/ ~98% (2× medido, D2 + run
+  gentil). Novo runbook `training/run_ft_freeze.sh` — encoder congelado (63M), treina só
+  frontend+cabeças (~0,9M, collapse-proof). Patch de freeze via env var no train.py da instância.
+- Baseline D1 real-codec + runbook do FT gentil corrigido: `training/measure_realcodec.py`
+  (WER em CORAA mono-falante degradado pelo codec-pool = **36,88% [MEDIDO]**) e
+  `training/run_ft_codec.sh` (FT single-ckpt + LR 0,002 + codec-pool p=0,5 + fp32 — corrige o
+  colapso do D2). Phase 2/4 do plano m5-8khz.
+- Cadeia telefônica de treino agora sorteia o codec do pool por-cut
+  (`scripts/corpus/telephone_channel_transform.py` + `apply_band` em `telephone_channel.py`),
+  substituindo o G.711-fixo. Default do pool = codecs realistas (GSM/Opus/G.711); `{"g711a":1.0}`
+  recupera o comportamento legado. Retrocompatível (152 testes verdes). (ADR D3/D4 do plano m5-8khz)
+- Pool de codecs telefônicos realistas (`scripts/corpus/codec_pool.py`) — G.711 μ/a (audioop),
+  GSM-FR e Opus baixo-bitrate (ffmpeg em pipes, sem WAV em disco), amostrável por pesos. Substitui
+  o G.711-fixo que causava o platô de 8 kHz (ADR D3/D4 do plano m5-8khz). 7 testes.
+- Plano da fatia que fecha o DoD#3 telefônico
+  (`knowledge-base/plans/m5-8khz-telephone-wer-plan.md`) — FT gentil corrigido + codec-pool
+  realista + n-gram LM + métrica CORAA mono-falante real-codec. plan-confidence
+  SHIPPABLE_WITH_CAVEATS (weighted_avg 99,2).
+- Harness de medição de WER em call center real 8 kHz (`training/measure_callcenter.py`) —
+  segmenta pela transcrição humana timestampada, normaliza, WER via jiwer; dado fica local
+  (LGPD). Baseline REAL do modelo entregue = 40,13% [MEDIDO] (pior que o proxy 31,97%).
+- Blueprint de deep research para WER 8 kHz telefônico
+  (`knowledge-base/discoveries/blueprints/m5-8khz-telephone-wer-blueprint.md`) — ranking de
+  alavancas (n-gram LM, pool de codecs realistas, adaptação gentil, dev/test real), com
+  divergência entre cientistas registrada (8kHz-nativo vs upsample).
+- App de transcrição em tempo real do microfone (`training/mic_transcribe.py`) — captura mic
+  16 kHz → VAD de energia (RMS+histerese, calibra ruído de fundo, zero deps de ML) → fbank →
+  ONNX int8 M5 → transcrição ao vivo no terminal, por frase (M5 é não-streaming). Mostra
+  latência + RTFx por frase. Roda no notebook em CPU.
+- Deliverable medido de M5 `[MEDIDO]` — Zipformer-CTC medium+fonema fine-tunado (CORAA+TAGARELA),
+  int8 ONNX, avaliado **no hardware-alvo (notebook CPU, ONNX Runtime)**, full-test CORAA humano
+  12.676 utts: **WER wideband espontâneo 23,31%** (CER 11,28%; abaixo do M4 27,46% que era fala
+  lida) e **RTFx 34,69×** (RNF-07 ≥6× ✅). Modelo médio (averaging de checkpoint-124000+112000).
+  Telefônico-proxy 8 kHz 31,97% (continuação com augmentação D2 em curso para o DoD#3 ≤25%).
+  Resultados + metodologia em `training/results/m5-final-results.md`; harness de medição em
+  `training/decode_onnx_local.py`; prep da clip real em `training/make_callcenter_cuts.py`;
+  auditoria de ruído de pseudo-rótulo em `training/scripts/tagarela_noise_audit.py`.
+- Diagnóstico de M5 documentado no `CLAUDE.md` § "Contexto que evita erros repetidos" —
+  a arquitetura está correta `[MEDIDO]`: o finetune faz *overfitting* (train ctc ≈ val ctc
+  no melhor ponto de cada época, val sobe acima da train dentro da época), o que **prova
+  capacidade de encoder suficiente**; o gargalo é dado/generalização (ruído dos pseudo-rótulos
+  Whisper do TAGARELA). Registra 3 alavancas grátis contra o mesmo overfitting antes de
+  colher dado novo: augmentação ligada (Reverb→Noise→Telephone + SpecAugment/weight decay,
+  ADR D2, também ataca DoD#3), checkpoint averaging (`--avg`), e beam+LM no decode (hoje greedy).
+- Ciclo de M5 (discover→plan) — blueprint `m5-scale-model-wer-blueprint.md`
+  (`/discover-confidence` SHIPPABLE) trava o recipe de fine-tune (`do_finetune` do icefall,
+  não resume) + augmentação `cut_transforms`; plano `m5-scale-model-wer-plan.md`
+  (`/plan-confidence` SHIPPABLE 97,6). Corpus (ADR D4): mux CORAA humano + TAGARELA pseudo
+  pesado 1:1 (`--use-mux`), test sempre no CORAA humano (pseudo nunca no test).
+- Patch de fine-tune de M5 — `training/prep_finetune.py` porta o mecanismo `do_finetune`
+  (flags `--do-finetune/--init-modules/--finetune-ckpt` + `load_model_params`) para o
+  `zipformer/train.py` do icefall, reusando `apply_patch` (Regra 9/DRY); 5 testes de
+  contrato verdes (`training/tests/test_prep_finetune.py` — injeção, compilação,
+  idempotência, fail-fast).
+- Prep do TAGARELA para o mux de M5 — `training/prep_tagarela.py` (molde `prep_coraa.py`,
+  reusa `normalize_ptbr`+Fbank, Regra 9) adaptado ao schema parquet real (FLAC embutido em
+  `audio.bytes`, filtra `accent=="pt-br"`); sem flag de split dev/test por construção
+  (garantia estrutural de não-vazamento). Revisão de corpus (speech-data-scientist) →
+  correções: downmix mono + decode via `Recording.from_file` (bounda RAM, garante mono, F4/F5);
+  filtro determinístico de alucinação de pseudo-label (repetição n-grama + bound char/segundo,
+  F3); relatório de cobertura por show (F7); 18 testes comportamentais verdes.
+  `training/scripts/tagarela_coraa_leak_check.py` cruza paths do TAGARELA × videoIDs do TEDx no
+  test CORAA (vazamento cross-corpus = BLOCKER; F2). Subset ~600h baixado na instância. Infra:
+  consolidada em 1 instância vast.ai (RTX 3090, 600GB, $0,313/h); modelo M4 preservado local (SHA).
+- Augmentação on-the-fly de M5 — adapter `scripts/corpus/telephone_channel_transform.py`
+  (`TelephoneChannel(AudioTransform)`) torna o canal telefônico de M3 aplicável como
+  transform lhotse lazy (precedente `Recording.narrowband()`, trata `MonoCut`/`MixedCut`),
+  reusando `apply_telephone_channel` sem duplicar DSP (Regra 9); patch
+  `training/prep_augment_datamodule.py` injeta Reverb + flags `--enable-telephone-aug`/
+  `--rir-manifest` + telephone no `asr_datamodule.py` na ordem física Reverb→ruído→telefone
+  (ADR D2); 15 testes de contrato verdes; canal telefônico é on-the-fly no treino (não
+  materializado em disco), offline só nos test sets.
+- Fase de dados de M5 — CORAA-v1.1 (fala espontânea PT-BR) preparado no formato do
+  datamodule icefall: `training/prep_coraa.py` reusa `normalize_ptbr` + Fbank 80-bin do
+  treino (Regra 9), emite `cv-pt_cuts_{dev,test}` com dev=5,91h/7522 cuts e
+  test=11,24h/12676 cuts [MEDIDO] na instância vast.ai (`training/tests/test_prep_coraa.py`).
+- Prova de ausência de vazamento de locutor no CORAA (PRD §7.3):
+  `training/scripts/coraa_speaker_overlap.py` — disjunção train↔dev↔test provada por
+  script nas 3 fontes com chave de locutor no path (CORAL/NURC/TEDx ≈78% das horas de
+  train, 0 chaves em comum); ALIP+SP2010 (≈22%) reportados como não-verificáveis.
 
 ### Changed
 
@@ -22,6 +123,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Removed
 
 ### Fixed
+- Corrige dois artefatos do app de streaming (`training/mic_transcribe.py`): duplicação de
+  palavra na costura da janela pós-trim (dedup no `commit_localagreement`) e a linha que não
+  quebrava em fala contínua (quebra por tamanho independe de texto tentativo). Núcleo do
+  LocalAgreement extraído para função pura testável (+4 testes).
 
 ### Security
 
