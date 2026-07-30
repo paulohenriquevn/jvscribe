@@ -2,9 +2,9 @@
 """Mede WER do batch_transcribe num dataset PÚBLICO do HF (FLEURS pt_br) — fala lida
 banda-larga (perfil ~128 kbps). Pega bytes crus (decode=False, sem torchcodec), grava
 como arquivos, roda batch_transcribe, compara com a referência humana via jiwer."""
-import re, sys, json
+import os, re, sys, json
 from pathlib import Path
-sys.path.insert(0, "/home/paulo/Projetos/jvscribe/training")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # batch/ — co-locado com batch_transcribe
 from datasets import load_dataset, Audio
 import jiwer
 from batch_transcribe import transcribe_folder
