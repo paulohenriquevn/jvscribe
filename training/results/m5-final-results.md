@@ -138,3 +138,14 @@ p=0,15. **A abordagem por fine-tuning simples NÃO fecha o DoD#3 com este modelo
   call center). O n-gram LM (grátis, ~10% rel) soma mas sozinho não fecha o gap.
 
 Nada aqui é declarado sem número medido. GPU pausada (sem mais experimentos — 4 colapsos = conclusivo).
+
+## ⚠️ CORREÇÃO DE CAUSA-RAIZ (2026-07-30) — o colapso era BUG DE CONFIG, não a augmentação `[FONTE-REPO]`
+
+Controle decisivo: FT **sem augmentação nenhuma** também colapsou (**99,57%, 16 corretas**). A
+augmentação NUNCA foi a causa. Bug em `load_model_params` (train.py:335): matching de `--init-modules`
+por prefixo `"encoder."` casa `encoder.*` (63M) mas NÃO `encoder_embed.*` (frontend Conv 0,6M). Com
+`--init-modules "encoder,ctc_output,phoneme_output"` (D2 + 5 tentativas), o **`encoder_embed` ficava
+ALEATÓRIO** → alimenta blank ao encoder bom → colapso, com ou sem aug (o run original a LR 0,03/10
+épocas re-treinava o frontend, por isso não colapsava). **Fix: adicionar `encoder_embed` ao
+init-modules** (confirmado no log). Experimento corrigido em curso; conclusões anteriores de
+"codec-aug colapsa" RETRATADAS.
