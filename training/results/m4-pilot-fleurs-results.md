@@ -37,7 +37,7 @@ Comando: `ctc_decode.py --epoch 30 --avg 1 --use-averaged-model 0 --decoding-met
 | **test (held-out)** | **96,52%** | 10 | 19394 | 1320 | 21471 |
 | train | 95,19% | 16 | 54340 | 4837 | 62186 |
 
-Evidência bruta: `training/results/m4-pilot-fleurs/errs-test-epoch-30_avg-1.txt`, `decode_noavg.log`, `train.log`.
+Evidência bruta: `training/results/archive/m4-pilot-fleurs-raw.tar.gz` (arquivada em M9/T4.2 — 193 KB). **Não foi apagada**: ao contrário dos demais decodes, este diretório não tem `recogs-*.txt` par, então os `errs-*` são o único dado por-utterance sobrevivente e não são recomputáveis.
 
 ## Hipótese → Evidência → Conclusão
 

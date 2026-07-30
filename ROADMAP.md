@@ -39,12 +39,14 @@ margem).
 
 ### Explicitly out of scope
 
-- **Plataforma de frota** (distribuição BYOD, versionamento de modelo, telemetria, monitoramento de WER em produção) — *why excluded:* é um sistema distribuído próprio, com ciclo independente; depende de A+B prontos e não os bloqueia
+- **Plataforma de frota** (distribuição BYOD, telemetria, monitoramento de WER em produção) — *why excluded:* é um sistema distribuído próprio, com ciclo independente; depende de A+B prontos e não os bloqueia
 - **Compliance LGPD e mascaramento de PII** — *why excluded:* é trilho jurídico, não engenharia de ASR. **Mas é dependência crítica:** se exigir NER de PII no dispositivo, consome orçamento de CPU já apertado e invalida decisões de dimensionamento
 - **Classificação de intenção** — *why excluded:* consumidor downstream do texto; define a ponderação de WER mas não faz parte do transcritor
 - **UI e empacotamento de produto** — *why excluded:* não é ASR
 
 > Items in this list are off-limits for V1. To reconsider, write a new roadmap revision — do not silently expand scope.
+>
+> Note: "versionamento de modelo" foi removido de **Plataforma de frota** em 2026-07-30, quando M9 entrou (governança do artefato canônico DENTRO deste repo; distribuição BYOD, telemetria e monitoramento em produção seguem fora de escopo). Ver CHANGELOG.
 
 ## Constraints
 
@@ -217,7 +219,7 @@ por uma fração do custo do treino completo.
 
 ---
 
-### M5 — [ ] Modelo em escala
+### M5 — [~] Modelo em escala (2/3 DoDs; DoD#3 telefônico DEFERIDO — data-limited, Top Risk #2 materializou; ver training/results/m5-final-results.md)
 
 **Objective:** Treinar o modelo final e atingir o alvo de WER.
 
@@ -304,6 +306,57 @@ sem pontuação.
 
 1. Hardware BYOD real muito abaixo da máquina de referência (Q-01 nunca respondida) — o modelo passa no i7-1355U e falha no i3 de 2018
 2. Trilho de LGPD (sub-projeto D) não concluído bloqueia o envio de transcrições ao lake, inviabilizando o piloto mesmo com o modelo pronto
+
+---
+
+### M9 — [ ] Governança de artefato e reprodutibilidade
+
+> Added 2026-07-30 by `/roadmap-feature` (slug: `governanca-artefato-reprodutibilidade`). See CHANGELOG `[Unreleased] § Added`.
+
+**Objective:** Fechar as lacunas de integridade e reprodutibilidade encontradas na auditoria
+de system design de 2026-07-30, de modo que os números do projeto sejam comparáveis entre si
+e verificáveis por terceiros — antes que M6 meça RNF sobre um runtime cujo artefato de
+modelo é ambíguo.
+
+> ⛔ **Invariante deste milestone:** nenhum arquivo de modelo, peso ou vocabulário é
+> excluído — `.onnx`, `.onnx.data`, `.pt`, `.ckpt`, `.bin`, `.safetensors`, `tokens.txt`,
+> `vocab.txt`, `bpe.model`. "Canonizar" e "mover" significam symlink/`mv`, nunca `rm`.
+> Modelo treinado é o artefato mais caro e menos recuperável do projeto.
+
+**Definition of done:**
+
+- [ ] **Artefato canônico declarado** — `models/current/` (symlink ou manifesto) apontando o export vigente, com `model_card.json` (sha256, `vocab_size`, WER medido, data, proveniência de treino). Nenhum peso removido no processo
+- [ ] **Fail-fast de vocabulário** — `AsrEngine::load` (Rust) e o lado Python validam `vocab_size` do `tokens.txt` contra a dimensão de saída do modelo; apontar para o diretório errado falha alto em vez de transcrever errado
+- [ ] **`MACAW_MODEL_DIR` nos dois lados** — eliminado o caminho absoluto de `training/batch/eval_public_hf.py:15`
+- [ ] **`training/common/`** com `ctc.py` e `text.py`, consolidando as 7 implementações de colapso CTC e as 5 `normalize_ptbr`; guarda de layout alterada de "nenhum import cross-pipeline" para "cross-pipeline apenas a partir de `common/`"
+- [ ] **Teste de conformidade CTC cross-language** entre `common/ctc.py` e `macaw-asr::ctc_greedy`, no mesmo padrão do golden `kaldi_fbank_golden_test.rs`
+- [ ] **`.gitignore` corrigido** — linhas 57-58 (`*.wav`, `*.f32`) removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` e `crates/macaw-audio/tests/fixtures/` deixaram de ser ignoradas
+- [ ] **CI verde** — `cargo test --workspace` + `scripts/test_report.sh` (falhando se o nº de SKIPs subir) + `pytest training/tests scripts/tests`, rodando em runner limpo
+- [ ] **`LICENSE` Apache-2.0** na raiz (os 3 crates já declaram a licença sem arquivo que a sustente) e `rust-toolchain.toml` fixando a versão
+- [ ] **Grupo A da lista de remoção executado** — 89.874 linhas de dumps/código sem caller, conforme `system-design-output/target_architecture.md` § 4; Grupo B **arquivado, não apagado**
+- [ ] **README e citações mortas** — tabela "Como navegar" apontando para o que existe; sweep das 50 citações a `PRD.md`/`knowledge-base/` em 34 arquivos; endpoint `/m1` de `app.rs:501` corrigido ou removido (hoje engole ENOENT com `unwrap_or_default()`)
+
+**Dependencies:** M5 (o artefato de modelo a canonizar precisa existir; M5 está `[~]` — 2/3 DoDs, com o telefônico deferido, e o export já existe).
+
+**Agents:** `rust-runtime-engineer` (lidera — fail-fast de vocab, `.gitignore`, endpoint morto) · `ml-infra-engineer` (artefato canônico, `model_card.json`, CI) · `evaluation-scientist` (conformidade CTC cross-language e unificação de `normalize_ptbr` — as duas mudanças podem alterar números publicados) · `technical-program-lead` (gate: nada entra em M6 antes deste fechar)
+
+**Top risks (new — pre-existing risks documented elsewhere in roadmap):**
+
+1. O fail-fast de `vocab_size` **quebra fluxos que hoje passam em silêncio** com o modelo errado — vai falhar alto em scripts que ninguém sabia estarem quebrados, e o custo aparece de uma vez
+2. O CI **expõe a quantidade real de testes que fazem SKIP** sem ambiente; o número pode ser desconfortável e forçar decisão sobre fixtures versionadas
+3. Unificar as 7 cópias do colapso CTC pode **mudar sutilmente o resultado de alguma pipeline**, invalidando um número já publicado no CHANGELOG ou no paper
+4. Mover o artefato para `models/current/` **quebra todo script com caminho hard-coded** — o inventário de caminhos precisa vir antes da mudança
+
+**Why now (from grill Q1):**
+
+A auditoria de system design de 2026-07-30 mediu que o produto ocupa 9% dos bytes do próprio
+repositório, que dois diretórios disputam o nome `model.int8.onnx` com vocabulários de
+tamanhos diferentes (502 vs 503 linhas), e que existem 5 funções `normalize_ptbr` com
+semânticas incompatíveis — o que torna WERs de pipelines diferentes não comparáveis entre si.
+O gatilho é M6: ele vai medir os cinco critérios de RNF sobre um runtime cujo artefato de
+modelo é ambíguo e cuja suíte não roda em lugar nenhum além da máquina do dono. Medir antes
+de fechar essas lacunas produz número que não transfere — exatamente a falácia que
+`.claude/rules/asr-evidence-discipline.md` § 3 nomeia.
 
 ---
 

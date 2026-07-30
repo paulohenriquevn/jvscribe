@@ -7,6 +7,14 @@ tolerância explícita (testing.md § 3, § 4.1). Rodam com
 
 from __future__ import annotations
 
+import pytest
+
+# Dependência de ambiente, não do produto: em runner limpo o módulo pode faltar.
+# `importorskip` transforma isso em SKIP VISÍVEL em vez de erro de coleta, que
+# derrubaria a suíte inteira (M9 — descoberto rodando o CI).
+pytest.importorskip("scipy")
+
+
 import os
 import sys
 

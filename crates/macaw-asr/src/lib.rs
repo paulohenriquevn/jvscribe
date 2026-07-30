@@ -37,6 +37,27 @@ pub enum AsrError {
     InferenceFailed { reason: String },
     /// Operação de inferência pedida a um motor sem sessão carregada.
     NoSession,
+    /// O vocabulário não corresponde à saída do modelo — par (modelo, `tokens.txt`) incoerente.
+    ///
+    /// Falhar aqui é deliberado: sem esta checagem o decode produz texto **silenciosamente
+    /// errado**, porque um id fora de faixa (ou mapeado para outro token) não levanta erro.
+    VocabModelMismatch {
+        /// Última dimensão de `log_probs` — nº de classes que o modelo pode emitir.
+        model_dim: usize,
+        /// Tokens emitíveis do vocabulário (exclui símbolos de desambiguação).
+        vocab_real: usize,
+    },
+    /// O vocabulário tem o tamanho certo mas **não é o vocabulário deste modelo**.
+    ///
+    /// Este é o caso que a checagem de cardinalidade NÃO pega. `[MEDIDO]` 2026-07-30: os dois
+    /// artefatos em disco têm 500 tokens emitíveis cada e 492 dos 500 ids mapeiam tokens
+    /// diferentes — trocá-los produz transcrição integralmente errada sem nenhum erro.
+    VocabFingerprintMismatch {
+        /// Fingerprint declarado no `model_card.json` do artefato.
+        expected: String,
+        /// Fingerprint computado sobre o `tokens.txt` carregado.
+        actual: String,
+    },
 }
 
 impl fmt::Display for AsrError {
@@ -52,6 +73,20 @@ impl fmt::Display for AsrError {
             }
             Self::InferenceFailed { reason } => write!(f, "forward pass falhou: {reason}"),
             Self::NoSession => write!(f, "motor sem sessão carregada"),
+            Self::VocabModelMismatch {
+                model_dim,
+                vocab_real,
+            } => write!(
+                f,
+                "vocabulário incompatível com o modelo: model_dim={model_dim} vocab_real={vocab_real} \
+                 — o tokens.txt não pertence a este modelo (transcrição seria silenciosamente errada)"
+            ),
+            Self::VocabFingerprintMismatch { expected, actual } => write!(
+                f,
+                "vocabulário de tamanho correto mas IDENTIDADE divergente: \
+                 model_card declara {expected} e o tokens.txt carregado é {actual} \
+                 — cardinalidade não distingue estes casos; o conteúdo sim"
+            ),
         }
     }
 }
@@ -64,6 +99,8 @@ impl std::error::Error for AsrError {}
 #[derive(Debug)]
 pub struct Vocab {
     tokens: Vec<String>,
+    /// Contagem de tokens emitíveis, computada UMA vez na carga (validação é O(1)).
+    real_len: usize,
 }
 
 impl Vocab {
@@ -95,7 +132,8 @@ impl Vocab {
             });
         }
 
-        Ok(Self { tokens })
+        let real_len = tokens.iter().filter(|t| !Self::is_disambig(t)).count();
+        Ok(Self { tokens, real_len })
     }
 
     /// Número de tokens carregados.
@@ -111,6 +149,57 @@ impl Vocab {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.tokens.is_empty()
+    }
+
+    /// `true` para símbolo de desambiguação do lexicon FST do icefall (`#0`, `#1`, …).
+    ///
+    /// Esses símbolos existem no `tokens.txt` para a construção do `L.fst` e **nunca são
+    /// emitidos pelo modelo**. `[MEDIDO]` 2026-07-30: o export do runtime tem 2 deles
+    /// (502 linhas para 500 classes) e o de avaliação tem 3 (503 linhas para 500 classes).
+    fn is_disambig(token: &str) -> bool {
+        matches!(token.strip_prefix('#'), Some(rest)
+            if !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+    }
+
+    /// Número de tokens **emitíveis** — exclui os símbolos de desambiguação.
+    ///
+    /// É esta a grandeza comparável com a última dimensão de `log_probs`;
+    /// [`Vocab::len`] conta linhas do arquivo e **não** serve para essa comparação.
+    #[must_use]
+    pub fn real_len(&self) -> usize {
+        self.real_len
+    }
+
+    /// Fingerprint de **identidade** do vocabulário: SHA-256 sobre a sequência ordenada
+    /// `id\ttoken\n` dos tokens emitíveis.
+    ///
+    /// Cardinalidade não distingue vocabulários: `[MEDIDO]` 2026-07-30, os dois artefatos
+    /// em disco têm 500 tokens reais cada e **492 dos 500 ids mapeiam tokens diferentes**.
+    /// Só o conteúdo distingue — daí o hash sobre `(id, token)`, e não sobre a contagem.
+    ///
+    /// Símbolos de desambiguação são excluídos para que dois lang-dirs equivalentes com
+    /// número diferente de `#N` produzam o mesmo fingerprint (D2 do plano de M9).
+    #[must_use]
+    pub fn fingerprint(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        for (id, token) in self.tokens.iter().enumerate() {
+            if Self::is_disambig(token) {
+                continue;
+            }
+            hasher.update(id.to_string().as_bytes());
+            hasher.update(b"\t");
+            hasher.update(token.as_bytes());
+            hasher.update(b"\n");
+        }
+        hasher
+            .finalize()
+            .iter()
+            .fold(String::with_capacity(64), |mut acc, b| {
+                use std::fmt::Write as _;
+                let _ = write!(acc, "{b:02x}");
+                acc
+            })
     }
 
     /// Resolve um id de token para o texto correspondente.
@@ -129,6 +218,14 @@ impl Vocab {
 pub struct AsrEngine {
     model_path: String,
     session: Option<ort::session::Session>,
+    /// Nº de classes que o modelo pode emitir — última dimensão de `log_probs`.
+    ///
+    /// Lido **uma vez, na carga**, do type-info da sessão: `[MEDIDO]` 2026-07-30 o export
+    /// do icefall declara `log_probs` como `['N','T',500]`, ou seja, a dimensão de vocabulário
+    /// é **estática** e não exige inferência para ser conhecida. `None` quando a saída não
+    /// existe ou a dimensão é dinâmica (`-1`) — nesse caso a validação degrada para no-op,
+    /// em vez de rejeitar um modelo legítimo.
+    output_vocab_dim: Option<usize>,
 }
 
 impl AsrEngine {
@@ -168,10 +265,45 @@ impl AsrEngine {
             .commit_from_file(model_path)
             .map_err(|e| session_err(e.to_string()))?;
 
+        // Dimensão de vocabulário lida do type-info, SEM rodar inferência (D1 do plano de
+        // M9). Só a última dimensão de `log_probs` importa; `-1` = dinâmica → None.
+        let output_vocab_dim = session
+            .outputs()
+            .iter()
+            .find(|o| o.name() == "log_probs")
+            .and_then(|o| o.dtype().tensor_shape())
+            .and_then(|shape| shape.iter().last().copied())
+            .and_then(|d| usize::try_from(d).ok());
+
         Ok(Self {
             model_path: model_path.display().to_string(),
             session: Some(session),
+            output_vocab_dim,
         })
+    }
+
+    /// Nº de classes emitíveis pelo modelo, quando a dimensão é estática no grafo.
+    #[must_use]
+    pub fn output_vocab_dim(&self) -> Option<usize> {
+        self.output_vocab_dim
+    }
+
+    /// Recusa o par (modelo, vocabulário) incoerente.
+    ///
+    /// Compara a dimensão de saída do modelo com os tokens **emitíveis** do vocabulário
+    /// ([`Vocab::real_len`]). O custo é O(1): a dimensão foi lida na carga e `real_len` é
+    /// cacheado em [`Vocab::load`].
+    ///
+    /// # Erros
+    /// [`AsrError::VocabModelMismatch`] quando as duas grandezas divergem.
+    pub fn validate_vocab(&self, vocab: &Vocab) -> Result<(), AsrError> {
+        match self.output_vocab_dim {
+            Some(model_dim) if model_dim != vocab.real_len() => Err(AsrError::VocabModelMismatch {
+                model_dim,
+                vocab_real: vocab.real_len(),
+            }),
+            _ => Ok(()),
+        }
     }
 
     /// Nomes das entradas do grafo carregado.
@@ -279,7 +411,7 @@ impl AsrEngine {
             .map_err(|e| AsrError::InferenceFailed { reason: e.to_string() })?;
         if shape.len() != 3 {
             return Err(AsrError::InferenceFailed {
-                reason: format!("log_probs esperado 3-D, veio {:?}", shape),
+                reason: format!("log_probs esperado 3-D, veio {shape:?}"),
             });
         }
         let t = shape[1] as usize;
@@ -298,6 +430,9 @@ impl AsrEngine {
         n_frames: usize,
         vocab: &Vocab,
     ) -> Result<String, AsrError> {
+        // Fail-fast ANTES de gastar a inferência: par incoerente produziria texto
+        // silenciosamente errado (M9/T1.2).
+        self.validate_vocab(vocab)?;
         let (logits, t, v) = self.ctc_logits(mel, n_frames)?;
         let ids = crate::decode::ctc_greedy(&logits, t, v, ICEFALL_BLANK_ID);
         Ok(crate::decode::detok(&ids, vocab))
@@ -307,5 +442,43 @@ impl AsrEngine {
     #[must_use]
     pub fn model_path(&self) -> &str {
         &self.model_path
+    }
+}
+
+/// Valida a **identidade** do vocabulário contra o `model_card.json` do diretório do artefato.
+///
+/// Complementa [`AsrEngine::validate_vocab`], que compara apenas cardinalidade. A cardinalidade
+/// pega o erro fácil (vocabulário de tamanho errado); esta função pega o difícil — `[MEDIDO]`
+/// 2026-07-30, os dois artefatos do repositório têm 500 tokens emitíveis **cada** e 492 dos 500
+/// ids mapeiam tokens diferentes. Trocá-los produz transcrição integralmente errada e **nenhum**
+/// erro de dimensão.
+///
+/// Degrada para `Ok(())` quando não há `model_card.json` ou quando ele não declara o campo —
+/// o card é um complemento humano, não um pré-requisito de carga (D1 do plano de M9).
+///
+/// # Erros
+/// [`AsrError::VocabFingerprintMismatch`] quando o card declara um fingerprint diferente.
+pub fn validate_against_model_card(artifact_dir: &Path, vocab: &Vocab) -> Result<(), AsrError> {
+    let card = artifact_dir.join("model_card.json");
+    let Ok(raw) = std::fs::read_to_string(&card) else {
+        return Ok(()); // sem card: valida só cardinalidade
+    };
+    // Extração mínima do campo — evita puxar um parser de JSON só para ler uma string
+    // (escada de parcimônia, rung 6). O card é gerado por `scripts/make_model_card.py`.
+    let Some(expected) = raw
+        .split("\"vocab_fingerprint\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').nth(1))
+    else {
+        return Ok(()); // card presente mas sem o campo: degrada
+    };
+    let actual = vocab.fingerprint();
+    if expected == actual {
+        Ok(())
+    } else {
+        Err(AsrError::VocabFingerprintMismatch {
+            expected: expected.to_string(),
+            actual,
+        })
     }
 }

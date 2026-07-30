@@ -11,5 +11,3 @@ macaw-audio = { path = "../macaw-audio" }
 macaw-asr = { path = "../macaw-asr" }
 hound = { workspace = true }
 
-[dev-dependencies]
-macaw-audio = { path = "../macaw-audio" }

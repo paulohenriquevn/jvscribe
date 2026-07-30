@@ -236,7 +236,9 @@
       const j = await r.json();
       const el = document.getElementById('m1Baseline');
       // mostra só a tabela de WER + a nota do corpus (o mais interessante)
-      el.textContent = (j.baseline || '(relatório de baseline ainda não gerado)').trim();
+      // M9/T4.1: se o backend sinalizou ausência, MOSTRA a causa em vez de fingir
+      // que o relatório "ainda não foi gerado" — os dois estados são diferentes.
+      el.textContent = j.error ? `⚠ ${j.error}` : (j.baseline || '(relatório de baseline vazio)').trim();
     } catch (e) {
       document.getElementById('m1Baseline').textContent = '(não foi possível carregar os relatórios)';
     }

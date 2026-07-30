@@ -41,6 +41,11 @@ target/
 # ONNX Runtime nativo (baixado por scripts/setup_onnxruntime.sh)
 vendor/
 
+# Backups/arquivos de modelo comprimidos — NUNCA versionar (pesos são artefato caro e
+# irrecuperável; um zip de 1,2 GB no histórico é permanente).
+models.zip
+*.zip
+
 # Modelo emprestado de M0 (artefato de terceiro, grande) — baixado por scripts/setup_model.sh
 models/
 *.onnx.data
@@ -54,5 +59,13 @@ callcenter/
 # Logs de treino volumosos + áudio de eval (evidência fica em resultados .md, não no git)
 training/results/**/*train*.log
 training/results/**/_eval_wavs/
-*.wav
+
+# Dumps binários de float (features exportadas para eval). A regra é geral, mas a fixture
+# GOLDEN do kaldi_fbank É versionada — ela é a âncora do teste de conformidade contra o
+# lhotse, e o CI não pode depender de rede para obtê-la.
+#
+# ORDEM IMPORTA: em .gitignore o último padrão que casa vence. A negação vem DEPOIS da
+# regra geral. Antes de M9/T2.1 havia um '*.wav'/'*.f32' repetido no fim do arquivo que
+# anulava as exceções lá de cima e deixava as fixtures determinísticas fora do git.
 *.f32
+!crates/macaw-audio/tests/fixtures/*.f32

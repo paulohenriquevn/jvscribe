@@ -1,2 +1,0 @@
-settings	WER
-ctc-greedy-search	28.58

@@ -49,8 +49,13 @@ def _strip_accents(text: str) -> str:
     return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
 
 
-def normalize_ptbr(text: str) -> str:
-    """Normaliza texto PT-BR para comparação de WER.
+def normalize_for_wer_compare(text: str) -> str:
+    """Normaliza texto PT-BR para COMPARAÇÃO de WER — **remove acentos**.
+
+    Renomeada em M9/T3.2. Antes chamava-se `normalize_ptbr`, o mesmo nome de uma função
+    de semântica OPOSTA (`training/finetune/prep_icefall.py:49`, que **preserva** acento).
+    Enquanto os dois nomes coincidiam, comparar dois WERs do projeto pressupunha uma
+    igualdade de régua que ninguém tinha verificado.
 
     Passos (ordem fixa, determinística):
       1. caixa baixa

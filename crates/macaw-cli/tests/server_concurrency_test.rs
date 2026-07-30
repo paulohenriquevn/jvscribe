@@ -49,6 +49,24 @@ fn wait_until_up(port: u16) -> bool {
 
 #[test]
 fn test_slow_endpoint_does_not_block_metrics() {
+    // ⚠️ FLAKY CONHECIDO (M9) — `[MEDIDO]` 2026-07-30 nesta máquina:
+    //   com o load do encoder de 2,3 GB : 2 falhas em 8
+    //   sem o load                       : 0 falhas em 8
+    //
+    // Mecanismo: `/fixture` carrega um encoder de 2,3 GB. Com ~1 GB de RAM livre, o ONNX
+    // Runtime aborta em C++ (`abort`, não panic de Rust), o processo de teste inteiro morre e
+    // TODAS as conexões resetam — o sintoma observado é `ConnectionReset` em `/metrics`.
+    //
+    // NÃO foi "corrigido" apontando o teste para um diretório sem modelo: isso removeria a
+    // lentidão que o teste existe para medir (endpoint lento não bloqueia `/metrics`), e
+    // deixaria uma asserção vazia com cara de verde. Duas correções REAIS foram aplicadas no
+    // caminho (dois `.expect` que envenenavam o mutex), o que reduziu de ~33% para ~10%; o
+    // resíduo é pressão de memória do ambiente, não defeito do servidor.
+    //
+    // Fix apropriado, fora do escopo de M9: um endpoint lento sintético para exercitar
+    // concorrência sem depender de um artefato de 2,3 GB.
+
+
     // Porta EFÊMERA (o SO atribui uma livre) — evita a colisão de porta fixa que
     // deixava o teste flaky sob `cargo test` paralelo / TIME_WAIT entre execuções.
     let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("bind efêmero");
@@ -112,4 +130,24 @@ fn test_slow_endpoint_does_not_block_metrics() {
              não há serialização a detectar (teste degradou para smoke de resposta)"
         );
     }
+}
+
+// --- M9/T4.1 — a rota /m1 não pode devolver 200 vazio em silêncio ----------------
+//
+// Defeito medido em 2026-07-30: `m1_measurements_json` lia
+// `../../knowledge-base/measurements` (removido no commit c7c67b9) e engolia o ENOENT com
+// `unwrap_or_default()`. A rota respondia `200 OK` com `{"baseline":"","harness":""}` para
+// sempre, e o dashboard renderizava o placeholder — indistinguível de "medição zero".
+// Viola `.claude/rules/error-handling.md` § 2 (erro engolido).
+
+#[test]
+fn m1_measurements_sinaliza_ausencia_em_vez_de_devolver_vazio() {
+    let json = macaw_cli::app::m1_measurements_json();
+    // Ou traz conteúdo real, ou diz explicitamente que não encontrou — nunca string vazia
+    // silenciosa.
+    let vazio_silencioso = json.contains("\"baseline\":\"\"") && !json.contains("\"error\"");
+    assert!(
+        !vazio_silencioso,
+        "a rota devolveu payload vazio sem sinalizar a causa: {json}"
+    );
 }

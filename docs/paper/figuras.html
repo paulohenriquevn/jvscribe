@@ -1,0 +1,244 @@
+<title>Macaw Voice — System Design & Figuras</title>
+<style>
+  :root{
+    --bg:#0d1420;--panel:#131c2b;--panel2:#0f1826;--edge:#22304a;
+    --ink:#e8eef7;--muted:#93a4bd;--faint:#5f728f;
+    --enc:#38e0c8;--dec:#f5b74e;--feat:#7aa2ff;
+    --good:#43d17a;--warn:#f5b74e;--bad:#f16a6a;--key:#f0a848;--fix:#6aa8f0;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:light){:root{--bg:#eef2f8;--panel:#fff;--panel2:#f4f7fc;--edge:#d3dcea;
+    --ink:#111a29;--muted:#4a5a72;--faint:#7688a2;--enc:#0fae95;--dec:#c8871a;--feat:#3f6fe0;
+    --good:#1e8449;--warn:#c8871a;--bad:#c0392b;--key:#d68910;--fix:#2e86c1;}}
+  :root[data-theme="dark"]{--bg:#0d1420;--panel:#131c2b;--panel2:#0f1826;--edge:#22304a;--ink:#e8eef7;--muted:#93a4bd;--faint:#5f728f;--enc:#38e0c8;--dec:#f5b74e;--feat:#7aa2ff;--good:#43d17a;--warn:#f5b74e;--bad:#f16a6a;--key:#f0a848;--fix:#6aa8f0;}
+  :root[data-theme="light"]{--bg:#eef2f8;--panel:#fff;--panel2:#f4f7fc;--edge:#d3dcea;--ink:#111a29;--muted:#4a5a72;--faint:#7688a2;--enc:#0fae95;--dec:#c8871a;--feat:#3f6fe0;--good:#1e8449;--warn:#c8871a;--bad:#c0392b;--key:#d68910;--fix:#2e86c1;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:30px 20px 60px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--enc);margin:0 0 6px}
+  h1{font-size:clamp(23px,4vw,34px);margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:8px 0 0;max-width:66ch}
+  h2{font-size:14px;font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--faint);
+    margin:44px 0 4px;border-top:1px solid var(--edge);padding-top:16px}
+  .cap{color:var(--muted);font-size:13px;margin:2px 0 14px}
+  .mono{font-family:var(--mono)}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:18px}
+
+  /* --- fluxo (boxes + setas) --- */
+  .flow{display:flex;flex-direction:column;gap:0;align-items:stretch}
+  .box{background:var(--panel2);border:1px solid var(--edge);border-radius:11px;padding:11px 14px;position:relative}
+  .box h4{margin:0;font-size:14.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .box p{margin:3px 0 0;color:var(--muted);font-size:12.5px}
+  .shape{font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--edge);border-radius:5px;padding:1px 6px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .arr{align-self:center;color:var(--faint);font-family:var(--mono);padding:5px 0;font-size:17px}
+  .b-feat{border-left:3px solid var(--feat)} .b-enc{border-left:3px solid var(--enc)} .b-dec{border-left:3px solid var(--dec)}
+  .b-aux{border-style:dashed;opacity:.8}
+  .stacks{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:10px}
+  .st{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:7px 4px;text-align:center;font-family:var(--mono)}
+  .st .d{font-weight:700;font-size:14px}.st .l,.st .s{font-size:10px;color:var(--muted)}
+  .st.deep{border-color:var(--enc);box-shadow:0 0 0 1px color-mix(in srgb,var(--enc) 30%,transparent) inset}
+
+  /* --- system design grid --- */
+  .sys{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+  @media(max-width:640px){.sys{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .pill{background:var(--panel2);border:1px solid var(--edge);border-radius:10px;padding:9px 12px;font-size:13px}
+  .pill b{font-size:13px}.pill small{color:var(--muted);display:block;font-size:11.5px}
+  .midarr{color:var(--faint);text-align:center;font-size:20px;font-family:var(--mono)}
+
+  /* --- bar charts --- */
+  .chart{display:grid;gap:9px;margin-top:4px}
+  .cr{display:grid;grid-template-columns:150px 1fr 62px;align-items:center;gap:10px}
+  @media(max-width:560px){.cr{grid-template-columns:110px 1fr 52px}}
+  .cr .lab{font-size:12px;color:var(--muted);text-align:right;line-height:1.25}
+  .track{height:26px;background:var(--panel2);border:1px solid var(--edge);border-radius:7px;position:relative;overflow:hidden}
+  .fill{height:100%;border-radius:6px 0 0 6px;transition:width .3s}
+  .cr .val{font-family:var(--mono);font-size:13px;font-weight:700}
+  .floor{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--bad);opacity:.9}
+  .floorlab{font-family:var(--mono);font-size:10.5px;color:var(--bad)}
+
+  /* --- decision tree --- */
+  .tree{display:flex;flex-direction:column;gap:0;align-items:center}
+  .tnode{border-radius:11px;padding:10px 14px;text-align:center;font-size:13px;max-width:560px;border:1px solid}
+  .tnode small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .t-bad{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border-color:var(--bad)}
+  .t-key{background:color-mix(in srgb,var(--key) 14%,var(--panel));border-color:var(--key)}
+  .t-fix{background:color-mix(in srgb,var(--fix) 12%,var(--panel));border-color:var(--fix)}
+  .t-good{background:color-mix(in srgb,var(--good) 12%,var(--panel));border-color:var(--good)}
+  .tarr{color:var(--faint);font-family:var(--mono);padding:4px 0}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .foot{margin-top:30px;color:var(--faint);font-size:11.5px;font-family:var(--mono)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Macaw Voice · ASR PT-BR · CPU real-time</p>
+  <h1>System Design & Figuras</h1>
+  <p class="sub">Companheiro visual do paper. Todos os números são <span class="tag">[MEDIDO]</span> em
+    CPU (ONNX int8, greedy). Tema claro/escuro automático.</p>
+
+  <!-- FIG 1 — ARQUITETURA -->
+  <h2>Figura 1 · Arquitetura do modelo (signal-flow)</h2>
+  <p class="cap"><b style="color:var(--feat)">azul</b>=DSP/features · <b style="color:var(--enc)">verde</b>=codificação (64M) · <b style="color:var(--dec)">âmbar</b>=decodificação (leve) · tracejado=só treino.</p>
+  <div class="card">
+    <div class="flow">
+      <div class="box b-feat"><h4><span class="dot" style="background:var(--feat)"></span> Áudio 16 kHz mono <span class="shape">8k→16k upsample</span></h4></div>
+      <div class="arr">↓</div>
+      <div class="box b-feat"><h4><span class="dot" style="background:var(--feat)"></span> Log-mel Fbank <span class="shape">80 bins · 100 fps · (T,80)</span></h4><p>DSP pura, sem rede.</p></div>
+      <div class="arr">↓</div>
+      <div class="box b-enc"><h4><span class="dot" style="background:var(--enc)"></span> Conv2dSubsampling <span class="shape">÷4 → 25 fps · 0,61M</span></h4><p>Comprime o tempo 4×. <span class="tag">(módulo do bug do fine-tune)</span></p></div>
+      <div class="arr">↓</div>
+      <div class="box b-enc"><h4><span class="dot" style="background:var(--enc)"></span> Zipformer2 encoder <span class="shape">6 stacks · 16 layers · 63,4M · não-causal</span></h4>
+        <div class="stacks">
+          <div class="st"><div class="l">S1</div><div class="d">192</div><div class="s">2c·ds1</div></div>
+          <div class="st"><div class="l">S2</div><div class="d">256</div><div class="s">2c·ds2</div></div>
+          <div class="st"><div class="l">S3</div><div class="d">384</div><div class="s">3c·ds4</div></div>
+          <div class="st deep"><div class="l">S4</div><div class="d">512</div><div class="s">4c·ds8</div></div>
+          <div class="st"><div class="l">S5</div><div class="d">384</div><div class="s">3c·ds4</div></div>
+          <div class="st"><div class="l">S6</div><div class="d">256</div><div class="s">2c·ds2</div></div>
+        </div>
+        <p style="margin-top:9px">cada camada = self-attention (4–8 heads) + módulo conv (k 15–31) + 2× feed-forward</p>
+      </div>
+      <div class="arr">↓</div>
+      <div class="box b-dec"><h4><span class="dot" style="background:var(--dec)"></span> CTC head (linear) <span class="shape">→ 500 BPE + blank · 0,26M · (T/4,501)</span></h4><p>Probabilidade por frame — saída do ONNX (log_probs).</p></div>
+      <div class="box b-dec b-aux" style="margin-top:8px"><h4><span class="dot" style="background:var(--faint)"></span> phoneme head (aux) <span class="shape">0,035M · removida na inferência</span></h4></div>
+      <div class="arr">↓ greedy</div>
+      <div class="box b-dec"><h4><span class="dot" style="background:var(--dec)"></span> argmax → colapsa → remove blank → BPE → <b>Texto</b></h4></div>
+    </div>
+  </div>
+
+  <!-- FIG 2 — SYSTEM DESIGN -->
+  <h2>Figura 2 · System Design (deployment CPU)</h2>
+  <p class="cap">1:1 com canais separados → diarização desnecessária por construção. Um modelo, dois modos.</p>
+  <div class="card">
+    <div class="sys">
+      <div class="col">
+        <div class="pill"><b>🎙️ Mic = atendente</b><small>VoIP local, ~banda-larga</small></div>
+        <div class="pill"><b>🔁 Loopback = cliente</b><small>telefonia 8 kHz</small></div>
+      </div>
+      <div class="midarr">→</div>
+      <div class="col">
+        <div class="pill"><b>Ring buffer + VAD</b><small>energia (RMS + histerese)</small></div>
+        <div class="pill"><b>Fbank 16 kHz</b><small>upsample 8k→16k</small></div>
+        <div class="pill" style="border-color:var(--enc)"><b style="color:var(--enc)">Modelo ONNX int8 · 64M</b><small>CPU only · sem GPU · sem rede</small></div>
+        <div class="pill" style="border-color:var(--dec)"><b style="color:var(--dec)">Decode CTC greedy</b><small>(+ n-gram LM opcional)</small></div>
+      </div>
+      <div class="midarr">→</div>
+      <div class="col">
+        <div class="pill" style="border-color:var(--dec)"><b>📄 Batch (offline)</b><small>pasta → .txt · paralelo+batch · 47,8×</small></div>
+        <div class="pill" style="border-color:var(--dec)"><b>🔴 Live (streaming)</b><small>LocalAgreement-2 · pseudo-streaming</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIG 3 — WER -->
+  <h2>Figura 3 · WER por condição (%, menor = melhor)</h2>
+  <p class="cap">A penalidade ~2× banda-larga → telefônico é visível. [MEDIDO]</p>
+  <div class="card"><div class="chart" id="werchart"></div>
+    <div class="legend"><span><span class="dot" style="background:var(--good)"></span>banda-larga</span><span><span class="dot" style="background:var(--warn)"></span>telefônico simulado</span><span><span class="dot" style="background:var(--bad)"></span>telefônico real</span></div>
+  </div>
+
+  <!-- FIG 4 — RTFx -->
+  <h2>Figura 4 · RTFx em CPU (maior = melhor; piso ≥6×)</h2>
+  <p class="cap">A tese da especialização num gráfico: o 64M fica muito acima do piso; um ~600M cairia abaixo. [MEDIDO]/[EST]</p>
+  <div class="card"><div class="chart" id="rtfxchart"></div></div>
+
+  <!-- FIG 5 — Zipformer vs Conformer -->
+  <h2>Figura 5 · Seleção de encoder: Zipformer vs Conformer (WER %)</h2>
+  <p class="cap">Mesmos params, mesmo decode. Delta 2,71pp, IC95% [2,11, 3,31] exclui zero. [MEDIDO]</p>
+  <div class="card"><div class="chart" id="archchart"></div></div>
+
+  <!-- FIG 6 — Trajetória FT + colapso -->
+  <h2>Figura 6 · A investigação telefônica (WER por checkpoint)</h2>
+  <p class="cap">Os 5 colapsos ficaram em ~98% (near-blank). O FT corrigido produz texto real, mas platôa acima do baseline 35,53% → data-limited.</p>
+  <div class="card"><div id="trajchart"></div></div>
+
+  <!-- FIG 7 — Decision tree -->
+  <h2>Figura 7 · Árvore de decisão do debug (a lição)</h2>
+  <p class="cap">4 falhas auto-consistentes NÃO provaram o mecanismo; o único controle sim.</p>
+  <div class="card">
+    <div class="tree">
+      <div class="tnode t-bad">Fine-tune com codec-aug → <b>4 configs, TODAS colapsam ~98–100%</b><small>(near-blank; train loss parecia saudável)</small></div>
+      <div class="tarr">↓</div>
+      <div class="tnode t-bad">Conclusão tentadora (ERRADA): "codec-aug colapsa o CTC — data-limited"</div>
+      <div class="tarr">↓ e se…</div>
+      <div class="tnode t-key"><b>CONTROLE:</b> fine-tune SEM augmentação nenhuma<small>se a aug fosse a causa, deveria ficar ~36%</small></div>
+      <div class="tarr">↓</div>
+      <div class="tnode t-key"><b>Também colapsa (99,57%)</b> → augmentação NÃO é a causa</div>
+      <div class="tarr">↓</div>
+      <div class="tnode t-fix"><b>Causa real:</b> encoder_embed ficava ALEATÓRIO<small>bug de prefixo no --init-modules (train.py:335)</small></div>
+      <div class="tarr">↓</div>
+      <div class="tnode t-good"><b>Fix (1 palavra):</b> +encoder_embed → sem colapso (42,84%, texto real)</div>
+      <div class="tarr">↓</div>
+      <div class="tnode t-good">FT corrigido platôa ~39% > baseline 35,53% → <b>data-limited (agora provado, não assumido)</b></div>
+    </div>
+  </div>
+
+  <p class="foot">Números [MEDIDO] no notebook CPU (ONNX int8, greedy) · paper completo em docs/paper/macaw-voice-cpu-asr.md · arquitetura herdada de M4 (ADR 0003).</p>
+</div>
+
+<script>
+  function bars(id, data, maxv, unit, floor){
+    const el=document.getElementById(id); if(!el) return;
+    data.forEach(d=>{
+      const row=document.createElement('div'); row.className='cr';
+      const lab=document.createElement('div'); lab.className='lab'; lab.textContent=d.l;
+      const tr=document.createElement('div'); tr.className='track';
+      const f=document.createElement('div'); f.className='fill';
+      f.style.width=Math.max(2,Math.min(100,d.v/maxv*100))+'%'; f.style.background=d.c;
+      tr.appendChild(f);
+      if(floor!=null){const fl=document.createElement('div'); fl.className='floor'; fl.style.left=(floor/maxv*100)+'%'; tr.appendChild(fl);}
+      const val=document.createElement('div'); val.className='val'; val.textContent=d.v+unit;
+      row.append(lab,tr,val); el.appendChild(row);
+    });
+  }
+  const G=getComputedStyle(document.documentElement);
+  const c=n=>G.getPropertyValue(n).trim();
+  bars('werchart',[
+    {l:'FLEURS (lida, BL)',v:16.14,c:c('--good')},
+    {l:'CORAA (espont., BL)',v:23.31,c:c('--good')},
+    {l:'M4 finalista (lida)',v:27.49,c:c('--enc')},
+    {l:'Tel. proxy bandpass',v:31.97,c:c('--warn')},
+    {l:'Tel. real-codec',v:35.53,c:c('--warn')},
+    {l:'Tel. real (call)',v:40.13,c:c('--bad')},
+  ],45,'%');
+  bars('rtfxchart',[
+    {l:'Moonshine 27M (AED)',v:7.93,c:c('--warn')},
+    {l:'Zipf 20M (transd.)',v:15.90,c:c('--enc')},
+    {l:'M5 64M (single)',v:34.69,c:c('--good')},
+    {l:'M5 64M (batch)',v:47.8,c:c('--good')},
+    {l:'~600M (est.)',v:3.5,c:c('--bad')},
+  ],50,'×',6);
+  const flr=document.createElement('div'); flr.className='floorlab'; flr.style.marginTop='8px';
+  flr.textContent='│ linha vermelha = piso real-time 6×'; document.getElementById('rtfxchart').after(flr);
+  bars('archchart',[
+    {l:'Zipformer-CTC',v:28.86,c:c('--good')},
+    {l:'Conformer-CTC',v:31.57,c:c('--warn')},
+  ],35,'%');
+
+  // trajetória (SVG line)
+  (function(){
+    const pts=[['4k',42.84],['8k',40.50],['12k',39.97],['16k',39.38]];
+    const W=560,H=210,pad=44, ymin=30,ymax=45;
+    const x=i=>pad+i*((W-pad-16)/(pts.length-1));
+    const y=v=>H-30-((v-ymin)/(ymax-ymin))*(H-60);
+    const base=y(35.53);
+    let poly=pts.map((p,i)=>x(i)+','+y(p[1])).join(' ');
+    let dots=pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p[1])}" r="4" fill="${c('--fix')}"/><text x="${x(i)}" y="${y(p[1])-9}" fill="${c('--ink')}" font-size="11" font-family="${c('--mono')||'monospace'}" text-anchor="middle">${p[1]}</text>`).join('');
+    let labs=pts.map((p,i)=>`<text x="${x(i)}" y="${H-10}" fill="${c('--muted')}" font-size="11" text-anchor="middle">ckpt-${p[0]}</text>`).join('');
+    document.getElementById('trajchart').innerHTML=
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:100%">
+      <text x="${W-8}" y="${base-6}" fill="${c('--muted')}" font-size="10.5" text-anchor="end">baseline sem-FT 35,53%</text>
+      <line x1="${pad}" y1="${base}" x2="${W-8}" y2="${base}" stroke="${c('--muted')}" stroke-dasharray="4 3" stroke-width="1"/>
+      <text x="${W-8}" y="26" fill="${c('--bad')}" font-size="10.5" text-anchor="end">(colapsos ficaram ~98%, fora da escala)</text>
+      <polyline points="${poly}" fill="none" stroke="${c('--fix')}" stroke-width="2.5"/>
+      ${dots}${labs}
+      <text x="12" y="${y(45)+4}" fill="${c('--faint')}" font-size="10">45%</text>
+      <text x="12" y="${y(30)+4}" fill="${c('--faint')}" font-size="10">30%</text>
+    </svg>`;
+  })();
+</script>
