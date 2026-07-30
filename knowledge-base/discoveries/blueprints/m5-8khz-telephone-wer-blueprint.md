@@ -98,6 +98,38 @@ mesmo test set 8 kHz real — só investir se o nativo ganhar.
 loopback) mas o mic do atendente é VoIP local (talvez sem degradação) — **decidir se a augmentação
 de canal se aplica por-stream** antes da próxima rodada com dado real. Questão em aberto.
 
+## 🧪 Testes de mesa (2026-07-29) e decisões PhD-level
+
+Dois desk-checks sobre o baseline real de 40,13%, mais correção de método (evidência mandou):
+
+**TM#1 — decomposição S/D/I `[MEDIDO]`** (`analyze_errors.py`, modelo entregue, call real):
+`hits 65,0% · substitutions 23,7% (DOMINA) · deletions 11,4% · insertions 5,1%`.
+- **Hipótese "mistura de 2 falantes infla via deleção" → REFUTADA** (deleções só 11,4%; ~5 pp
+  de inflação, não a maioria). O erro é **confusão acústica (substituição)**, não perda de fala.
+- O modelo **acerta 2/3 das palavras** num áudio real difícil — base decente; gap fechável.
+- Consequência: erro substituição-dominante é (a) parcialmente corrigível por **LM** e (b)
+  principalmente pela **augmentação de codec realista** (o modelo confunde porque nunca viu o
+  canal real). A alavanca acústica é a principal; o LM é complemento barato.
+
+**TM#2 — sensibilidade a codec `[MEDIDO]`** (ffmpeg tandem sobre o call real):
+`mp3 40,13% · μ-law 39,35% · GSM-FR 41,90%`. Deltas pequenos (±2 pp) mas na ordem da literatura
+(μ-law inócuo, GSM pior) — **abafados** porque o áudio já é mp3 8 kHz (tandem muda pouco). O teste
+limpo de codec exige áudio **limpo mono-falante** (CORAA, na instância). Valida a ferramenta.
+
+**Correção de método (a decisão mais importante):** produção é **1:1 com canais SEPARADOS**
+(mic=atendente VoIP-local, loopback=cliente 8 kHz) → **cada stream é MONO-FALANTE**. O 40,13% foi
+medido em **mono-misto (2 falantes)** — condição mais difícil e **diferente** da produção. O alvo
+honesto do DoD#3 é **mono-falante real-codec 8 kHz** (stream do cliente).
+
+### Decisões travadas
+| # | Decisão | Base |
+|---|---|---|
+| D1 | **Métrica âncora = CORAA humano + pool de codecs realistas (mono-falante, N grande, IC estreito).** 40,13% (mono-misto) vira upper-bound de stress; 31,97% (bandpass) é lower-bound otimista. | correção de método + TM#1 |
+| D2 | **Alavanca principal = FT gentil corrigido com codec-pool** (single-ckpt, LR 0,002, warmup 4000, codec p=0,5 em rampa, `--use-mux 1`, + bandwidth-embedding). Precisa de GPU. | substituição domina (TM#1) + APSIPA + recipe icefall |
+| D3 | **LM n-gram (shallow fusion) = complemento barato**, avaliado sobre o modelo melhorado, não isolado primeiro. | substituições são LM-addressable, mas menor que a acústica |
+| D4 | **Augmentação por-stream**: degradar só o stream do cliente; o mic do atendente pode ficar wideband. | arquitetura 1:1 |
+| D5 | **CPU-agora (instância pausada): implementar+testar o transform de codec-pool** (prerequisito do D2, GPU-free). Re-provisionar GPU só quando a ferramenta estiver pronta. | parsimônia + não desperdiçar GPU |
+
 ## ADRs a registrar quando decidir
 
 - Se #4 virar produto: **novo ADR de features 8kHz-nativo** (muda dim de entrada; ≠ artefato exportado hoje).
