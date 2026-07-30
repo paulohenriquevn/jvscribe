@@ -25,6 +25,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Fixed
 - Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
 
+### Removed
+- Reorganização FAANG (fase 1): removidos 8 scripts/runbook M4-superseded e one-offs de `training/` (prep_mls, prep_nemo, prep_conformer_ctc_decode, patch_ctc_decode, resume_tagarela_feats, download_tagarela_subset, gen_phonemes, run_pilot_icefall) + 3 testes órfãos + 2 arquivos `results/` marcados STALE-DO-NOT-USE.
+
 ## [0.7.0] - 2026-07-30
 
 ### Changed

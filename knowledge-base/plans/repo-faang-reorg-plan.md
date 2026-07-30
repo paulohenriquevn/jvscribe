@@ -6,6 +6,12 @@ goal: Reestruturar training/ por pipeline e remover artefatos-ruído, mantendo a
 
 # Plan: Reorganização FAANG-level do repositório Macaw Voice
 
+> **Version 1.2** — **CORREÇÃO no implement (a guarda EC-1 disparou):** `prep_icefall.py` **NÃO é
+> ruído** — `prep_coraa.py:46` e `prep_tagarela.py:70` importam `prep_icefall.normalize_ptbr` (audit D2).
+> Reclassificado de *deletar* → **manter + mover para `finetune/`**; seu teste `test_prep_icefall.py`
+> permanece. Testes órfãos adicionais a deletar: `test_prep_nemo.py`, `test_prep_mls.py` (testam módulos
+> deletados). Lista final de deleção: 8 código/doc + **3** testes órfãos + 2 STALE.
+>
 > **Version 1.1** (edge-cases absorvidos: EC-1 padrão de grep `from|import`, EC-2 `mkdir -p` antes do
 > `git mv`, EC-3 verificação do grafo de imports completo — ver `knowledge-base/reviews/repo-faang-reorg-edge-cases-2026-07-30.md`)
 > — Este plano reestrutura o repositório para que qualquer engenheiro que o abra
