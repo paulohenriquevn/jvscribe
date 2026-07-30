@@ -33,6 +33,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   real, incluindo captura simultânea dos dois streams e ausência de processo órfão.
 - CI reescrito para Python-only, com `pulseaudio-utils` e relatório de skips.
 
+### Fixed
+- `training/results/m6-realtime-current-model.md` **reetiquetado**: os RTFx de 41–90× ali
+  registrados são medição de **componente** (só inferência) em máquina ociosa, e estavam sendo
+  lidos como se descrevessem o pipeline. `[MEDIDO]` no pipeline completo, mesma máquina, o
+  número é **~6–7×** contra o piso de 6× do RNF-07 — folga de ~10%, não de 7–15×, com execuções
+  individuais **abaixo do piso** sob carga. O placar de RNF-01/07 do documento não pode ser
+  lido como ✅ com folga até ser re-medido de ponta a ponta.
+- `batch_transcribe.py` resolvia modelo e vocabulário por **nome fixo relativo ao cwd**, então
+  quebrava assim que `models/current` apontava para um artefato com outro nome de arquivo —
+  o operador canonizava e nada canonizava. Agora resolve pelo artefato canônico
+  (`MACAW_MODEL_DIR` > `models/current` > cwd) e busca o `tokens.txt` **no mesmo diretório do
+  modelo**, que é o que impede o par incoerente que M9 fechou.
+
 ### Changed
 - Produto renomeado de "Macaw Voice" para **jvscribe** nos documentos vivos. Registros
   históricos (ADRs anteriores, `training/results/*.md`, medições) **não** foram reescritos —

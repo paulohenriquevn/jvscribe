@@ -1,5 +1,36 @@
 # M6 early — critérios de real-time no modelo atual (Zipformer-CTC small int8)
 
+---
+
+> ## ⚠️ Reetiquetagem obrigatória (2026-07-30)
+>
+> **Os RTFx abaixo são medição de COMPONENTE em máquina ociosa. Não descrevem o pipeline.**
+>
+> Todos vieram de `bench_rtfx.py`, que mede **só a inferência ONNX**. O produto entrega
+> `fbank → inferência → decode CTC`, e a conta de ponta a ponta é outra. Somar ou comparar as
+> duas é a falácia § 3 #11 da `asr-evidence-discipline.md` — "comparar RTFx de componente com
+> orçamento de pipeline".
+>
+> Medição do **pipeline completo** na mesma máquina (i7-1355U), mesma clip de 17,76 s,
+> 2 threads, com a máquina em uso normal `[MEDIDO]` 2026-07-30:
+>
+> | Runtime | RTFx | Mediana |
+> |---|---|---|
+> | Python (`batch_transcribe.py`) | 5,7 · 6,3 · 6,7 · 7,5 · 8,0 | **6,7×** |
+> | Rust (removido em 2026-07-30) | 3,0 · 3,6 · 4,9 · 8,8 · 11,3 · 14,7 | **6,9×** |
+>
+> **O número real está em ~6–7×, contra o piso de 6× do RNF-07 — folga de ~10%, não de 7–15×.**
+> Sob carga, execuções individuais ficaram **abaixo do piso** (3,0× e 3,6×).
+>
+> Consequência para o placar mais abaixo neste documento: **RNF-01/07 não pode ser dado como
+> ✅ com folga**. O critério precisa ser re-medido no pipeline completo, com carga controlada,
+> antes de qualquer declaração de viabilidade de tempo real.
+>
+> Isto não invalida os números originais — eles medem corretamente o que se propuseram a
+> medir. Invalida o **uso** que se fez deles como se descrevessem o produto.
+
+---
+
 Iniciado M6 com o modelo que já temos (decisão do dono, 2026-07-26), para de-riscar o
 real-time cedo — validando os critérios que **não dependem de M5**. Hardware: **i7-1355U de
 referência** (esta máquina). Modelo: `model.int8.onnx` (27MB, int8, exportado do small 22M).

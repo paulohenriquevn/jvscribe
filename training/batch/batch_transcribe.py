@@ -40,6 +40,41 @@ WORD_START = "▁"
 AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".mp4", ".webm"}
 
 
+
+def _default_model_path() -> str:
+    """Resolve o modelo do artefato canônico, aceitando os nomes em uso.
+
+    Ordem: `MACAW_MODEL_DIR` > `models/current` > cwd. Dentro do diretório, procura os nomes
+    conhecidos em ordem de preferência. Devolve um nome relativo quando nada for encontrado,
+    preservando o comportamento anterior de resolver pelo cwd.
+    """
+    import os
+
+    base = os.environ.get("MACAW_MODEL_DIR")
+    candidatos_dir = []
+    if base:
+        candidatos_dir.append(Path(base))
+    repo = Path(__file__).resolve().parents[2]
+    candidatos_dir += [repo / "models" / "current", Path.cwd()]
+
+    for d in candidatos_dir:
+        for nome in ("model.int8.onnx", "m5_avg.int8.onnx"):
+            if (d / nome).exists():
+                return str(d / nome)
+    return "model.int8.onnx"
+
+
+def _default_sibling(nome: str) -> str:
+    """Resolve um arquivo IRMÃO do modelo canônico (tokens.txt, model_card.json).
+
+    O vocabulário tem de vir do MESMO diretório do modelo — apontar para outro é exatamente
+    o modo de falha que M9 fechou: os dois artefatos do repo têm 500 tokens emitíveis cada e
+    492 dos 500 ids divergentes, então trocá-los produz transcrição errada sem nenhum erro.
+    """
+    modelo = Path(_default_model_path())
+    irmao = modelo.parent / nome
+    return str(irmao) if irmao.exists() else nome
+
 def load_tokens(path: str) -> dict[int, str]:
     d = {}
     with open(path) as f:
@@ -200,8 +235,13 @@ def main():
     ap = argparse.ArgumentParser(description="Transcrição em lote (pasta de áudios) — M5 ONNX CPU")
     ap.add_argument("--input-dir", required=True)
     ap.add_argument("--out-dir", default="./transcricoes")
-    ap.add_argument("--model", default="m5_avg.int8.onnx")
-    ap.add_argument("--tokens", default="tokens.txt")
+    # Default resolvido a partir do artefato CANÔNICO (`models/current`, ou `MACAW_MODEL_DIR`),
+    # não de um nome fixo. `[MEDIDO]` 2026-07-30: os dois artefatos do repo usam nomes de
+    # arquivo diferentes (`model.int8.onnx` vs `m5_avg.int8.onnx`), então um default literal
+    # quebra assim que o symlink canônico aponta para o outro — o operador acha que canonizou
+    # e não canonizou nada.
+    ap.add_argument("--model", default=_default_model_path())
+    ap.add_argument("--tokens", default=_default_sibling("tokens.txt"))
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--workers", type=int, default=4, help="threads de decode paralelo")
     ap.add_argument("--threads", type=int, default=6, help="threads intra-op do ONNX")
