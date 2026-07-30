@@ -2,6 +2,9 @@
 
 **Macaw Voice — Technical Report / Experience Paper (v1, 2026-07-30)**
 
+> **Language.** Portuguese (PT-BR) edition — with each component framed as *"problem it solves → how"* —
+> at [`docs/paper/macaw-voice-cpu-asr.pt-br.md`](./macaw-voice-cpu-asr.pt-br.md).
+>
 > **Figures.** Diagrams below use Mermaid (rendered on GitHub and Mermaid-capable viewers). A
 > **self-contained, always-rendered HTML companion** with all figures is at
 > [`docs/paper/figuras.html`](./figuras.html) (open in a browser); the model architecture alone is at
