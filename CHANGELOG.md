@@ -22,6 +22,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Plano da fatia que fecha o DoD#3 telefônico
+  (`knowledge-base/plans/m5-8khz-telephone-wer-plan.md`) — FT gentil corrigido + codec-pool
+  realista + n-gram LM + métrica CORAA mono-falante real-codec. plan-confidence
+  SHIPPABLE_WITH_CAVEATS (weighted_avg 99,2).
 - Harness de medição de WER em call center real 8 kHz (`training/measure_callcenter.py`) —
   segmenta pela transcrição humana timestampada, normaliza, WER via jiwer; dado fica local
   (LGPD). Baseline REAL do modelo entregue = 40,13% [MEDIDO] (pior que o proxy 31,97%).
