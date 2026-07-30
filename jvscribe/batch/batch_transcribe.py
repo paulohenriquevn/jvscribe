@@ -32,6 +32,8 @@ import sys
 # standalone e passa na suíte inteira (regressão real de M9/T3.1).
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 import ctc  # noqa: E402  — shared kernel
+from artifact import default_model_path as _default_model_path  # noqa: E402
+from artifact import default_sibling as _default_sibling  # noqa: E402
 
 
 SR = 16000
@@ -40,58 +42,6 @@ WORD_START = "▁"
 AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".mp4", ".webm"}
 
 
-
-def _default_model_path() -> str:
-    """Resolve o modelo do artefato canônico, aceitando os nomes em uso.
-
-    Ordem: `MACAW_MODEL_DIR` > `models/current` > cwd. Dentro do diretório, procura os nomes
-    conhecidos em ordem de preferência. Devolve um nome relativo quando nada for encontrado,
-    preservando o comportamento anterior de resolver pelo cwd.
-    """
-    import os
-
-    base = os.environ.get("MACAW_MODEL_DIR")
-    candidatos_dir = []
-    if base:
-        candidatos_dir.append(Path(base))
-    repo = Path(__file__).resolve().parents[2]
-    candidatos_dir += [repo / "models" / "current", Path.cwd()]
-
-    for d in candidatos_dir:
-        # O `model_card.json` é a AUTORIDADE sobre qual peso é o canônico. Sem isto, dois
-        # pesos no mesmo diretório são desempatados por nome — e o nome não conhece o WER.
-        declarado = _model_file_do_card(d)
-        if declarado and (d / declarado).exists():
-            return str(d / declarado)
-        for nome in ("model.int8.onnx", "m5_avg.int8.onnx"):
-            if (d / nome).exists():
-                return str(d / nome)
-    return "model.int8.onnx"
-
-
-def _model_file_do_card(d: Path) -> str | None:
-    """Lê `model_file` do model card. Card ausente/ilegível degrada para os nomes conhecidos."""
-    import json
-
-    card = d / "model_card.json"
-    if not card.exists():
-        return None
-    try:
-        return json.loads(card.read_text(encoding="utf-8")).get("model_file")
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def _default_sibling(nome: str) -> str:
-    """Resolve um arquivo IRMÃO do modelo canônico (tokens.txt, model_card.json).
-
-    O vocabulário tem de vir do MESMO diretório do modelo — apontar para outro é exatamente
-    o modo de falha que M9 fechou: os dois artefatos do repo têm 500 tokens emitíveis cada e
-    492 dos 500 ids divergentes, então trocá-los produz transcrição errada sem nenhum erro.
-    """
-    modelo = Path(_default_model_path())
-    irmao = modelo.parent / nome
-    return str(irmao) if irmao.exists() else nome
 
 def load_tokens(path: str) -> dict[int, str]:
     d = {}

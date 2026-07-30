@@ -83,3 +83,26 @@ def test_o_artefato_canonico_tem_tokens_e_card():
         pytest.skip("models/current ausente")
     for obrigatorio in ("tokens.txt", "model_card.json"):
         assert (current / obrigatorio).exists(), f"{obrigatorio} ausente no artefato canônico"
+
+
+def test_todos_os_entrypoints_resolvem_o_MESMO_modelo_canonico():
+    """Um artefato canônico, um resolvedor — não um default literal por script.
+
+    Defeito real de 2026-07-30: `mic_transcribe.py` carregava `m5_avg.int8.onnx` fixo no
+    código. Ao renomear o artefato para o padrão SOTA, o lote continuou funcionando e o
+    tempo real quebrou — porque cada entrypoint resolvia o modelo por conta própria.
+    Default duplicado é default que diverge.
+    """
+    import importlib
+
+    sys.path.insert(0, str(REPO / "jvscribe" / "realtime"))
+    from batch_transcribe import _default_model_path
+
+    canonico = Path(_default_model_path())
+    if not (REPO / "models" / "current").exists():
+        pytest.skip("models/current ausente")
+
+    mic = importlib.import_module("mic_transcribe")
+    assert Path(mic._default_model_path()).resolve() == canonico.resolve(), (
+        "mic_transcribe e batch_transcribe discordam sobre o modelo canônico"
+    )

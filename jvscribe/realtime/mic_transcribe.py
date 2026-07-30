@@ -27,6 +27,14 @@ import onnxruntime as ort
 import sounddevice as sd
 from lhotse import Fbank, FbankConfig
 
+import pathlib
+
+# `common/` é o shared kernel. Um humano rodando este script direto só tem o diretório dele
+# no path — sem o insert explícito o script quebra standalone e a suíte inteira passa.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+from artifact import default_model_path as _default_model_path  # noqa: E402
+from artifact import default_sibling as _default_sibling  # noqa: E402
+
 SR = 16000
 CHUNK = 512          # ~32ms @ 16kHz
 BLANK = 0
@@ -158,8 +166,8 @@ class StreamingCTC:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="m5_avg.int8.onnx")
-    ap.add_argument("--tokens", default="tokens.txt")
+    ap.add_argument("--model", default=_default_model_path())
+    ap.add_argument("--tokens", default=_default_sibling("tokens.txt"))
     ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode (s) — menor = menos latência, mais flicker")
     ap.add_argument("--window", type=float, default=12.0, help="janela máx (s) antes do trim")
     ap.add_argument("--nl-sil", type=float, default=1.2, help="silêncio (s) sem texto novo p/ quebrar linha")

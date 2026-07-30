@@ -14,6 +14,34 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **`jvscribe/common/artifact.py` — um resolvedor de artefato para todos os entrypoints.**
+  `batch_transcribe`, `mic_transcribe` e os testes resolviam o modelo cada um por conta
+  própria; defaults duplicados divergem. Agora todos leem `model_file` do `model_card.json`,
+  com degradação para nomes conhecidos quando o card falta.
+- Model card no padrão HuggingFace em `models/current/README.md` — YAML frontmatter com
+  `model-index`, resultados medidos, arquitetura completa, limitações explícitas (8 kHz e
+  call center **não medidos**) e licença `other` com a herança dos corpora declarada.
+
+### Changed
+- **Nomenclatura SOTA em `models/`.** `m5-final-medium-phoneme` →
+  `jvscribe-ptbr-zipformer-ctc-64m` (produto-idioma-arquitetura-tamanho). O peso oficial passa
+  a se chamar `model.int8.onnx`; os alternativos vão para `alternates/` com nomes que declaram
+  a procedência (`ckpt124k.int8.onnx`, `ckpt124k.fp32.onnx`) em vez de escondê-la num sufixo.
+  Em `finetune/`: `avg-124k-112k.pt`, `phoneme_targets.json`, `training.log`. A convenção
+  `checkpoint-N.pt` do icefall foi mantida — é o padrão do framework.
+  Verificado funcionalmente após a renomeação: WER 15,99% / CER 7,30% / RTFx 40,0×, idêntico.
+
+### Fixed
+- **A renomeação transformou um smoke de ponta a ponta em `skip` silencioso.**
+  `test_batch_transcribe.py` tinha o caminho do modelo absoluto e literal; ao renomear o
+  artefato o teste passou a pular com "modelo ausente" e a suíte seguiu verde — cobertura
+  perdida sem nenhum sinal. Agora resolve pelo kernel compartilhado. 204 testes, zero skips.
+- **`mic_transcribe.py` carregava `m5_avg.int8.onnx` fixo no código** e quebrou na renomeação
+  enquanto o lote continuou funcionando. Coberto por teste novo que exige que todos os
+  entrypoints resolvam o MESMO artefato canônico.
+
+
+### Added
 - **`models/finetune/` — tudo para retomar o treino dos dois modelos M5, em um lugar só.**
   Renomeado de `backup/` (nome que não dizia para que servia) e completado com `tokens.txt` +
   dois READMEs: `models/README.md` (qual é o oficial e por quê) e

@@ -14,8 +14,13 @@ import pytest
 
 from batch_transcribe import greedy, segment, SR
 
-MODEL = "/home/paulo/Projetos/jvscribe/models/m5-final-medium-phoneme/m5_avg.int8.onnx"
-TOKENS = "/home/paulo/Projetos/jvscribe/models/m5-final-medium-phoneme/tokens.txt"
+# Resolvido pelo kernel compartilhado, NUNCA por caminho literal: em 2026-07-30 o artefato foi
+# renomeado e estas duas constantes, absolutas e com o nome antigo, transformaram o smoke de
+# ponta a ponta num `skip` silencioso — suíte verde, cobertura perdida.
+from artifact import default_model_path, default_sibling  # noqa: E402
+
+MODEL = default_model_path()
+TOKENS = default_sibling("tokens.txt")
 
 
 # --- greedy (colapso CTC de uma linha) --------------------------------------
