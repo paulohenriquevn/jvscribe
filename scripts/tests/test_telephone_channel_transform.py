@@ -176,3 +176,27 @@ def test_falha_alto_sem_recording_nem_mixed():
     bare = MonoCut(id="bare", start=0.0, duration=1.0, channel=0, recording=None, supervisions=[])
     with pytest.raises(TypeError, match="nao tem Recording nem e MixedCut"):
         list(tct.TelephoneChannelTransform(p=1.0)(CutSet.from_cuts([bare])))
+
+
+# --- T1.2: codec-pool sorteado por-cut (ADR D3/D4) ---------------------------
+
+def test_sample_codec_respeita_pesos_do_pool():
+    t = tct.TelephoneChannelTransform(p=1.0, seed=0, codecs={"gsm": 0.0, "g711a": 1.0})
+    assert {t._sample_codec() for _ in range(30)} == {"g711a"}
+
+
+def test_transform_deterministico_sob_seed(tmp_path):
+    cut = _sine_cut(tmp_path, "c1")
+    kw = dict(p=1.0, seed=7, codecs={"g711a": 1.0})
+    a = list(tct.TelephoneChannelTransform(**kw)(CutSet.from_cuts([cut])))[0].load_audio()
+    b = list(tct.TelephoneChannelTransform(**kw)(CutSet.from_cuts([cut])))[0].load_audio()
+    assert np.allclose(a, b)
+
+
+def test_transform_anexa_codec_sorteado_na_recording(tmp_path):
+    cut = _sine_cut(tmp_path, "c2")
+    out = list(tct.TelephoneChannelTransform(p=1.0, seed=1, codecs={"g711a": 1.0})(
+        CutSet.from_cuts([cut])))[0]
+    tr = out.recording.transforms[-1]
+    codec = tr.codec if hasattr(tr, "codec") else tr.get("codec", tr.get("kwargs", {}).get("codec"))
+    assert codec == "g711a"

@@ -47,29 +47,32 @@ def _from_int16_bytes(raw: bytes) -> np.ndarray:
     return np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32767.0
 
 
-def apply_telephone_channel(samples: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
-    """Aplica a cadeia telefônica em memória; retorna (áudio 8 kHz float32, 8000).
+def apply_band(samples: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
+    """Resample 16k→8k + passa-banda 300-3400 Hz (SEM codec); retorna (float32 8 kHz, 8000).
 
-    Fail-fast (error-handling.md § 2): entrada vazia/None é ValueError tipado, não
-    NaN silencioso.
+    Extraído para o codec ser plugável (M5 codec-pool, ADR D3/D4): a banda é o canal físico,
+    o codec (G.711/GSM/Opus) é sorteado à parte. Fail-fast em entrada vazia (error-handling.md).
     """
     if samples is None or getattr(samples, "size", 0) == 0:
-        raise ValueError("apply_telephone_channel: array de áudio vazio")
-
+        raise ValueError("apply_band: array de áudio vazio")
     x = np.asarray(samples, dtype=np.float32)
-
-    # 1. resample 16k→8k (só quando necessário; resample_poly já faz anti-aliasing)
+    # 1. resample 16k→8k (resample_poly já faz anti-aliasing)
     if sr != TELEPHONE_SR:
         g = gcd(int(sr), TELEPHONE_SR)
         x = resample_poly(x, TELEPHONE_SR // g, int(sr) // g).astype(np.float32)
-
     # 2. passa-banda 300-3400 Hz @ 8 kHz — SOS ordem 4 (estável em banda estreita)
     sos = butter(_BUTTER_ORDER, _BAND_HZ, btype="band", fs=TELEPHONE_SR, output="sos")
     x = sosfilt(sos, x).astype(np.float32)
+    return x, TELEPHONE_SR
 
+
+def apply_telephone_channel(samples: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
+    """Cadeia telefônica clássica: banda + G.711 A-law. Retrocompatível (= apply_band + A-law).
+
+    Fail-fast (error-handling.md § 2): entrada vazia/None é ValueError tipado.
+    """
+    x, _ = apply_band(samples, sr)
     # 3. G.711 A-law round-trip, tudo em memória (width=2 → PCM 16-bit)
     alaw = audioop.lin2alaw(_to_int16_bytes(x), 2)
     pcm = audioop.alaw2lin(alaw, 2)
-    x = _from_int16_bytes(pcm)
-
-    return x, TELEPHONE_SR
+    return _from_int16_bytes(pcm), TELEPHONE_SR

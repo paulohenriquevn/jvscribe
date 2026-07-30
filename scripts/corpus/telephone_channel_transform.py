@@ -89,7 +89,8 @@ from lhotse.cut.mixed import MixedCut
 from lhotse.utils import fastcopy
 from scipy.signal import resample_poly
 
-from telephone_channel import apply_telephone_channel
+from telephone_channel import apply_band, apply_telephone_channel  # noqa: F401
+import codec_pool
 
 
 def _resample_to(samples: np.ndarray, sr_from: int, sr_to: int) -> np.ndarray:
@@ -111,10 +112,13 @@ def _resample_to(samples: np.ndarray, sr_from: int, sr_to: int) -> np.ndarray:
 
 @dataclass
 class TelephoneChannel(AudioTransform):
-    """`AudioTransform` lazy sem parâmetros — a cadeia (banda 300-3400 Hz +
-    G.711 A-law) é 100% fixa dentro de `apply_telephone_channel`, nada aqui é
-    sorteado, então zero campos de dataclass (`to_dict()/from_dict()` faz
-    round-trip trivial: `{"name": "TelephoneChannel", "kwargs": {}}`)."""
+    """`AudioTransform` lazy: banda 300-3400 Hz + um codec do pool (ADR D3/D4).
+
+    `codec` é o único campo (default `g711a` = a cadeia clássica retrocompatível =
+    `apply_band` + G.711 A-law). Round-trip de serialização: `{"codec": "..."}`. O codec
+    é escolhido por-cut pelo `TelephoneChannelTransform` (RNG seedado), não aqui."""
+
+    codec: str = "g711a"
 
     def __call__(self, samples: np.ndarray, sampling_rate: int) -> np.ndarray:
         mono = samples.ndim == 1
@@ -123,9 +127,8 @@ class TelephoneChannel(AudioTransform):
 
         degraded = []
         for channel in channels:
-            samples_8k, sr_8k = apply_telephone_channel(
-                channel.astype(np.float32), int(sampling_rate)
-            )
+            band_8k, sr_8k = apply_band(channel.astype(np.float32), int(sampling_rate))
+            samples_8k = codec_pool.apply_codec(band_8k, sr_8k, self.codec)
             restored = _resample_to(samples_8k, sr_8k, int(sampling_rate))
             # resample 16k->8k->16k pode variar +-1 amostra por arredondamento
             # do polyphase filter; forcamos o comprimento exato de volta (a
@@ -164,10 +167,18 @@ class TelephoneChannelTransform:
         p: float = 0.5,
         seed: Union[int, random.Random] = 42,
         preserve_id: bool = False,
+        codecs: dict[str, float] | None = None,
     ) -> None:
         self.p = p
         self.random = seed if isinstance(seed, random.Random) else random.Random(seed)
         self.preserve_id = preserve_id
+        # pool de codecs (ADR D3): default = todos os realistas; {"g711a":1.0} recupera o legado
+        self.codecs = dict(codecs) if codecs else dict(codec_pool.POOL_DEFAULT)
+
+    def _sample_codec(self) -> str:
+        names = list(self.codecs)
+        weights = [self.codecs[c] for c in names]
+        return self.random.choices(names, weights=weights, k=1)[0]
 
     def __call__(self, cuts: CutSet) -> CutSet:
         return CutSet.from_cuts(self._maybe_apply(cut) for cut in cuts)
@@ -175,10 +186,11 @@ class TelephoneChannelTransform:
     def _maybe_apply(self, cut):
         if self.random.random() > self.p:
             return cut
+        codec = self._sample_codec()
         if isinstance(cut, MixedCut):
-            return self._apply_to_mixed(cut)
+            return self._apply_to_mixed(cut, codec)
         if getattr(cut, "has_recording", False):
-            return self._apply_to_recording_backed(cut)
+            return self._apply_to_recording_backed(cut, codec)
         raise TypeError(
             f"TelephoneChannelTransform: cut {cut.id!r} (tipo "
             f"{type(cut).__name__}) nao tem Recording nem e MixedCut -- nao "
@@ -186,10 +198,10 @@ class TelephoneChannelTransform:
             "--on-the-fly-feats? ver EC-P1/ADR D2)."
         )
 
-    def _apply_to_recording_backed(self, cut):
+    def _apply_to_recording_backed(self, cut, codec: str = "g711a"):
         existing = list(cut.recording.transforms) if cut.recording.transforms else []
         new_recording = fastcopy(
-            cut.recording, transforms=existing + [TelephoneChannel()]
+            cut.recording, transforms=existing + [TelephoneChannel(codec=codec)]
         )
         return fastcopy(
             cut,
@@ -197,10 +209,10 @@ class TelephoneChannelTransform:
             recording=new_recording,
         )
 
-    def _apply_to_mixed(self, cut: MixedCut) -> MixedCut:
+    def _apply_to_mixed(self, cut: MixedCut, codec: str = "g711a") -> MixedCut:
         existing = list(cut.transforms) if cut.transforms else []
         return fastcopy(
             cut,
             id=cut.id if self.preserve_id else f"{cut.id}_tel",
-            transforms=existing + [TelephoneChannel()],
+            transforms=existing + [TelephoneChannel(codec=codec)],
         )

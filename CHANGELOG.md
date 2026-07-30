@@ -22,6 +22,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Cadeia telefônica de treino agora sorteia o codec do pool por-cut
+  (`scripts/corpus/telephone_channel_transform.py` + `apply_band` em `telephone_channel.py`),
+  substituindo o G.711-fixo. Default do pool = codecs realistas (GSM/Opus/G.711); `{"g711a":1.0}`
+  recupera o comportamento legado. Retrocompatível (152 testes verdes). (ADR D3/D4 do plano m5-8khz)
 - Pool de codecs telefônicos realistas (`scripts/corpus/codec_pool.py`) — G.711 μ/a (audioop),
   GSM-FR e Opus baixo-bitrate (ffmpeg em pipes, sem WAV em disco), amostrável por pesos. Substitui
   o G.711-fixo que causava o platô de 8 kHz (ADR D3/D4 do plano m5-8khz). 7 testes.
