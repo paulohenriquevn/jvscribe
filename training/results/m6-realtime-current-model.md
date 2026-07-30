@@ -19,8 +19,18 @@
 > | Python (`batch_transcribe.py`) | 5,7 · 6,3 · 6,7 · 7,5 · 8,0 | **6,7×** |
 > | Rust (removido em 2026-07-30) | 3,0 · 3,6 · 4,9 · 8,8 · 11,3 · 14,7 | **6,9×** |
 >
-> **O número real está em ~6–7×, contra o piso de 6× do RNF-07 — folga de ~10%, não de 7–15×.**
-> Sob carga, execuções individuais ficaram **abaixo do piso** (3,0× e 3,6×).
+> **⚠️ CONDIÇÃO DA MEDIÇÃO — leia antes de usar estes números.** As medições acima foram
+> tomadas com a máquina em **load average 69,4 sobre 12 cores** (~6× sobrecarregada): um
+> `npm ci` a 57% de CPU, quatro containers Docker e a sessão de agente. **Não caracterizam a
+> máquina de referência ociosa nem sob carga de softphone.** Registrar isso é obrigatório —
+> apresentar número sem condição é a falha de método que este documento existe para corrigir.
+>
+> O que estes dados **sustentam**: a comparação **relativa** Rust × Python, porque ambos
+> rodaram alternadamente sob a mesma carga, na mesma clip. Medianas 6,9× e 6,7× — indistinguíveis.
+>
+> O que **não** sustentam: qualquer afirmação sobre o RTFx absoluto do produto, e portanto
+> qualquer veredito sobre RNF-01/07. **O estado correto de RNF-01/07 é `a re-medir`**, não
+> "✅ com folga" nem "abaixo do piso".
 >
 > Consequência para o placar mais abaixo neste documento: **RNF-01/07 não pode ser dado como
 > ✅ com folga**. O critério precisa ser re-medido no pipeline completo, com carga controlada,

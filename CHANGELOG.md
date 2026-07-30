@@ -34,6 +34,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - CI reescrito para Python-only, com `pulseaudio-utils` e relatório de skips.
 
 ### Fixed
+- **Correção de método na própria reetiquetagem** (2026-07-30): eu afirmei que "o número real desta máquina é ~6–7×" e que RNF-01/07 não podia ser dado como verde. As medições foram tomadas com **load average 69,4 sobre 12 cores** — ~6× sobrecarregada, em parte pela própria sessão de agente. Isso caracteriza a carga, não a máquina. O estado correto de RNF-01/07 é **`a re-medir`**. Continua válida a comparação **relativa** Rust × Python, medida alternadamente sob a mesma carga.
 - `training/results/m6-realtime-current-model.md` **reetiquetado**: os RTFx de 41–90× ali
   registrados são medição de **componente** (só inferência) em máquina ociosa, e estavam sendo
   lidos como se descrevessem o pipeline. `[MEDIDO]` no pipeline completo, mesma máquina, o
