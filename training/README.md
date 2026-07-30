@@ -23,7 +23,7 @@ registro histórico, ver `smoke/README.md`).
 - **Nada de script solto na raiz.** Um teste-guarda (`tests/test_pipeline_layout.py`) falha se algum
   `.py`/`.sh` aparecer solto na raiz de `training/` ou se um módulo importar por nome outro de pipeline
   diferente (quebraria standalone).
-- **Deps de canal telefônico** (`telephone_channel`, `codec_pool`) vivem em `scripts/corpus/` (nível
+- **Deps de canal telefônico** (`telephone_channel`, `codec_pool`) vivem em `training/corpus/` (nível
   repo) — os scripts de `eval/` as acessam via `sys.path`.
 
 Estrutura decidida em `knowledge-base/plans/repo-faang-reorg-plan.md` (package-by-feature, ADR D1).

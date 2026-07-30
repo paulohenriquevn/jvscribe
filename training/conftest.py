@@ -1,16 +1,24 @@
-"""Expõe os subdirs de pipeline ao sys.path para que os testes (e scripts) importem os
-módulos por nome depois da reorganização por pipeline (finetune/batch/realtime/eval).
+"""Expõe os módulos das pipelines ao `sys.path` para que os testes os importem por nome.
 
-pytest auto-carrega este conftest do rootdir `training/` antes de coletar `tests/`, então
-`from batch_transcribe import ...` resolve via `training/batch/` sem tocar em cada teste.
-Ver ADR D2 em knowledge-base/plans/repo-faang-reorg-plan.md."""
-import sys
+Estrutura (uma árvore só desde 2026-07-30 — antes havia `scripts/` e `training/tools/`,
+duas pastas-lixeira com o mesmo nome genérico):
+
+    common/    shared kernel — ctc, texto, artefato de modelo
+    corpus/    preparação de dados (era training/corpus)
+    finetune/  treino
+    batch/     transcrição offline
+    realtime/  captura dual + streaming
+    eval/      medição de WER e baselines
+    tools/     one-offs de análise (era training/tools)
+
+`common/` é o único destino permitido para import cross-pipeline — a guarda
+`tests/test_pipeline_layout.py` verifica isso.
+"""
 import pathlib
+import sys
 
 _ROOT = pathlib.Path(__file__).parent
-# `common` é o shared kernel (M9/T3.1) — único destino permitido para import
-# cross-pipeline pela guarda de layout.
-for _pipe in ("finetune", "batch", "realtime", "eval", "common"):
+for _pipe in ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools"):
     _p = str(_ROOT / _pipe)
     if _p not in sys.path:
         sys.path.insert(0, _p)

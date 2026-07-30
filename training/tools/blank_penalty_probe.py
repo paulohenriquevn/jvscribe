@@ -10,7 +10,7 @@ Varre β no test wideband E telefone e mede WER. Se o melhor β no telefone bate
 ganha um primeiro número — em contraste com o −24,6pp do alinhamento de features (DISC-05).
 
 Reusa `build_dataset` + helpers do DISC-05 (Regra 9). CPU-only, sem GPU.
-Uso: python3 training/scripts/blank_penalty_probe.py [--n 150]
+Uso: python3 training/tools/blank_penalty_probe.py [--n 150]
 """
 import argparse
 import sys

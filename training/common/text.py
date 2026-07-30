@@ -26,8 +26,8 @@ def normalize_train_target(text: str) -> str:
     """Normalização do ALVO DE TREINO — **preserva** acentos.
 
     Fonte da verdade histórica: `training/finetune/prep_icefall.py:49`, replicada
-    byte-a-byte em `training/scripts/eval_runtime_wer.py:37` e
-    `training/scripts/analyze_error_composition.py:37`.
+    byte-a-byte em `training/tools/eval_runtime_wer.py:37` e
+    `training/tools/analyze_error_composition.py:37`.
     """
     text = unicodedata.normalize("NFC", (text or "").lower().strip())
     text = re.sub(_TRAIN_KEEP, " ", text, flags=re.UNICODE)
@@ -37,7 +37,7 @@ def normalize_train_target(text: str) -> str:
 def normalize_for_wer_compare(text: str) -> str:
     """Normalização de COMPARAÇÃO DE WER — **remove** acentos, expande coloquialismos.
 
-    Delega à implementação canônica em `scripts/text_normalize_ptbr.py`, que tem os passos
+    Delega à implementação canônica em `training/common/text_normalize_ptbr.py`, que tem os passos
     em ordem fixa e determinística (caixa baixa → símbolo monetário → pontuação → acento →
     coloquialismos). Não é reimplementada aqui: uma segunda cópia recriaria exatamente o
     problema que esta task resolve.

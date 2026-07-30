@@ -13,7 +13,7 @@ O que injeta (âncoras verificadas contra o `asr_datamodule.py` REAL de
 1. Import de `ReverbWithImpulseResponse` no bloco `from lhotse.dataset import
    (...)` — já importável de lá (blueprint Q3); `CutMix` já está.
 2. Import FLAT de `TelephoneChannelTransform`
-   (`scripts/corpus/telephone_channel_transform.py`) — o runbook de treino
+   (`training/corpus/telephone_channel_transform.py`) — o runbook de treino
    copia esse arquivo + `telephone_channel.py` para o MESMO diretório do
    `asr_datamodule.py` patcheado (mesma convenção de
    `training/make_telephone_test.py`).
@@ -60,7 +60,7 @@ _TELEPHONE_IMPORT = (
     "from icefall.utils import str2bool\n"
     "\n"
     "# M5 -- canal telefonico on-the-fly (Regra 9: reusa\n"
-    "# scripts/corpus/telephone_channel.py via o adapter\n"
+    "# training/corpus/telephone_channel.py via o adapter\n"
     "# TelephoneChannelTransform; import flat pq o runbook copia o arquivo\n"
     "# para o mesmo dir de asr_datamodule.py na instancia -- mesma\n"
     "# convencao de training/make_telephone_test.py).\n"

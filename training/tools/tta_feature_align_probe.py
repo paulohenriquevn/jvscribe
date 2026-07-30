@@ -15,7 +15,7 @@ O alinhamento é GLOBAL (um transform por domínio, estimado do stream), NÃO pe
 sem vazamento de oráculo. Reusa normalize_ptbr, word_edit_distance, paired_bootstrap e
 apply_telephone_channel (Regra 9). CPU-only, sem GPU.
 
-Uso: python3 training/scripts/tta_feature_align_probe.py [--n 150] [--model <int8.onnx>]
+Uso: python3 training/tools/tta_feature_align_probe.py [--n 150] [--model <int8.onnx>]
 """
 import argparse
 import io

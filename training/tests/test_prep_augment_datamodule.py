@@ -8,7 +8,7 @@ não bate 1×.
 Não testa o comportamento em runtime do datamodule (isso precisa de icefall +
 manifests reais na instância) — testa o MECANISMO de patch offline, mesmo
 idioma de `test_prep_finetune.py`. O comportamento do adapter em si (a peça
-DSP nova) é testado em `scripts/tests/test_telephone_channel_transform.py`
+DSP nova) é testado em `training/tests/test_telephone_channel_transform.py`
 com `lhotse` real.
 """
 

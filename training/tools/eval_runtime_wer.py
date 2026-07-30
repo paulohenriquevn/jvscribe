@@ -12,7 +12,7 @@ degrada a acurácia vs o decode de treino?
 Sem dependência nova: WER por Levenshtein de palavras (stdlib). `[MEDIDO]`.
 
 Uso:
-    python3 training/scripts/eval_runtime_wer.py --n 50
+    python3 training/tools/eval_runtime_wer.py --n 50
 """
 from __future__ import annotations
 

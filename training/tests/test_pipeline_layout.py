@@ -172,3 +172,31 @@ def test_entrypoints_de_pipeline_rodam_standalone():
             if faltante in nossos:
                 falhas.append(f"{rel}: {ultima}")
     assert not falhas, "entrypoint não roda standalone: " + "; ".join(falhas)
+
+
+def test_nao_existe_pasta_lixeira_chamada_scripts():
+    """Duas pastas `scripts/` conviviam — o anti-pattern de pasta-lixeira.
+
+    `scripts/` (raiz) e `training/scripts/` misturavam setup de ambiente, ferramentas de
+    avaliação, biblioteca de corpus e utilitários. Nomes genéricos (`scripts`, `utils`,
+    `helpers`, `misc`, `common` como catch-all) acumulam código sem relação porque não
+    exigem decisão de onde algo pertence. Hoje cada pasta diz o que contém.
+    """
+    repo = TRAIN.parent
+    proibidas = {"scripts", "utils", "helpers", "misc", "lib"}
+    achadas = [
+        str(d.relative_to(repo))
+        for d in repo.rglob("*")
+        if d.is_dir()
+        and d.name in proibidas
+        and not any(p in {".git", ".claude", "target", ".venv", "node_modules",
+                          "knowledge-base", "models", "vendor"} for p in d.parts)
+    ]
+    assert not achadas, "pasta com nome genérico voltou: " + ", ".join(achadas)
+
+
+def test_cada_pipeline_declarada_existe():
+    """O `conftest.py` e a realidade não podem divergir."""
+    declaradas = ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools")
+    faltando = [d for d in declaradas if not (TRAIN / d).is_dir()]
+    assert not faltando, f"pipelines declaradas no conftest mas ausentes: {faltando}"

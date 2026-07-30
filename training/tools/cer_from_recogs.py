@@ -7,7 +7,7 @@ inteira errada; o CER mede a distância real de caractere. Reutiliza o MESMO
 sequência de caracteres sem espaços — idêntico ao método que produziu o CER do
 Zipformer, para comparação apples-to-apples entre arquiteturas.
 
-Uso: python3 training/scripts/cer_from_recogs.py <recogs.txt>
+Uso: python3 training/tools/cer_from_recogs.py <recogs.txt>
 """
 import ast
 import re

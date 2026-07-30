@@ -428,7 +428,7 @@ treinado nesse corpus — mas precedente não é segurança jurídica.
 **Filtro de qualidade por concordância.** As labels do TAGARELA são de máquina
 (ElevenLabs Scribe → Whisper large-v3 fine-tuned). Rodar um segundo transcritor e
 manter apenas os segmentos concordantes segue o pipeline do Granary, que reporta
-performance equivalente com ~50% dos dados. **Implementado em M3** (`scripts/corpus/`,
+performance equivalente com ~50% dos dados. **Implementado em M3** (`training/corpus/`,
 blueprint `knowledge-base/discoveries/blueprints/m3-corpus-blueprint.md`): filtro por
 concordância CER par-a-par com τ calibrado empiricamente + manifests Lhotse com
 augmentação telefônica on-the-fly; licenças mapeadas em `knowledge-base/corpus/m3-licenses.md`.

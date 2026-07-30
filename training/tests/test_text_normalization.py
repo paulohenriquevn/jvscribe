@@ -3,10 +3,10 @@
 Cinco funções chamadas `normalize_ptbr` conviviam no repo. Medido em 2026-07-30: são
 **2 semânticas distintas**, com 3 cópias byte-idênticas de uma delas.
 
-  REMOVE acento  → scripts/text_normalize_ptbr.py:52        (comparação de WER)
+  REMOVE acento  → training/common/text_normalize_ptbr.py:52        (comparação de WER)
   PRESERVA acento→ training/finetune/prep_icefall.py:49      (alvo de treino)
-                   training/scripts/eval_runtime_wer.py:37   (cópia idêntica, documentada)
-                   training/scripts/analyze_error_composition.py:37 (cópia idêntica)
+                   training/tools/eval_runtime_wer.py:37   (cópia idêntica, documentada)
+                   training/tools/analyze_error_composition.py:37 (cópia idêntica)
 
 Enquanto as duas compartilhavam um nome, todo WER do projeto carregava uma ambiguidade
 silenciosa sobre qual régua foi usada — e comparar "35,53% telefônico" com "16,14% FLEURS"

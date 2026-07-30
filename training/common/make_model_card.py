@@ -10,8 +10,8 @@ vem do próprio grafo ONNX (ver `crates/macaw-asr/src/lib.rs`, `AsrEngine::outpu
 recuperável do projeto — horas de GPU paga sobre um corpus que pode não ser reproduzível.
 
 Uso:
-    python3 scripts/make_model_card.py <dir-do-artefato> [--wer 35.53 --wer-source arquivo.md]
-    python3 scripts/make_model_card.py training/results/onnx
+    python3 training/common/make_model_card.py <dir-do-artefato> [--wer 35.53 --wer-source arquivo.md]
+    python3 training/common/make_model_card.py training/results/onnx
 """
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def vocab_fingerprint(tokens_path: Path) -> str:
     tokens diferentes. Cardinalidade não os distingue; este fingerprint sim.
 
     DEVE reproduzir bit a bit `Vocab::fingerprint()` do Rust — há teste de conformidade
-    cross-language em `scripts/tests/test_make_model_card.py`.
+    cross-language em `training/tests/test_make_model_card.py`.
     """
     h = hashlib.sha256()
     for idx, token in _real_tokens(tokens_path):

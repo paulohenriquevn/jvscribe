@@ -1,5 +1,5 @@
 """Teste da parte pura do harness de penalidade telefônica (experimento #1).
-A cadeia telefônica em si é testada em scripts/corpus/tests; aqui cobrimos o
+A cadeia telefônica em si é testada em training/corpus/tests; aqui cobrimos o
 `_resample` (o glue de volta a 16 kHz) e o reuso do apply_telephone_channel."""
 
 from __future__ import annotations

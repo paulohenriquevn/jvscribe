@@ -16,7 +16,7 @@ mesma lida em `fleurs_one.txt`) dentro do parquet de teste do FLEURS pt_br
 (cache local do `huggingface_hub`, o mesmo usado por `training/smoke/prep_fleurs.py`).
 
 Uso:
-    python3 training/scripts/extract_fleurs_one_wav.py
+    python3 training/tools/extract_fleurs_one_wav.py
 """
 from __future__ import annotations
 

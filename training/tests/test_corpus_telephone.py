@@ -2,7 +2,7 @@
 
 Determinísticos: sinais analíticos (senos), sem RNG. Invariantes DSP com
 tolerância explícita (testing.md § 3, § 4.1). Rodam com
-`python3 -m pytest scripts/tests/test_corpus_telephone.py`.
+`python3 -m pytest training/tests/test_corpus_telephone.py`.
 """
 
 from __future__ import annotations

@@ -12,7 +12,7 @@ um dicionário PT-BR (hashmap = /usr/share/dict/brazilian ∪ hunspell), medindo
 
 Alinhamento por difflib (stdlib). Transcrição pelo runtime real (macaw-cli). `[MEDIDO]`.
 
-Uso: ORT_DYLIB_PATH=.../libonnxruntime.so python3 training/scripts/analyze_error_composition.py --n 100
+Uso: ORT_DYLIB_PATH=.../libonnxruntime.so python3 training/tools/analyze_error_composition.py --n 100
 """
 from __future__ import annotations
 

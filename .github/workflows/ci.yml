@@ -42,16 +42,16 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/python -m pip install --quiet --upgrade pip
-          .venv/bin/python -m pip install --quiet -r scripts/requirements-test.txt
+          .venv/bin/python -m pip install --quiet -r requirements-test.txt
 
       - name: Testes
-        run: .venv/bin/python -m pytest training/tests scripts/tests -q
+        run: .venv/bin/python -m pytest training/tests -q
 
       # Torna VISÍVEL quantos testes não exercitaram nada por falta de ambiente. Um número
       # de skips que sobe sem explicação é regressão de cobertura disfarçada de build verde.
       - name: Relatório de skips
         run: |
-          .venv/bin/python -m pytest training/tests scripts/tests -q -rs 2>&1 | tail -25
+          .venv/bin/python -m pytest training/tests -q -rs 2>&1 | tail -25
 
   # ---------------------------------------------------------------------------
   # CONDICIONAL — exercita o que exige o modelo real. Sua ausência nunca pinta o
@@ -78,7 +78,7 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/python -m pip install --quiet --upgrade pip
-          .venv/bin/python -m pip install --quiet -r scripts/requirements-test.txt
+          .venv/bin/python -m pip install --quiet -r requirements-test.txt
 
       - name: Obter o artefato de modelo
         env:
@@ -91,15 +91,15 @@ jobs:
       # Valida a IDENTIDADE do vocabulário antes de medir qualquer coisa: cardinalidade não
       # distingue dois artefatos de 500 tokens com 492 ids divergentes (M9).
       - name: Validar o par (modelo, vocabulário)
-        run: .venv/bin/python scripts/make_model_card.py training/results/onnx
+        run: .venv/bin/python training/common/make_model_card.py training/results/onnx
 
       - name: Transcrição de ponta a ponta
         run: |
           mkdir -p /tmp/ci-audio /tmp/ci-out
           test -f training/results/onnx/_eval_wavs/a000.wav \
             && cp training/results/onnx/_eval_wavs/a000.wav /tmp/ci-audio/
-          cd training/results/onnx && \
-            "$GITHUB_WORKSPACE/.venv/bin/python" \
-              "$GITHUB_WORKSPACE/training/batch/batch_transcribe.py" \
-              --input-dir /tmp/ci-audio --out-dir /tmp/ci-out \
-              --model model.int8.onnx --threads 2
+          # Sem `cd`: o script resolve modelo e tokens pelo artefato canônico
+          # (MACAW_MODEL_DIR > models/current > cwd).
+          MACAW_MODEL_DIR="$PWD/training/results/onnx" \
+            .venv/bin/python training/batch/batch_transcribe.py \
+              --input-dir /tmp/ci-audio --out-dir /tmp/ci-out --threads 2

@@ -10,7 +10,7 @@ Inventário medido em 2026-07-30 — 5 implementações Python + 1 Rust:
   training/batch/decode_onnx_local.py:31       greedy_ctc(log_probs, lens)              -> ids
   training/eval/measure_callcenter.py:58       greedy(lp, id2tok)                       -> str
   training/eval/measure_realcodec.py:40        greedy(logp, lens, sp)                   -> str (sp.decode)
-  training/scripts/tta_feature_align_probe.py  greedy(logp, id2tok)                     -> str
+  training/tools/tta_feature_align_probe.py  greedy(logp, id2tok)                     -> str
   crates/macaw-asr/src/decode.rs:28            ctc_greedy(...)                          -> ids
 """
 import numpy as np

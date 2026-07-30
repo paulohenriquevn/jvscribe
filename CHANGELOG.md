@@ -15,6 +15,33 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **Reorganização estrutural: uma árvore só, `scripts/` eliminado.** Conviviam duas pastas
+  chamadas "scripts" — `scripts/` (raiz) e `training/scripts/` — o anti-pattern de
+  pasta-lixeira: nome genérico não exige decisão de onde algo pertence, então acumula código
+  sem relação. `scripts/` misturava setup de ambiente, ferramentas de avaliação, biblioteca de
+  corpus e utilitário de texto.
+
+  | De | Para | Por quê |
+  |---|---|---|
+  | `scripts/corpus/` | `training/corpus/` | biblioteca de preparação de dados |
+  | `scripts/text_normalize_ptbr.py` | `training/common/` | é shared kernel |
+  | `scripts/make_model_card.py` | `training/common/` | governança de artefato |
+  | `scripts/{eval_wer,baseline_*,run_baseline}.py` | `training/eval/` | ferramentas de medição |
+  | `training/scripts/` | `training/tools/` | one-offs de análise — o nome agora diz isso |
+  | `scripts/tests/` | `training/tests/` | uma árvore de testes |
+  | `scripts/requirements-*.txt` | raiz | são do repositório, não de um subdiretório |
+
+  Dois testes travam a estrutura: `test_nao_existe_pasta_lixeira_chamada_scripts` (proíbe
+  `scripts`/`utils`/`helpers`/`misc`/`lib`) e `test_cada_pipeline_declarada_existe` (impede
+  o `conftest.py` divergir da realidade).
+
+### Fixed
+- `training/tests/test_codec_pool.py` importava `codec_pool` **sem configurar path** e passava
+  só porque outro módulo poluía o `sys.path` antes dele — dependência de ordem de execução
+  (`testing.md` § 6). A reorganização resolveu na raiz: `corpus/` agora é declarado no
+  `conftest.py`.
+
 ### Removed
 - **Runtime de inferência em Rust removido** (decisão do dono, 2026-07-30): 3 crates,
   4.042 LoC, 79 testes. `jvscribe` passa a ser **Python-only**. Arquivado e recuperável em

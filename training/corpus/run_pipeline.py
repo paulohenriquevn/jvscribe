@@ -6,7 +6,7 @@ Fluxo (Integration Validation do plano m3-corpus):
   on-the-fly → evidência [MEDIDO].
 
 Grava `knowledge-base/corpus/m3-cer-distribution.md`. Uso:
-  python3 scripts/corpus/run_pipeline.py --n 20 --sizes small base
+  python3 training/corpus/run_pipeline.py --n 20 --sizes small base
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ def main() -> None:
     ap.add_argument("--sizes", nargs=2, default=["small", "base"])
     args = ap.parse_args()
     sizes = (args.sizes[0], args.sizes[1])
-    cmd = f"python3 scripts/corpus/run_pipeline.py --n {args.n} --keep {args.keep} --sizes {sizes[0]} {sizes[1]}"
+    cmd = f"python3 training/corpus/run_pipeline.py --n {args.n} --keep {args.keep} --sizes {sizes[0]} {sizes[1]}"
 
     import tempfile
 

@@ -1,7 +1,7 @@
 """Testes de WER+IC e do normalizador PT-BR (M1 — T3.1).
 
 Determinísticos: valores conhecidos e seed fixa. Rodam com
-`python3 -m pytest scripts/tests/test_eval_wer.py`.
+`python3 -m pytest training/tests/test_eval_wer.py`.
 """
 
 from __future__ import annotations
