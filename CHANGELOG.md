@@ -74,6 +74,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- **CI não rodava — três defeitos que só a execução expôs** (M9/H-5 do `/review`). O critério
+  original ("o YAML parseia") era um proxy que não distinguia workflow válido de workflow
+  funcional. Rodando com `act`:
+  1. `rustup: command not found` — o step assumia uma ferramenta que o runner do GitHub traz
+     mas o container não, tornando o workflow não-verificável localmente;
+  2. `cannot find -l:libpulse.so.0` — **a dependência de sistema nunca era instalada**. Não é
+     limitação do `act`: o runner do GitHub também não traz `libpulse-dev`, então o job
+     falharia igual em produção;
+  3. `test_capture_fails_with_typed_error_when_source_does_not_exist` exigia servidor de áudio
+     inexistente no container. A asserção **não foi enfraquecida** — onde há servidor ela
+     continua exigindo `SourceNotFound`; onde não há, degrada com `SKIP` visível no
+     `test_report.sh`.
 - **Regressão de M9/T3.1 corrigida (BLOCKER do `/review`)**: a migração para o shared kernel
   quebrou a execução standalone dos scripts de pipeline — `python3 training/batch/batch_transcribe.py`
   falhava com `ModuleNotFoundError: No module named 'ctc'`, porque `import ctc` só resolvia sob

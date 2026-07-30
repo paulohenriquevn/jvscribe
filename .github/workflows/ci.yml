@@ -31,8 +31,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # `macaw-audio` linka contra libpulse (a captura por stream que motivou escolher
+      # libpulse sobre cpal). Sem estes pacotes o link falha com
+      # `cannot find -l:libpulse.so.0` — descoberto rodando `act` de verdade (M9). O runner
+      # do GitHub também NÃO traz libpulse-dev por padrão, então isto não é um remendo para
+      # o act: era um defeito real que só a execução expôs.
+      - name: Dependências de sistema (libpulse)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libpulse-dev pkg-config
+
+      # `rustup show` instala a toolchain declarada em rust-toolchain.toml. O runner do GitHub
+      # já traz rustup; a imagem do `act` não — instalar quando ausente é o que torna este
+      # workflow verificável LOCALMENTE, e não só em produção. Descoberto rodando `act` de
+      # verdade (M9): sem isto o job falhava com `rustup: command not found`.
       - name: Toolchain Rust (fixada em rust-toolchain.toml)
-        run: rustup show
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain none --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          rustup show
 
       - name: Cache do cargo
         uses: actions/cache@v4
