@@ -12,7 +12,17 @@ from batch_transcribe import transcribe_folder
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 100
 import tempfile; SC = tempfile.mkdtemp(prefix="fleurs_eval_")
 AUD = Path(f"{SC}/fleurs_aud"); OUT = Path(f"{SC}/fleurs_out")
-M = "/home/paulo/Projetos/jvscribe/models/m5-final-medium-phoneme"
+# Diretório do artefato: MACAW_MODEL_DIR > models/current (symlink canônico) > o caminho
+# histórico deste benchmark. O caminho absoluto anterior amarrava o script à máquina do dono
+# (M9/T1.3) e — pior — apontava para um modelo DIFERENTE do que o runtime Rust carrega, o que
+# é a origem do 16,14% de WER publicado sem dizer de qual artefato veio.
+_REPO = Path(__file__).resolve().parents[2]
+M = str(
+    Path(os.environ.get("MACAW_MODEL_DIR"))
+    if os.environ.get("MACAW_MODEL_DIR")
+    else (_REPO / "models/current" if (_REPO / "models/current").exists()
+          else _REPO / "models/m5-final-medium-phoneme")
+)
 
 def norm(t):
     t = t.lower()

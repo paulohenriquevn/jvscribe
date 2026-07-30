@@ -14,6 +14,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- `scripts/make_model_card.py` e artefato canônico `models/current` (M9/T1.3): gera `model_card.json` com sha256 do modelo, fingerprint e contagem de tokens emitíveis. O fingerprint Python reproduz bit a bit o do Rust (teste de conformidade cross-language). `models/current` é **symlink** — nenhum peso é movido ou copiado. `eval_public_hf.py` deixa de usar caminho absoluto e honra `MACAW_MODEL_DIR`.
 - Fail-fast de par (modelo, vocabulário) incoerente (M9/T1.2): `AsrEngine` lê a dimensão de saída do grafo na carga (sem inferência) e `transcribe` recusa vocabulário incompatível com `AsrError::VocabModelMismatch`, citando os dois números. Antes, apontar para o `tokens.txt` errado produzia transcrição silenciosamente errada.
 - `Vocab::real_len()` e `Vocab::fingerprint()` (M9/T1.1): contagem de tokens emitíveis (excluindo símbolos de desambiguação `#N` do lexicon FST) e fingerprint SHA-256 de identidade do vocabulário. Medido nos dois artefatos reais: ambos com 500 tokens emitíveis (502 e 503 linhas) e fingerprints distintos — cardinalidade não os distingue, identidade sim.
 - Restaurado `knowledge-base/references/_catalog.md` (fonte: `c7c67b9~1`, onde foi removido junto com o resto do knowledge-base) — catálogo dos 8 peers SOTA clonados em 2026-07-24, necessário como contrato de fonte para o ciclo DISCOVER de M9. Bootstrap autorizado via marcador `.references-bootstrap` conforme `hooks/boundary-check.sh`.
