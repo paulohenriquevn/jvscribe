@@ -309,7 +309,7 @@ sem pontuação.
 
 ---
 
-### M9 — [ ] Governança de artefato e reprodutibilidade
+### M9 — [x] Governança de artefato e reprodutibilidade
 
 > Added 2026-07-30 by `/roadmap-feature` (slug: `governanca-artefato-reprodutibilidade`). See CHANGELOG `[Unreleased] § Added`.
 
