@@ -186,6 +186,63 @@ Zipformer2 encoder (6 stacks, 16 layers, 63.4 M, non-causal) → linear CTC head
 8 kHz audio is upsampled to 16 kHz first (a single input format; the upsample cost is negligible, and
 the 16 kHz-upsample convention matches modern toolkits `[REPO]` icefall/ESPnet SWBD recipes).
 
+**Figure 1 — Model architecture (signal flow).** Green = encoding (heavy, 64 M); amber = decoding
+(light, greedy); dashed = train-only, removed at export.
+
+```mermaid
+flowchart TD
+  A["Audio 16 kHz mono<br/>(8 kHz upsampled)"]:::feat --> B["Log-mel Fbank<br/>80 bins - 100 fps - (T,80)"]:::feat
+  B --> C["Conv2dSubsampling<br/>x1/4 -> 25 fps - 0.61M"]:::enc
+  C --> D["Zipformer2 encoder<br/>6 stacks - 16 layers - 63.4M - non-causal"]:::enc
+  D --> E["CTC head (linear)<br/>-> 500 BPE + blank - 0.26M - (T/4, 501)"]:::dec
+  D -.-> F["phoneme head (aux)<br/>0.035M - train only"]:::aux
+  E --> G["Greedy: argmax -> collapse repeats -> drop blank -> BPE"]:::dec
+  G --> H["Text"]:::dec
+  classDef feat fill:#dde9ff,stroke:#3f6fe0,color:#111;
+  classDef enc  fill:#d6f7ef,stroke:#0fae95,color:#111;
+  classDef dec  fill:#fdeccb,stroke:#c8871a,color:#111;
+  classDef aux  fill:#eceff4,stroke:#8090a5,color:#333,stroke-dasharray:4 3;
+```
+
+The six Zipformer stacks run at different temporal resolutions and widths (deepest in the middle):
+
+| Stack | S1 | S2 | S3 | **S4** | S5 | S6 |
+|---|---|---|---|---|---|---|
+| dim | 192 | 256 | 384 | **512** | 384 | 256 |
+| layers | 2 | 2 | 3 | **4** | 3 | 2 |
+| downsample | 1 | 2 | 4 | **8** | 4 | 2 |
+| attn heads | 4 | 4 | 4 | **8** | 4 | 4 |
+
+Each Zipformer layer = self-attention + a convolution module (kernel 15–31) + two feed-forwards.
+
+### 4.6 System design (the deployment system)
+
+The model is one component of an inference system that runs entirely on the agent's CPU, with no GPU
+and no network call. In the dominant 1:1 case, diarization is unnecessary **by construction**: the mic
+stream *is* the agent and the loopback stream *is* the customer, so channel routing is deterministic
+(zero cost, 100 % accurate). The same model serves two modes — offline **batch** (folder → transcripts,
+47.8× RTFx) and **pseudo-streaming** (LocalAgreement-2 over the non-causal model for a live demo).
+
+**Figure 2 — System design (per-stream capture → CPU inference → text).**
+
+```mermaid
+flowchart LR
+  subgraph CAP["Capture (1:1, separate channels)"]
+    M["Mic = agent<br/>(VoIP, ~wideband)"]
+    L["Loopback = customer<br/>(8 kHz telephone)"]
+  end
+  M --> RB["Ring buffer<br/>+ energy VAD"]
+  L --> RB
+  RB --> FE["Fbank 16 kHz<br/>(upsample 8k->16k)"]
+  FE --> MDL["ONNX int8 model<br/>64M - CPU only"]:::enc
+  MDL --> DEC["CTC greedy<br/>(+ optional n-gram LM)"]:::dec
+  DEC --> MODE{"Mode"}
+  MODE -->|batch| BAT["Folder -> .txt<br/>parallel + batched - 47.8x"]:::dec
+  MODE -->|live| STR["LocalAgreement-2<br/>pseudo-streaming"]:::dec
+  classDef enc fill:#d6f7ef,stroke:#0fae95,color:#111;
+  classDef dec fill:#fdeccb,stroke:#c8871a,color:#111;
+```
+
 ---
 
 ## 5. Method, Part II — Data and Training at Scale
@@ -284,6 +341,37 @@ prematurely in §6.2, but now *earned* with the correct method rather than *asse
 is the crucial epistemic difference: the number was similar; the **causal claim was completely
 different**, and only the control could tell them apart.
 
+**Figure 3 — The debugging decision tree (§6).** Five self-consistent failures did *not* prove the
+mechanism; the single negative control did.
+
+```mermaid
+flowchart TD
+  P["Target: telephone WER <= 25%"] --> FT["Fine-tune with codec augmentation"]
+  FT --> C1["5 configs (LR, warm-start,<br/>frozen, aug intensity)"]
+  C1 --> COL["ALL collapse to ~98% (near-blank)<br/>while train loss looks healthy"]:::bad
+  COL --> HYP["Tempting (wrong) conclusion:<br/>codec-aug fundamentally collapses CTC<br/>=> data-limited"]:::bad
+  HYP --> CTRL["NEGATIVE CONTROL:<br/>fine-tune with NO augmentation"]:::key
+  CTRL --> C2["Also collapses (99.57%)<br/>=> augmentation is NOT the cause"]:::key
+  C2 --> ROOT["Root cause: encoder_embed left RANDOM<br/>(--init-modules prefix bug, train.py:335)"]:::fix
+  ROOT --> FIX["Fix (one token): +encoder_embed<br/>=> no collapse (42.84%, real text)"]:::good
+  FIX --> PLAT["Corrected FT plateaus ~39% > baseline 35.53%<br/>=> genuinely data-limited (earned, not asserted)"]:::good
+  classDef bad  fill:#fadbd8,stroke:#c0392b,color:#111;
+  classDef key  fill:#fdebd0,stroke:#d68910,color:#111;
+  classDef fix  fill:#d6eaf8,stroke:#2e86c1,color:#111;
+  classDef good fill:#d5f5e3,stroke:#1e8449,color:#111;
+```
+
+**Figure 4 — Corrected fine-tune trajectory (real-codec D1 WER by checkpoint).** For contrast, every
+collapsed run sat at ~98 % (near-blank) and the un-fine-tuned baseline is 35.53 %.
+
+```mermaid
+xychart-beta
+  title "Corrected FT: real-codec WER per checkpoint (baseline 35.53%)"
+  x-axis ["ckpt-4k", "ckpt-8k", "ckpt-12k", "ckpt-16k"]
+  y-axis "WER %" 30 --> 45
+  line [42.84, 40.50, 39.97, 39.38]
+```
+
 ### 6.6 The generalizable lesson
 
 - **Partial checkpoint loads fail silently.** A `strict=False` / prefix-matched loader will happily
@@ -312,6 +400,16 @@ All numbers `[MEASURED]` on CPU, int8 ONNX, greedy CTC, via the released harness
 | Telephone real-codec | CORAA + codec pool | ~35.53 % | honest single-speaker baseline |
 | Telephone real | call-center clip | ~40.13 % | mono-mixed 2-speaker, wide CI |
 
+**Figure 5 — WER by condition (%, lower is better).** The ~2× wideband→telephone penalty is visible.
+
+```mermaid
+xychart-beta
+  title "WER by condition (%, lower is better)"
+  x-axis ["FLEURS read", "CORAA spont", "M4 finalist", "Tel proxy", "Tel real-codec", "Tel real"]
+  y-axis "WER %" 0 --> 45
+  bar [16.14, 23.31, 27.49, 31.97, 35.53, 40.13]
+```
+
 **Telephone DoD (≤25 %): not met.** The delivered model on real telephone sits at ~36 %; the gap is
 data-limited (§6). We report this as a finding, not a footnote.
 
@@ -329,6 +427,28 @@ data-limited (§6). We report this as a finding, not a footnote.
 - **Why big models don't fit** `[EST]`: a ~600 M model (~9× our parameters) scales to roughly ~3–4×
   RTFx on the same CPU — **below the 6× floor**. Size→speed is not linear (F8), but the order of
   magnitude holds and is the empirical basis for the specialization thesis.
+
+**Figure 6 — RTFx on CPU (higher is better; the ≥6× real-time floor).** The specialization thesis in
+one chart: our 64 M sits far above the floor; a ~600 M model would fall below it.
+
+```mermaid
+xychart-beta
+  title "RTFx on CPU (higher better; real-time floor = 6x)"
+  x-axis ["Moonshine 27M AED", "Zipf 20M transducer", "M5 64M single", "M5 64M batch", "~600M (est)"]
+  y-axis "RTFx" 0 --> 50
+  bar [7.93, 15.90, 34.69, 47.8, 3.5]
+```
+
+**Figure 7 — Architecture selection: Zipformer vs Conformer (WER %, matched params, same decode).**
+Delta 2.71 pp, 95 % CI [2.11, 3.31] excludes zero.
+
+```mermaid
+xychart-beta
+  title "Encoder head-to-head: WER % (lower better)"
+  x-axis ["Zipformer-CTC", "Conformer-CTC"]
+  y-axis "WER %" 0 --> 35
+  bar [28.86, 31.57]
+```
 
 ---
 
