@@ -250,6 +250,9 @@ fn test_list_sources_identifies_monitor_sources() {
 #[test]
 fn test_two_captures_run_simultaneously_without_interference() {
     let _lock = serialize();
+    // Baseline próprio: este teste TEM de devolver o contador global ao estado em que o
+    // encontrou antes de soltar o lock (ver o bloco de limpeza no fim).
+    let baseline = active_capture_threads();
 
     if !(tool_available("pactl") && tool_available("paplay") && tool_available("sox")) {
         eprintln!("SKIP: pactl/paplay/sox indisponíveis — captura dupla concorrente não pode ser exercitada neste ambiente");
@@ -315,6 +318,30 @@ fn test_two_captures_run_simultaneously_without_interference() {
     assert!(
         diff_pct < 5.0,
         "taxa em regime diverge: mic {mic_window} vs monitor {mon_window} na janela de 6s = {diff_pct:.1}% (esperado < 5%)"
+    );
+
+    // --- Limpeza determinística (M9/T2.3) --------------------------------------------
+    //
+    // Sem isto o teste era uma bomba para o SEGUINTE. `[MEDIDO]` 2026-07-30: 2 falhas em 5
+    // execuções de `capture_test` (40%), sempre em
+    // `test_capture_thread_terminates_cleanly_on_drop`, com `left: 1, right: 3` — ou seja, o
+    // teste seguinte lia `baseline = 2` porque ESTAS duas threads ainda estavam vivas, e elas
+    // morriam antes da asserção.
+    //
+    // A causa: a thread de captura só encerra na PRÓXIMA leitura após o canal fechar (~32 ms
+    // com o `fragsize` fixado). Dropar o `Receiver` no fim do escopo não é suficiente — o lock
+    // era liberado antes de o contador global voltar ao normal.
+    drop(rx_mic);
+    drop(rx_mon);
+    let deadline = Instant::now() + Duration::from_millis(500);
+    while active_capture_threads() > baseline && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(
+        active_capture_threads(),
+        baseline,
+        "este teste precisa devolver o contador global ao baseline antes de soltar o lock, \
+         senão contamina o teste seguinte"
     );
 }
 

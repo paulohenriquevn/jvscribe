@@ -5,7 +5,10 @@ members = ["crates/macaw-audio", "crates/macaw-asr", "crates/macaw-cli"]
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
-rust-version = "1.75"
+# MSRV medido (M9/T2.4): a dep `ort 2.0.0-rc.12` exige edition2024 e declara
+# rust-version = "1.88". O valor anterior (1.75) nunca foi verificado — fixar a toolchain
+# nele quebrou o build imediatamente.
+rust-version = "1.88"
 
 [workspace.dependencies]
 # Captura de áudio — decidido em ADR D2 do plano m0-walking-skeleton.

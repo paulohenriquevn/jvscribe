@@ -32,6 +32,28 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
+### Added
+- CI com dois jobs (M9/T2.3): `test-model-free` (obrigatório, runner limpo, sem nenhum
+  artefato de modelo) e `test-with-artifact` (condicional, roda os testes `#[ignore]`).
+  Separar as camadas elimina o falso verde por **design** em vez de detectá-lo por relatório —
+  padrão observado em sherpa-onnx, onde nenhum dos 22 `*-test.cc` toca modelo.
+- `rust-toolchain.toml` fixando a toolchain (M9/T2.4).
+
+### Fixed
+- **`rust-version` do workspace estava errado** (M9/T2.4): declarava `1.75`, mas o projeto
+  nunca buildou nessa versão — buildava com o rustc da máquina. Fixar a toolchain em 1.75
+  quebrou o build na hora (`ort 2.0.0-rc.12` exige `edition2024`). O MSRV real, lido da
+  própria dependência, é **1.88**; corrigido e verificado com a suíte completa.
+- **Teste flaky em `capture_test`** (M9/T2.3): `[MEDIDO]` 2 falhas em 5 execuções (40%) em
+  `test_capture_thread_terminates_cleanly_on_drop`. Causa: o teste de captura dupla soltava o
+  lock de serialização **antes** de suas threads morrerem (elas só encerram na próxima leitura
+  após o canal fechar, ~32 ms), deixando o contador global sujo para o teste seguinte.
+  Corrigido com limpeza determinística; `[MEDIDO]` 0 falhas em 8 execuções.
+- **`test_report.sh` reportava sucesso com o build quebrado** (M9/T2.3): imprimia
+  "testes 'ok': 0 / SKIPs: 0" e saía 0 quando `cargo test` falhava — a ferramenta feita para
+  impedir falso verde produzindo o falso verde mais puro. Agora propaga o código de saída e
+  trata zero-testes-executados como erro.
+
 ### Security
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
