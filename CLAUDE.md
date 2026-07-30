@@ -149,6 +149,34 @@ num regime (treino do zero) que a própria fonte identifica como o que *mais* pr
 de dados. Q-09 (acesso às ~76k h brutas do Cem Mil Podcasts) vale mais para o WER
 final do que qualquer escolha de encoder.
 
+**A arquitetura está correta — o gargalo de M5 é dado/generalização `[MEDIDO]`.** O
+finetune M5 faz *overfitting*, não *underfitting*: no melhor ponto de cada época
+(logo após o reshuffle) train ctc ≈ val ctc (~0,23 ≈ 0,23), mas **dentro de cada
+época** a val loss sobe acima da train (0,23 → 0,29-0,34) e o WER no CORAA humano
+degrada. Overfitting **prova que a capacidade do encoder é suficiente** — um modelo
+pequeno demais faria o oposto. Logo, não se muda a arquitetura (seria retrabalho
+contra a medição de M4); o tamanho 64M é o **certo dado o constraint** RNF-07 (≥6×
+RTFx em CPU) — `large`/`XL` violariam real-time. A alavanca é **dado (qualidade >
+quantidade**, pois o overfitting é ao ruído dos pseudo-rótulos Whisper do TAGARELA).
+
+**Antes de colher dado novo (caro), 3 alavancas grátis atacam o MESMO overfitting `[ESTIMATIVA]`:**
+
+1. **Augmentação LIGADA** — o run de convergência de M5 rodou com `--enable-musan 0`
+   e telephone off (para isolar a convergência primeiro). Religar a cadeia
+   Reverb→Noise→Telephone (ADR D2 do plano M5, já preparada) + SpecAugment mais
+   forte + weight decay é **regularização que reduz overfitting de graça**. Bônus:
+   ataca também o DoD#3 (WER telefônico 8 kHz).
+2. **Checkpoint averaging (`--avg`)** — suaviza a oscilação intra-época; como os
+   melhores checkpoints são pós-shuffle (início de época), a média deles tende a
+   bater abaixo do melhor single. É o que o recipe 69M-CTC do icefall usa no decode.
+3. **Beam search + LM no decode** — melhora WER ~10-20% relativo `[LITERATURA]` sem
+   tocar modelo nem dado. O decode de M5 hoje é greedy CTC (o piso).
+
+Ordem de valor/custo: terminar o run + averaging + beam/LM → medir; se platôar acima
+do alvo, religar augmentação num run curto de continuação; só então investir em dado
+(menos TAGARELA / mais humano / Q-09). Plano M5:
+`knowledge-base/plans/m5-scale-model-wer-plan.md` (ADR D2 = augmentação).
+
 **O orçamento de CPU é do pipeline, não do modelo.** Taxas somam pelo inverso: ASR
 a 3× somado a diarização a 3× dá 1,5×. Por isso RNF-07 exige ASR isolado ≥ 6×
 (`PRD.md` § 6).
