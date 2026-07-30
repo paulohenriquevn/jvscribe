@@ -14,6 +14,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Modelo publicado em `paulohenriquevn/jvscribe`** (HuggingFace, privado): ONNX oficial,
+  vocabulário, model card, alternativos e os artefatos de finetune (~3,0 GB). Excluídos os
+  dados de avaliação (`testdata/`, 1,2 GB) e o `.pt` truncado — que permanece em disco.
+- **`jvscribe/tools/finetune_smoke.py` — prova que o checkpoint publicado TREINA.**
+  Três asserções sobre dados reais: `load_state_dict(faltando=0)`; CTC loss do checkpoint
+  **25× menor** que a de um modelo aleatório de mesma arquitetura no mesmo lote (0,86 vs
+  21,96 — um `.pt` corrompido produziria loss de aleatório); e loss caindo 85,4% em 10 passos
+  com a norma do gradiente indo de 16,4 a 0,59.
+  Fecha a lacuna deixada pela reconstrução do `avg-124k-112k.pt`, antes verificado só por
+  "abre e tem o tamanho certo".
+- `jvscribe/results/reproducibility-2026-07-30.md` — hipóteses, evidência e limitações da
+  verificação, incluindo o que ela **não** prova (não é treino; `k2` é stub; 8 kHz segue
+  `[DESCONHECIDO]`).
+
+
+### Added
 - **`jvscribe/common/artifact.py` — um resolvedor de artefato para todos os entrypoints.**
   `batch_transcribe`, `mic_transcribe` e os testes resolviam o modelo cada um por conta
   própria; defaults duplicados divergem. Agora todos leem `model_file` do `model_card.json`,
