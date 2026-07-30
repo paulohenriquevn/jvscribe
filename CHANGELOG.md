@@ -15,6 +15,31 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Removed
+- **`models/` limpo: 8,1 GB → 4,0 GB.** Mantido apenas `m5-final-medium-phoneme`, o
+  deliverable final de M5. Removidos `m0-borrowed` + `m0-borrowed-hf` (2,4 GB — o modelo
+  emprestado que só o runtime Rust removido usava), `m4-final-medium-phoneme` (1,3 GB) e
+  `m4-final-phoneme-small` (453 MB). Cada remoção foi precedida de verificação por hash: os
+  pesos de `m4-*` têm duplicata em `jvscribe/results/onnx`.
+  **Perda real registrada:** `m4-final-phoneme-small/model.fp32.onnx` (88 MB) era o único peso
+  sem duplicata em outro lugar. `models/` é gitignored — não volta.
+- Cópias byte-idênticas de `decode_onnx_local.py` e `mic_transcribe.py` que viviam dentro do
+  diretório de modelo (achado da auditoria de system design).
+
+### Fixed
+- **O artefato canônico apontava para o modelo errado.** `models/current` resolvia para
+  `jvscribe/results/onnx`, cujo `model.int8.onnx` é o *small* de 27 MB (hash `6fbe9f05`) — não
+  o M5. É exatamente o defeito que M9 foi construído para impedir, e estava ativo. Agora
+  aponta para `m5-final-medium-phoneme`, com `model_card.json` gerado (fingerprint
+  `9fcb45e4…`, 500 tokens emitíveis).
+
+### Added
+- `jvscribe/tools/compare_models.py` — compara dois modelos no mesmo conjunto com a mesma
+  régua, reportando WER, CER e **intervalo de confiança por bootstrap**. Existe porque "qual
+  modelo é melhor" foi decidido por nome mais de uma vez neste projeto ("final", "leve",
+  "SOTA"), e nome não é evidência. Declara explicitamente quando os intervalos se sobrepõem —
+  escolher pelo WER nesse caso seria escolher por ruído. 6 testes.
+
 ### Changed
 - **`training/` renomeado para `jvscribe/`** — o topo do repositório passa a declarar o
   produto, e um nível abaixo declara as capacidades (`common`, `corpus`, `finetune`, `batch`,
