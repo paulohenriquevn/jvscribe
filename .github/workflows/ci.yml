@@ -81,13 +81,17 @@ jobs:
       - name: Relatório de SKIPs (torna visível o falso verde)
         run: ./scripts/test_report.sh
 
-      - name: Python
+      # venv em vez de pip global: distribuições recentes marcam o Python do sistema como
+      # externally-managed (PEP 668) e recusam `pip install`. Descoberto rodando o CI de
+      # verdade (M9) — o step falhava com "externally-managed-environment".
+      - name: Python (venv)
         run: |
-          python3 -m pip install --quiet --upgrade pip
-          python3 -m pip install --quiet -r scripts/requirements-eval.txt pytest pyyaml
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --quiet --upgrade pip
+          .venv/bin/python -m pip install --quiet -r scripts/requirements-test.txt
 
       - name: Testes Python
-        run: python3 -m pytest training/tests scripts/tests -q
+        run: .venv/bin/python -m pytest training/tests scripts/tests -q
 
   # ---------------------------------------------------------------------------
   # CONDICIONAL — exercita os testes `#[ignore]`, que exigem o modelo real.

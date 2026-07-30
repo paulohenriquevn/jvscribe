@@ -4,6 +4,13 @@ Cobre o LocalAgreement-2 (longest_common_prefix) e o colapso CTC→palavras
 (ctc_words) — a lógica de negócio que decide o que é confirmado e onde cada
 palavra começa no tempo. Determinístico; não abre mic nem carrega ONNX.
 """
+import pytest
+
+# Dependência de ambiente, não do produto: em runner limpo o módulo pode faltar.
+# `importorskip` transforma isso em SKIP VISÍVEL em vez de erro de coleta, que
+# derrubaria a suíte inteira (M9 — descoberto rodando o CI).
+pytest.importorskip("sounddevice")
+
 import numpy as np
 import pytest
 
