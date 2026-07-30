@@ -15,6 +15,29 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Removed
+- **Runtime de inferência em Rust removido** (decisão do dono, 2026-07-30): 3 crates,
+  4.042 LoC, 79 testes. `jvscribe` passa a ser **Python-only**. Arquivado e recuperável em
+  `git switch -c rust-restore rust-runtime-archive-v0.8.0`. Racional completo em
+  `knowledge-base/adrs/0004-remocao-do-runtime-rust.md`.
+  **A decisão não foi por performance:** `[MEDIDO]` na mesma clip e pipeline, Python mediana
+  6,7× e Rust mediana 6,9× — indistinguíveis. Foi por foco de time e colaboração de cientistas
+  de dados.
+- `scripts/{app,bench,test_report}.sh` — dependiam do binário Rust.
+
+### Added
+- `training/realtime/dual_capture.py` — captura dual mic + loopback com **seleção de source por
+  stream**, a capacidade de produto que só existia no Rust (separa atendente de cliente numa
+  ligação). Usa um `parec --device=<source>` por stream porque `sounddevice` **não expõe monitor
+  sources** (verificado: 8 entradas, 0 monitores nesta máquina). 6 testes provam em execução
+  real, incluindo captura simultânea dos dois streams e ausência de processo órfão.
+- CI reescrito para Python-only, com `pulseaudio-utils` e relatório de skips.
+
+### Changed
+- Produto renomeado de "Macaw Voice" para **jvscribe** nos documentos vivos. Registros
+  históricos (ADRs anteriores, `training/results/*.md`, medições) **não** foram reescritos —
+  documentam o que era verdade quando foram escritos.
+
 ### Added
 - Teto de threads no runtime Rust (M6/R1): `AsrEngine::load` passa a chamar
   `with_intra_threads`, default 2, override por `MACAW_THREADS`. Antes o ONNX Runtime

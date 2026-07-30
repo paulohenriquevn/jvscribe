@@ -32,10 +32,15 @@ def test_fixture_wav_nova_nao_e_ignorada():
     )
 
 
-def test_golden_f32_novo_nao_e_ignorado():
-    assert not _is_ignored("crates/macaw-audio/tests/fixtures/__probe_novo.f32"), (
-        "o golden .f32 do kaldi_fbank está sendo ignorado — o teste de conformidade "
-        "cross-language contra o lhotse perderia sua fixture"
+def test_dump_binario_de_eval_continua_ignorado():
+    """O golden `.f32` vivia em `crates/`, removido com o runtime Rust em 2026-07-30.
+
+    A regra `*.f32` permanece porque protege os dumps de eval (`fleurs_one.f32`, 214 KB) de
+    entrarem no histórico. Se um golden voltar a ser versionado, adicione a negação DEPOIS da
+    regra geral — a ordem é o que determina quem vence em `.gitignore`.
+    """
+    assert _is_ignored("training/results/onnx/fleurs_one.f32"), (
+        "dump binário de eval não pode ser versionável"
     )
 
 
@@ -48,7 +53,7 @@ def test_pesos_de_modelo_continuam_ignorados():
         assert _is_ignored(p), f"{p} DEVERIA continuar ignorado"
 
 
-def test_dump_de_eval_f32_continua_ignorado():
+def _obsoleto_test_dump_de_eval_f32():
     """Regressão pega durante a própria T2.1.
 
     A primeira tentativa de corrigir o shadowing removeu a regra `*.f32` inteira — o que

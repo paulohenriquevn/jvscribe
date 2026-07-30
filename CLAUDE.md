@@ -1,4 +1,4 @@
-# Macaw Voice — ASR PT-BR real-time em CPU
+# jvscribe — ASR PT-BR real-time em CPU
 
 Transcritor de português brasileiro que roda **em tempo real, sobre CPU, no
 notebook do atendente** — sem GPU, sem chamada de rede, sem custo por hora

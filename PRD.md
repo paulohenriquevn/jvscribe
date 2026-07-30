@@ -1,4 +1,4 @@
-# PRD — Macaw Voice: ASR PT-BR real-time em CPU
+# PRD — jvscribe: ASR PT-BR real-time em CPU
 
 | | |
 |---|---|

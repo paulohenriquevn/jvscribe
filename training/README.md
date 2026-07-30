@@ -1,4 +1,4 @@
-# `training/` — as três pipelines do Macaw Voice
+# `training/` — as três pipelines do jvscribe
 
 Tudo aqui roda **offline, em CPU**, sobre o modelo entregue em M5 (Zipformer-CTC 64M + fonema,
 ONNX int8). Organizado por **pipeline**: cada pasta é um estágio nítido do ciclo de vida do modelo.

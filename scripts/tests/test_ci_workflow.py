@@ -38,17 +38,18 @@ def test_job_model_free_nao_referencia_artefato_de_modelo():
         )
 
 
-def test_job_model_free_roda_as_duas_suites():
+def test_job_model_free_roda_a_suite():
+    """jvscribe é Python-only desde 2026-07-30 (runtime Rust removido e arquivado em tag)."""
     body = yaml.dump(_load()["jobs"]["test-model-free"])
-    assert "cargo test" in body, "suíte Rust ausente"
-    assert "pytest" in body, "suíte Python ausente"
+    assert "pytest" in body, "suíte de testes ausente"
+    assert "cargo" not in body, "resquício de Rust no CI de um projeto Python-only"
 
 
 def test_job_com_artefato_e_condicional_e_nao_bloqueia():
     """Ausência de artefato não pode pintar o build de verde nem de vermelho por engano."""
     job = _load()["jobs"]["test-with-artifact"]
     body = yaml.dump(job)
-    assert "--ignored" in body, "deve rodar justamente os testes marcados #[ignore]"
+    assert "batch_transcribe" in body, "deve exercitar a transcrição de ponta a ponta"
     assert "if" in job or "continue-on-error" in body, (
         "o job precisa ser explicitamente condicional"
     )

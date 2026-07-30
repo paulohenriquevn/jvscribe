@@ -4,6 +4,11 @@
 # __isoc23_strtoll); este runtime é carregado via load-dynamic (ORT_DYLIB_PATH
 # em .cargo/config.toml). api-23 no Cargo.toml casa com esta versão.
 #
+# NOTA (2026-07-30): com a remoção do runtime Rust, o ONNX Runtime NATIVO só é
+# necessário para quem for reconstruir aquele runtime. O lado Python usa o wheel
+# `onnxruntime` do requirements-test.txt. Mantido porque o tarball verificado é
+# útil e o script é idempotente.
+#
 # INTEGRIDADE (M9/T2.2): o tarball é verificado por SHA-256 ANTES de ser extraído.
 # `[MEDIDO]` em M6: uma libonnxruntime errada deixou a inferência até 40× mais lenta e
 # custou uma investigação inteira — um tarball corrompido, truncado ou substituído passaria

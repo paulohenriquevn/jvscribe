@@ -1,4 +1,4 @@
-# Macaw Voice — transcrição PT-BR em tempo real, sobre CPU
+# jvscribe — transcrição PT-BR em tempo real, sobre CPU
 
 Transcreva atendimento em português brasileiro **ao vivo, no notebook do próprio
 atendente** — sem GPU, sem enviar áudio para a nuvem, sem custo por hora transcrita.
