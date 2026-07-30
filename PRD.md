@@ -237,7 +237,7 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 > **Substituição registrada:** o 2º finalista
 > efetivamente medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo —
 > un-provisionable neste ambiente (4+ falhas), trocado para eliminar confounds de
-> framework (`training/results/m4-decision-161h-results.md`). Limites honestos no
+> framework (`jvscribe/results/m4-decision-161h-results.md`). Limites honestos no
 > ADR: WER é wideband FLEURS (não 8 kHz call center — M5); treino causal/equivalência
 > streaming são M4-fase-3/M6. Restam da § 8.1 `✅ Decidido` acima: BPE, supervisão
 > fonética (M4 fase 3 **concluída** — cabeça auxiliar dá −4,63% relativo de WER, DoD ≥3%
@@ -428,7 +428,7 @@ treinado nesse corpus — mas precedente não é segurança jurídica.
 **Filtro de qualidade por concordância.** As labels do TAGARELA são de máquina
 (ElevenLabs Scribe → Whisper large-v3 fine-tuned). Rodar um segundo transcritor e
 manter apenas os segmentos concordantes segue o pipeline do Granary, que reporta
-performance equivalente com ~50% dos dados. **Implementado em M3** (`training/corpus/`,
+performance equivalente com ~50% dos dados. **Implementado em M3** (`jvscribe/corpus/`,
 blueprint `knowledge-base/discoveries/blueprints/m3-corpus-blueprint.md`): filtro por
 concordância CER par-a-par com τ calibrado empiricamente + manifests Lhotse com
 augmentação telefônica on-the-fly; licenças mapeadas em `knowledge-base/corpus/m3-licenses.md`.

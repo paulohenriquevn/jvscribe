@@ -29,7 +29,7 @@ jobs:
           python-version: "3.10"
 
       # `pulseaudio-utils` traz `parec`/`pactl`, usados pela captura dual
-      # (`training/realtime/dual_capture.py`). Sem eles os testes de captura fazem skip
+      # (`jvscribe/realtime/dual_capture.py`). Sem eles os testes de captura fazem skip
       # explícito em vez de falhar — o container de CI não tem servidor de áudio.
       - name: Dependências de sistema
         run: |
@@ -45,13 +45,13 @@ jobs:
           .venv/bin/python -m pip install --quiet -r requirements-test.txt
 
       - name: Testes
-        run: .venv/bin/python -m pytest training/tests -q
+        run: .venv/bin/python -m pytest jvscribe/tests -q
 
       # Torna VISÍVEL quantos testes não exercitaram nada por falta de ambiente. Um número
       # de skips que sobe sem explicação é regressão de cobertura disfarçada de build verde.
       - name: Relatório de skips
         run: |
-          .venv/bin/python -m pytest training/tests -q -rs 2>&1 | tail -25
+          .venv/bin/python -m pytest jvscribe/tests -q -rs 2>&1 | tail -25
 
   # ---------------------------------------------------------------------------
   # CONDICIONAL — exercita o que exige o modelo real. Sua ausência nunca pinta o
@@ -84,22 +84,22 @@ jobs:
         env:
           ARTIFACT_URL: ${{ vars.JVSCRIBE_ARTIFACT_URL }}
         run: |
-          mkdir -p training/results/onnx
+          mkdir -p jvscribe/results/onnx
           curl -fsSL "$ARTIFACT_URL" -o /tmp/artifact.tgz
-          tar xzf /tmp/artifact.tgz -C training/results/onnx --strip-components=1
+          tar xzf /tmp/artifact.tgz -C jvscribe/results/onnx --strip-components=1
 
       # Valida a IDENTIDADE do vocabulário antes de medir qualquer coisa: cardinalidade não
       # distingue dois artefatos de 500 tokens com 492 ids divergentes (M9).
       - name: Validar o par (modelo, vocabulário)
-        run: .venv/bin/python training/common/make_model_card.py training/results/onnx
+        run: .venv/bin/python jvscribe/common/make_model_card.py jvscribe/results/onnx
 
       - name: Transcrição de ponta a ponta
         run: |
           mkdir -p /tmp/ci-audio /tmp/ci-out
-          test -f training/results/onnx/_eval_wavs/a000.wav \
-            && cp training/results/onnx/_eval_wavs/a000.wav /tmp/ci-audio/
+          test -f jvscribe/results/onnx/_eval_wavs/a000.wav \
+            && cp jvscribe/results/onnx/_eval_wavs/a000.wav /tmp/ci-audio/
           # Sem `cd`: o script resolve modelo e tokens pelo artefato canônico
           # (MACAW_MODEL_DIR > models/current > cwd).
-          MACAW_MODEL_DIR="$PWD/training/results/onnx" \
-            .venv/bin/python training/batch/batch_transcribe.py \
+          MACAW_MODEL_DIR="$PWD/jvscribe/results/onnx" \
+            .venv/bin/python jvscribe/batch/batch_transcribe.py \
               --input-dir /tmp/ci-audio --out-dir /tmp/ci-out --threads 2

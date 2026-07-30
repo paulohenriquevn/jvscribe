@@ -28,9 +28,9 @@ small é só 1,15× mais rápido (não 2× — o RTFx do medium no ADR 0002 esta
 ~2×). Empatado o RTFx, o desempate migra para acurácia → **medium ganha −1,11pp WER**.
 A cabeça de fonema **transferiu ao medium** `[MEDIDO]`: WER 28,86% → **27,49%** (−4,74%
 rel, IC95% [2,79, 6,72], P(≥3%)=95,7%) — o **deliverable final de M4** é o medium+fonema,
-27,49% WER / 10,53% CER wideband (`training/results/m4-medium-phoneme-ablation-results.md`,
+27,49% WER / 10,53% CER wideband (`jvscribe/results/m4-medium-phoneme-ablation-results.md`,
 modelo em `models/m4-final-medium-phoneme/`). Evidência de decisão:
-`training/results/m4-decision-161h-results.md`, `soak-small-vs-medium-results.md`.
+`jvscribe/results/m4-decision-161h-results.md`, `soak-small-vs-medium-results.md`.
 
 **Histórico `[MEDIDO]` de M2:** transducer/CTC é ~2× mais rápido que AED em CPU
 (Zipformer 20M = 15,90 ± 2,06× vs Moonshine tiny 27M = 7,93 ± 0,72×, n=10) — a razão que

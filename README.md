@@ -21,12 +21,12 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 | M0 — Fundação do runtime · M1 — Instrumentação | ✅ concluídos |
 | M2 — Decisão de arquitetura · M3 — Corpus | ✅ concluídos |
 | M4 — Piloto comparativo | ✅ concluído |
-| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](training/results/m5-final-results.md)) |
+| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](jvscribe/results/m5-final-results.md)) |
 | M6 — Runtime otimizado · M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
 | M9 — Governança de artefato e reprodutibilidade | ⏳ próximo |
 
 > A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
-> ([`test_readme_links.py`](training/tests/test_readme_links.py)) garante que todo link interno
+> ([`test_readme_links.py`](jvscribe/tests/test_readme_links.py)) garante que todo link interno
 > daqui resolve — em 2026-07-30, 5 de 5 apontavam para arquivos removidos por engano.
 
 ### A arquitetura, decidida por medição
@@ -39,7 +39,7 @@ de velocidade em CPU (M2). O piloto comparativo de M4 então **travou o finalist
 
 `[MEDIDO]` head-to-head com parâmetros equivalentes: Zipformer domina Conformer nos dois eixos
 de acurácia (WER 28,86% vs 31,57%, IC95% do delta excluindo 0). A cabeça de fonema levou o
-medium a **27,49% WER** ([evidência](training/results/m4-medium-phoneme-ablation-results.md)).
+medium a **27,49% WER** ([evidência](jvscribe/results/m4-medium-phoneme-ablation-results.md)).
 
 **O achado de M2 que orientou a escolha da família** `[MEDIDO]`: em CPU, na mesma máquina e na mesma
 clip de 12 s, o transducer é **~2× mais rápido** que o AED em tamanho comparável —
