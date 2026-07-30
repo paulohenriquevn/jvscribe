@@ -27,6 +27,13 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `jvscribe/results/reproducibility-2026-07-30.md` — hipóteses, evidência e limitações da
   verificação, incluindo o que ela **não** prova (não é treino; `k2` é stub; 8 kHz segue
   `[DESCONHECIDO]`).
+- **Reprodutibilidade validada a partir do HuggingFace, não dos arquivos locais.** Download
+  limpo de `paulohenriquevn/jvscribe`: `model_sha256` e `vocab_fingerprint` conferem com o
+  card, inferência entrega **WER 15,99% / CER 7,30%** (idêntico ao declarado) a RTFx 43,4×, e
+  o finetune sobre o `.pt` baixado desce a loss 80,9% em 8 passos.
+  Achado no caminho: `hf download --include` com seis padrões buscou cinco arquivos e **omitiu
+  o `model.int8.onnx` sem erro nem aviso** — registrado no documento como armadilha para quem
+  reproduzir.
 
 
 ### Added

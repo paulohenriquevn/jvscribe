@@ -53,10 +53,41 @@ Isto **fecha a lacuna** deixada pela reconstrução do checkpoint (ver
 `models/current/finetune/README.md § Incidente`): o `avg-124k-112k.pt` regenerado não era
 verificado além de "abre e tem o tamanho certo". Agora está medido que ele treina.
 
+### H1–H4 revalidadas a partir do HuggingFace `[MEDIDO]`
+
+O teste acima ainda rodava sobre os arquivos locais. Repetido sobre um **download limpo** de
+`paulohenriquevn/jvscribe` num diretório vazio — que é o que um terceiro receberia:
+
+| verificação | resultado |
+|---|---|
+| `model_sha256` do card vs arquivo baixado | `1ac8bc5d…` = `1ac8bc5d…` **OK** |
+| `vocab_fingerprint` do card vs `tokens.txt` baixado | `9fcb45e4…` = `9fcb45e4…` **OK** |
+| WER / CER da inferência sobre o baixado | **15,99% / 7,30%** — idêntico ao declarado |
+| RTFx | 43,4× (1.367,8 s em 31,5 s) |
+| finetune sobre `finetune/avg-124k-112k.pt` baixado | `faltando=0`; loss 0,8599 → 0,1639 (−80,9% em 8 passos) |
+
+Amostra da saída (`a007.wav`):
+
+```
+REF: o acidente ocorreu em grande altitude no terreno montanhoso e acredita-se que tenha
+     sido causado por fogo inimigo
+HYP: o acidente ocorreu em grande atitude no terreno montanhoso e acredita se que tenha
+     sido causado por fogo inimigo
+```
+
+O erro residual se concentra em nomes próprios (`goethe` → `golte`, `fichte` → `fiste`) e em
+diferenças de normalização que a régua conta como erro sem sê-lo (`20` vs `vinte`).
+
+**Um achado durante a verificação:** `hf download --include` com seis padrões buscou apenas
+cinco arquivos e **omitiu silenciosamente o `model.int8.onnx`** — sem erro, sem aviso. Baixado
+sozinho, veio íntegro. Quem for reproduzir deve conferir o inventário do download contra o
+repositório, não confiar no exit code.
+
 ## Conclusão
 
 O artefato publicado transcreve com WER 15,99% e serve como ponto de partida de finetuning.
-Ambas as afirmações são reprodutíveis pelos comandos abaixo.
+Ambas as afirmações foram medidas **a partir do download do HuggingFace**, não dos arquivos
+locais — que é a única forma de a reprodutibilidade significar algo.
 
 ## Reprodução
 
