@@ -73,6 +73,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Verificação de integridade no download do ONNX Runtime (M9/T2.2): `scripts/setup_onnxruntime.sh` agora confere SHA-256 **antes** de extrair e aborta sem criar `vendor/` se o tarball não conferir. `[MEDIDO]` em M6 uma lib errada deixou a inferência até 40× mais lenta; sem checksum, um artefato corrompido ou substituído passaria em silêncio. Hash de referência medido e validado por equivalência com a lib já em uso.
 
 ### Fixed
+- Rota `/m1` do dashboard devolvia `200 OK` vazio para sempre (M9/T4.1): `m1_measurements_json`
+  lia `knowledge-base/measurements` — removido em `c7c67b9` — e engolia o ENOENT com
+  `unwrap_or_default()`, o que o dashboard exibia como "relatório ainda não gerado",
+  indistinguível de "medição zero". Único caso em que a deriva documental virou defeito de
+  runtime. Agora a ausência é reportada no payload e exibida como causa. Os dois relatórios de
+  medição de M1 foram restaurados de `c7c67b9~1`.
 - `.gitignore` deixava as fixtures determinísticas fora do versionamento (M9/T2.1): as linhas 57-58 repetiam `*.wav`/`*.f32` **depois** da exceção `!tests/fixtures/*.wav`, e em `.gitignore` o último padrão que casa vence. As fixtures sobreviviam só por já estarem no index; qualquer fixture nova sumiria em silêncio, e o CI perderia o golden do `kaldi_fbank`. A regra geral agora precede a exceção, e 4 testes cobrem os dois sentidos — inclusive que o dump de eval `fleurs_one.f32` (214 K) **continua** ignorado.
 
 - Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
