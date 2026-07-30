@@ -14,6 +14,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Changed
+- FT gentil (`training/run_ft_codec.sh`): `--num-workers` 2→10 para paralelizar o codec-pool
+  (ffmpeg per-cut estava starvando a GPU a 0% util). Lançamento via `nohup setsid` (o `pkill -f`
+  com padrão que casava o próprio shell SSH matava o launch — corrigido).
 - App do microfone (`training/mic_transcribe.py`) reescrito de segmentação-por-pausa (VAD)
   para **pseudo-streaming**: janela deslizante com sobreposição + LocalAgreement-2
   (Macháček et al., ACL 2023) — não corta mais palavras na fronteira, exibe texto tentativo

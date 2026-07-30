@@ -26,7 +26,7 @@ CUDA_VISIBLE_DEVICES=0 OMP_NUM_THREADS=1 python3 zipformer/train.py \
   --phoneme-targets-json /workspace/phoneme_targets_m5.json \
   --base-lr 0.002 --lr-epochs 3 --lr-batches 5000 \
   --enable-musan 1 --enable-telephone-aug 1 --on-the-fly-feats True \
-  --num-workers 2 --max-duration 300 \
+  --num-workers 10 --max-duration 300 \
   --num-encoder-layers 2,2,3,4,3,2 \
   --feedforward-dim 512,768,1024,1536,1024,768 \
   --encoder-dim 192,256,384,512,384,256 \
