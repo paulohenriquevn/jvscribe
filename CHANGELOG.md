@@ -15,6 +15,16 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [0.8.0] - 2026-07-30
 
+### Known issues
+- `test_slow_endpoint_does_not_block_metrics` é **flaky em ~10%** nesta máquina. `[MEDIDO]`:
+  2 falhas em 8 execuções com o load do encoder de 2,3 GB, 0 em 8 sem ele, com ~1 GB de RAM
+  livre. Mecanismo: sob pressão de memória o ONNX Runtime aborta em C++ e mata o processo de
+  teste, o que aparece como `ConnectionReset` em `/metrics`. Duas correções reais no caminho
+  (dois `.expect` que envenenavam o mutex do cache de engine) reduziram de ~33% para ~10%; o
+  resíduo é ambiental. **Não foi mascarado** apontando o teste para um diretório sem modelo —
+  isso removeria a lentidão que ele existe para medir. Fix apropriado (endpoint lento
+  sintético) fica fora do escopo de M9.
+
 > **Nota de versionamento.** A regra de derivação do `cycle-release.md` dispara MAJOR quando
 > `§ Removed` não está vazio, o que daria v1.0.0. Desvio deliberado para MINOR: nenhuma API
 > pública foi removida (verificado no diff — zero `-pub fn|struct|enum`); o `§ Removed` lista

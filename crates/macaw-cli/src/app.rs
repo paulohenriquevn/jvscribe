@@ -98,7 +98,15 @@ fn speaker_label(s: Speaker) -> &'static str {
 }
 
 fn model_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../models/m0-borrowed")
+    // Honra `MACAW_MODEL_DIR` (M9): fecha o DoD "MACAW_MODEL_DIR nos dois lados", que estava
+    // implementado só no lado Python. Além de permitir apontar para outro artefato sem
+    // recompilar, é o que deixa um teste de CONCORRÊNCIA isolar-se do encoder de 2,3 GB —
+    // carregá-lo sob RAM apertada fazia o ONNX Runtime abortar em C++ e matar o processo
+    // inteiro, o que aparecia como flakiness (`[MEDIDO]` 2/8 com o load, 0/8 sem).
+    std::env::var("MACAW_MODEL_DIR").map_or_else(
+        |_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../models/m0-borrowed"),
+        PathBuf::from,
+    )
 }
 
 fn fixture_path() -> PathBuf {
@@ -473,7 +481,14 @@ fn run_bench_test(engine_cache: &Arc<Mutex<Option<AsrEngine>>>) -> String {
         Ok(g) => g,
         Err(e) => return e,
     };
-    let engine = guard.as_mut().expect("engine carregado");
+    // Segunda instância do mesmo defeito corrigido acima (M9): um `expect` aqui entra em
+    // panic SEGURANDO o mutex do cache, envenenando-o e derrubando endpoints não
+    // relacionados. `load_engine` pode devolver Ok(guard) com None quando o modelo não
+    // carregou — inclusive por pressão de memória, já que o encoder tem 2,3 GB.
+    let Some(engine) = guard.as_mut() else {
+        return "{\"ok\":false,\"msg\":\"Modelo indisponível — rode scripts/setup_model.sh\"}"
+            .to_string();
+    };
 
     let total_iters = 10usize;
     let warmup = 2usize;
