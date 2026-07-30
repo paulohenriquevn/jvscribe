@@ -22,7 +22,7 @@ twelve invalidating fallacies gates every conclusion — and show how it selecte
 head-to-head measurement rather than by reputation. Our final model attains **16.14 % WER on FLEURS
 pt_br** (read, wideband) and **23.31 % WER on CORAA** (spontaneous, wideband), measured on CPU with
 int8 inference. The central methodological contribution is a **negative-result case study**: a
-telephone-domain target (≤ 25 % WER on 8 kHz call-center audio) was **not** met, and *five* successive
+telephone-domain target (≤ 25 % WER on 8 kHz call-center audio) was **not** met, and *four* successive
 fine-tuning experiments appeared to prove that channel-augmentation fine-tuning fundamentally
 collapses a converged CTC model to near-blank output. A single controlled ablation (fine-tuning with
 **no augmentation at all**) refuted that conclusion and exposed the true cause: a **one-token
@@ -63,7 +63,7 @@ benchmark to justify a CPU claim — a discipline we make explicit in §3.
    separation, and a fallacy checklist — that we recommend for any resource-constrained ML effort.
 3. **A negative-result case study** (§6) with, we believe, broad pedagogical value: how a *silent
    partial-checkpoint-load bug* produced a fully self-consistent but **false** "fundamental limitation"
-   narrative across five experiments, and how one controlled ablation exposed it. We give the exact
+   narrative across four experiments, and how one controlled ablation exposed it. We give the exact
    failure signature and the minimal diagnostic that generalizes.
 4. **Reproducible artifacts** (§10): batch and streaming inference, a public-benchmark harness, and
    the augmentation/measurement tooling, all with tests.
@@ -291,15 +291,15 @@ The telephone Definition-of-Done was **≤ 25 % WER on 8 kHz call-center audio**
 fallacy F6 (the proxy underestimated the real channel). An honest single-speaker real-codec baseline
 put the ceiling at **~36 %**.
 
-### 6.2 The trap: five experiments that "proved" the wrong thing
+### 6.2 The trap: four experiments that "proved" the wrong thing
 
 To adapt to the channel we fine-tuned with on-the-fly telephone augmentation. It collapsed. We varied,
-across **five** experiments, the learning rate (0.006 → 0.002), the warm-start checkpoint (averaged →
+across **four** experiments, the learning rate (0.006 → 0.002), the warm-start checkpoint (averaged →
 single), the trainable parameter set (full model → frozen-encoder-body), and the augmentation
 intensity (p = 0.5 with musan → p = 0.15 without musan). **Every configuration collapsed the greedy
 decode to near-blank** (WER 97.8–100 %, near-zero correct tokens) while the *training* CTC loss looked
 healthy `[MEASURED]`. The literature made this narrative seductive: CTC's blank attractor
-(`arXiv:2105.14849`) plus aggressive augmentation is a known instability. After five consistent
+(`arXiv:2105.14849`) plus aggressive augmentation is a known instability. After four consistent
 failures we wrote — and nearly published — the conclusion that **channel-augmentation fine-tuning of a
 converged CTC is fundamentally collapse-prone, and ≤25 % is data-limited.**
 
@@ -310,7 +310,7 @@ That conclusion was **wrong in its causal claim**, and dangerously self-consiste
 The missing experiment was the **negative control**: fine-tune with **no augmentation at all**. If
 augmentation were the cause, this run should stay near ~36 %. It **also collapsed** (99.57 % WER,
 16 correct words of 3728) `[MEASURED]`. Augmentation was therefore *not* the cause — the failure was
-in the **fine-tuning setup itself**, independent of augmentation. Five experiments had all shared the
+in the **fine-tuning setup itself**, independent of augmentation. Four experiments had all shared the
 same hidden defect; only removing the *suspected* cause revealed that it was innocent.
 
 ### 6.4 The root cause: a prefix-matching loader silently randomizing the front-end
@@ -333,8 +333,8 @@ front-end in time.
 
 **The fix is one token:** add `encoder_embed` to `--init-modules`. Confirmed in the log
 (`Loading parameters with prefix encoder_embed`), the collapse vanished immediately: the corrected
-run produced real text (42.84 % → 40.50 % → 39.97 % → 39.38 % WER over checkpoints, 61 % correct
-tokens) `[MEASURED]`.
+run produced real decoded text (no longer blank): 42.84 % → 40.50 % → 39.97 % → 39.38 % WER over
+checkpoints `[MEASURED]`.
 
 ### 6.5 The honest resolution: fixed method, data-limited ceiling
 
@@ -346,14 +346,14 @@ prematurely in §6.2, but now *earned* with the correct method rather than *asse
 is the crucial epistemic difference: the number was similar; the **causal claim was completely
 different**, and only the control could tell them apart.
 
-**Figure 3 — The debugging decision tree (§6).** Five self-consistent failures did *not* prove the
+**Figure 3 — The debugging decision tree (§6).** Four self-consistent failures did *not* prove the
 mechanism; the single negative control did.
 
 ```mermaid
 flowchart TD
   P["Target: telephone WER <= 25%"] --> FT["Fine-tune with codec augmentation"]
-  FT --> C1["5 configs (LR, warm-start,<br/>frozen, aug intensity)"]
-  C1 --> COL["ALL collapse to ~98% (near-blank)<br/>while train loss looks healthy"]:::bad
+  FT --> C1["4 configs (LR 0.006/0.002, warm-start,<br/>frozen-encoder, aug p=0.15)"]
+  C1 --> COL["ALL collapse to ~98-100% (near-blank)<br/>while train loss looks healthy"]:::bad
   COL --> HYP["Tempting (wrong) conclusion:<br/>codec-aug fundamentally collapses CTC<br/>=> data-limited"]:::bad
   HYP --> CTRL["NEGATIVE CONTROL:<br/>fine-tune with NO augmentation"]:::key
   CTRL --> C2["Also collapses (99.57%)<br/>=> augmentation is NOT the cause"]:::key
@@ -386,7 +386,7 @@ xychart-beta
   greedy decode is degenerate. Gate on a **decoded metric**, not loss.
 - **Run the negative control before publishing a mechanism.** N self-consistent failures that all
   share an untested assumption prove nothing about the assumption. Removing the *suspected* cause is
-  the cheapest disambiguator; here it cost ~30 min and overturned a five-experiment conclusion.
+  the cheapest disambiguator; here it cost ~30 min and overturned a four-experiment conclusion.
 - **Pre-registered risks are worth their weight.** The data-limited outcome matched M5 Top-Risk #2
   verbatim; the register kept us honest about *which* explanation to trust once the bug was removed.
 
@@ -522,7 +522,7 @@ A small, specialized, CPU-only PT-BR ASR is achievable and *fast* (16.14 % WER o
 RTFx on a laptop) — but only if size is chosen by measurement under the deployment condition, and only
 if the pipeline is debugged against a **decoded** metric with the negative controls actually run. Our
 most transferable result is not the model but a caution: a **silent one-token configuration bug**
-manufactured a completely self-consistent, literature-supported, five-experiment "fundamental
+manufactured a completely self-consistent, literature-supported, four-experiment "fundamental
 limitation" that was simply false. The discipline that caught it — provenance labels, a decoded
 gate, and, decisively, the one missing control — is cheaper than the weeks it would have saved. The
 residual telephone gap is honestly data-limited, matching a pre-registered risk; closing it is a

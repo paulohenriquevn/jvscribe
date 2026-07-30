@@ -21,6 +21,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Saída: um .txt por áudio + transcripts.json com RTFx agregado. Medido: 9,2 min de áudio em
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
+### Fixed
+- Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
+
 ## [0.7.0] - 2026-07-30
 
 ### Changed
