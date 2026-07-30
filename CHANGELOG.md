@@ -28,6 +28,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Veredito conclusivo DoD#3 telefônico [MEDIDO]: 4 configs de codec-aug fine-tuning colapsam o
+  CTC para blank (~98-100%), enquanto o modelo entregue faz 35,53% no mesmo teste — a augmentação
+  dispara o atrator de blank. DoD#3 (≤25%) NÃO atingido; melhor honesto ~36% real-codec. Caminho
+  a ≤25% documentado como follow-up (curriculum/label-prior research + dado telefônico real).
 - Pivô do FT telefônico: full-FT + codec-aug colapsa o greedy p/ ~98% (2× medido, D2 + run
   gentil). Novo runbook `training/run_ft_freeze.sh` — encoder congelado (63M), treina só
   frontend+cabeças (~0,9M, collapse-proof). Patch de freeze via env var no train.py da instância.

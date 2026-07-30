@@ -111,3 +111,30 @@ de `ctc_loss` de treino saudável (~1,1). **Full-FT descartado como método.**
   isola "intensidade de augmentação" como causa. Decide entre "aug gentil funciona" e o veredito
   honesto de que a abordagem por FT não fecha o DoD#3 (→ follow-up: curriculum-aug research OU
   dado telefônico real).
+
+## VEREDITO CONCLUSIVO DoD#3 (2026-07-30) `[MEDIDO]`
+
+**4 configs de fine-tuning com codec-aug, TODAS colapsam o greedy para blank** (métrica D1 validada
+sã: modelo bom = 35,53% no mesmo pool):
+
+| Config | WER D1 |
+|---|---|
+| avg_124_112 (baseline, sem FT) | 35,53% ✅ |
+| full-FT LR 0,006/avg | ~98% |
+| full-FT LR 0,002/single | 97,83→98,58% |
+| encoder-freeze (frontend+cabeças) | 100% |
+| p=0,15 + musan off (aug mínima) | 97,77% |
+
+**Causa-raiz isolada:** o run M5 original SEM augmentação convergiu (avg_124_112 = 35% real-codec /
+23% wideband); adicionar augmentação telefônica dispara o atrator de blank do CTC — robusto até em
+p=0,15. **A abordagem por fine-tuning simples NÃO fecha o DoD#3 com este modelo.**
+
+### Estado honesto de M5
+- ✅ **DoD wideband** 23,31% · ✅ **DoD real-time** 34,69× RTFx.
+- ❌ **DoD#3 telefônico ≤25%: NÃO atingido.** Melhor honesto = **~36% real-codec** (modelo entregue).
+- **Follow-up (novo milestone) para ≤25%:** (a) research anti-colapso — curriculum de augmentação
+  a partir de p≈0 com ramp lento + label-prior CTC (arXiv:2406.02560); e/ou (b) **dado telefônico
+  real em escala** (o gargalo confiável, hoje ausente: Nexdata 104h comercial ou pseudo-label do
+  call center). O n-gram LM (grátis, ~10% rel) soma mas sozinho não fecha o gap.
+
+Nada aqui é declarado sem número medido. GPU pausada (sem mais experimentos — 4 colapsos = conclusivo).
