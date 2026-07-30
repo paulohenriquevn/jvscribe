@@ -149,3 +149,12 @@ ALEATÓRIO** → alimenta blank ao encoder bom → colapso, com ou sem aug (o ru
 épocas re-treinava o frontend, por isso não colapsava). **Fix: adicionar `encoder_embed` ao
 init-modules** (confirmado no log). Experimento corrigido em curso; conclusões anteriores de
 "codec-aug colapsa" RETRATADAS.
+
+## Trajetória FT corrigido (exp-m5-ft-fixed) `[MEDIDO]`
+
+Com o bug do `encoder_embed` corrigido, o FT NÃO colapsa mais (produz texto real). Trajetória D1
+(real-codec, 500 cuts): baseline sem-FT **35,53%** → ckpt-4000 **42,84%** → 8000 **40,50%** →
+12000 **39,97%**. Descendo mas **platôando ACIMA do baseline** e desacelerando (−2,34→−0,53pp).
+Leitura honesta: o FT na MESMA base (CORAA+TAGARELA) adiciona robustez a codec, não informação —
+o teto ~36% é **data-limited**. ≤25% parece improvável por esta via (aguardando épocas 2-3 +
+averaging + LM para confirmar). O fix validou o método; o limite agora é DADO, não bug.
