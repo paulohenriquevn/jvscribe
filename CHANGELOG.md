@@ -13,6 +13,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-30
+
 ### Changed
 - `codec_pool` on-the-fly agora usa torchaudio `AudioEffector` (in-process, ~21ms/cut) para
   opus baixo-bitrate, em vez de ffmpeg-subprocess (que starvava a GPU a 0% util, ~0,45 batch/s).
