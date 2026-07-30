@@ -3,7 +3,7 @@ task #20, PRD §8.1: "supervisão fonética auxiliar em camada intermediária,
 agnóstica ao decoder"). Regra 9 — NÃO reescreve o loop/loss/model do icefall; edita
 in-place `zipformer/{zipformer.py,model.py,train.py}` com substrings exatas
 (assert count==1, senão falha alto) e valida compilação — mesmo idioma de
-`patch_ctc_decode.py`/`prep_conformer_ctc_decode.py` já usados neste projeto.
+`patch_ctc_decode.py` já usado neste projeto.
 
 ⚠️ NÃO usar o `training/smoke/train_ctc.py` como base (rebaixado a smoke-only:
 bug de src_key_padding_mask ausente + cabeça ad-hoc — ver docstring do próprio

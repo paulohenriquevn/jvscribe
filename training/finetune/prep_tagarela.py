@@ -10,7 +10,7 @@ longo dos 1764 para reduzir viés de show/episódio — ver esse script para a a
 auditável).
 
 Emite `tagarela_cuts_train.jsonl.gz` + fbank 80-dim, o mesmo contrato de
-`prep_coraa.py`/`prep_mls.py`, então `zipformer/train.py --use-mux` combina os dois
+`prep_coraa.py`, então `zipformer/train.py --use-mux` combina os dois
 manifests sem modificação.
 
 Reuso (Regra 9 — sem duplicar):
@@ -142,7 +142,7 @@ def show_key(path: str) -> str:
 
 def _clamp(c):
     """Supervisão não pode exceder a duração do cut (fbank arredonda num_frames p/
-    baixo). Mesma correção de prep_coraa/prep_icefall/prep_mls — glue do lhotse."""
+    baixo). Mesma correção de prep_coraa/prep_icefall — glue do lhotse."""
     return fastcopy(c, supervisions=[
         fastcopy(sp, duration=round(c.duration - sp.start, 4))
         if sp.start + sp.duration > c.duration else sp

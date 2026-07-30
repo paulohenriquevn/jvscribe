@@ -6,7 +6,7 @@ espontânea/preparada: NURC-Recife, ALIP, SP2010, C-ORAL-BRASIL I, TEDx. É o co
 de M5 para hitar o WER espontâneo — o MLS-PT de M4 é fala lida de audiobook.
 
 Emite `cv-pt_cuts_{split}.jsonl.gz` + fbank 80-dim, o mesmo contrato de
-`prep_mls.py`/`prep_icefall.py`, então `zipformer/train.py --language pt
+`prep_icefall.py`, então `zipformer/train.py --language pt
 --cv-manifest-dir {out}` roda SEM modificação.
 
 Reuso (Regra 9 — sem duplicar):
@@ -53,7 +53,7 @@ META_CSV = "metadata_{split}_final.csv"
 
 def _clamp(c):
     """Supervisão não pode exceder a duração do cut (fbank arredonda num_frames p/ baixo).
-    Mesma correção de prep_icefall/prep_mls — glue do lhotse, não regra de negócio."""
+    Mesma correção de prep_icefall — glue do lhotse, não regra de negócio."""
     return fastcopy(c, supervisions=[
         fastcopy(sp, duration=round(c.duration - sp.start, 4))
         if sp.start + sp.duration > c.duration else sp

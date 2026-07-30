@@ -27,7 +27,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Correção de rigor no paper: número de experimentos de fine-tune colapsados alinhado à fonte medida (quatro configs codec-aug, não cinco) e remoção de precisão não-medida ("61% correct tokens").
 
 ### Removed
-- Reorganização FAANG (fase 1): removidos 8 scripts/runbook M4-superseded e one-offs de `training/` (prep_mls, prep_nemo, prep_conformer_ctc_decode, patch_ctc_decode, resume_tagarela_feats, download_tagarela_subset, gen_phonemes, run_pilot_icefall) + 3 testes órfãos + 2 arquivos `results/` marcados STALE-DO-NOT-USE.
+- Reorganização FAANG (fase 1): removidos 5 scripts/runbook M4-superseded e one-offs de `training/` (prep_mls, prep_nemo, prep_conformer_ctc_decode, resume_tagarela_feats, run_pilot_icefall) + 3 testes órfãos + 2 arquivos `results/` marcados STALE-DO-NOT-USE.
 
 ### Changed
 - Reorganização FAANG (fase 2): reestruturado `training/` por pipeline — `finetune/` (prep+treino), `batch/` (transcrição+benchmark), `realtime/` (demo mic), `eval/` (medição telefônica). Um `training/conftest.py` preserva os imports por nome; a suíte agora roda de qualquer diretório (antes exigia `PYTHONPATH=training`).

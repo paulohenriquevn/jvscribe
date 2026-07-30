@@ -6,6 +6,14 @@ goal: Reestruturar training/ por pipeline e remover artefatos-ruído, mantendo a
 
 # Plan: Reorganização FAANG-level do repositório Macaw Voice
 
+> **Version 1.3** — **CORREÇÃO no /review (fresh-eyes pegou wiring cross-linguagem):** `patch_ctc_decode.py`
+> (invocado por `run_zipformer_ctc.sh:23`), `download_tagarela_subset.py` (pré-requisito documentado em
+> `prep_tagarela.py`) e `gen_phonemes.py` (gera `phoneme_targets.json` do phoneme head vivo) **NÃO são
+> ruído** — são helpers vivos da pipeline finetune. Restaurados em `finetune/` (+ `test_gen_phonemes.py`).
+> Lista final de deleção: **5 scripts** (prep_mls, prep_nemo, prep_conformer_ctc_decode,
+> resume_tagarela_feats, run_pilot_icefall.md) + **2 testes órfãos** (test_prep_nemo, test_prep_mls) + 2 STALE.
+> A guarda EC-1 (só `import` Python) não via invocação shell/prosa — lição incorporada.
+>
 > **Version 1.2** — **CORREÇÃO no implement (a guarda EC-1 disparou):** `prep_icefall.py` **NÃO é
 > ruído** — `prep_coraa.py:46` e `prep_tagarela.py:70` importam `prep_icefall.normalize_ptbr` (audit D2).
 > Reclassificado de *deletar* → **manter + mover para `finetune/`**; seu teste `test_prep_icefall.py`
