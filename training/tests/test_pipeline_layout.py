@@ -6,6 +6,10 @@ import pathlib
 
 TRAIN = pathlib.Path(__file__).resolve().parents[1]
 PIPES = ("finetune", "batch", "realtime", "eval")
+# `common` é o shared kernel (M9/T3.1): é o ÚNICO destino permitido para import
+# cross-pipeline. A regra ficou mais forte — antes ela era contornada por cópia, que
+# é invisível para ela (o colapso CTC acabou replicado 7×).
+SHARED = "common"
 
 
 def _module_home():
@@ -61,3 +65,64 @@ def test_no_cross_pipeline_imports():  # EC-3
                 if n in home and home[n] != pipe:
                     offenders.append(f"{pipe}/{f.name} importa `{n}` (vive em {home[n]}/)")
     assert not offenders, "imports cross-pipeline (quebram standalone): " + "; ".join(offenders)
+
+
+# --- M9/T3.1+T3.3 — o shared kernel e o buraco que a guarda não via -----------------
+
+
+def test_import_de_common_e_permitido():
+    """`common/` é o destino legítimo do conhecimento compartilhado.
+
+    Sem ele, a regra "nenhum import cross-pipeline" empurrava para a cópia — o colapso CTC
+    acabou replicado 7× e `normalize_ptbr` 5×, com semânticas incompatíveis.
+    """
+    import ctc  # vive em training/common/, exposto pelo conftest
+
+    assert ctc.collapse([0, 5, 5, 0, 3]) == [5, 3]
+
+
+def test_common_nao_importa_de_pipeline():
+    """A dependência é unidirecional: pipelines → common, nunca o contrário."""
+    home = _module_home()
+    offenders = []
+    for f in (TRAIN / SHARED).glob("*.py"):
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            mods = []
+            if isinstance(node, ast.Import):
+                mods = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                mods = [node.module.split(".")[0]]
+            for m in mods:
+                if m in home:
+                    offenders.append(f"{SHARED}/{f.name} importa `{m}` (vive em {home[m]}/)")
+    assert not offenders, "common/ não pode depender de pipeline: " + "; ".join(offenders)
+
+
+def test_modulo_de_pipeline_nao_pode_viver_fora_da_arvore():
+    """Fecha o buraco por onde as cópias escaparam.
+
+    A guarda vigiava apenas `training/`. Cópias byte-idênticas de `decode_onnx_local.py` e
+    `mic_transcribe.py` foram parar em `models/m5-final-medium-phoneme/` — invisíveis para
+    ela. Hoje são idênticas; a divergência é questão de tempo.
+    """
+    import subprocess
+
+    repo = TRAIN.parent
+    # Só arquivos VERSIONADOS: a guarda protege o repositório, e diretórios gitignored
+    # (models/, data/) são artefatos locais do operador, não parte do contrato do repo.
+    tracked = subprocess.run(
+        ["git", "ls-files", "*.py"], cwd=repo, capture_output=True, text=True, check=True
+    ).stdout.split()
+    # `__init__.py` é marcador de pacote, não módulo de pipeline — casaria por stem em qualquer
+    # pacote do repo.
+    known = {n for n in _module_home() if n != "__init__"}
+    known |= {f.stem for f in (TRAIN / SHARED).glob("*.py") if f.stem != "__init__"}
+    offenders = [
+        rel
+        for rel in tracked
+        if not rel.startswith("training/") and pathlib.Path(rel).stem in known
+    ]
+    assert not offenders, (
+        "módulo de pipeline duplicado fora de training/: " + "; ".join(sorted(offenders))
+    )

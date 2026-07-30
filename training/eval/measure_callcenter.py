@@ -56,14 +56,10 @@ def load_tokens(path):
 
 
 def greedy(lp, id2tok):
-    ids = lp.argmax(-1)[0]
-    toks, prev = [], -1
-    for t in ids:
-        t = int(t)
-        if t != prev and t != 0:
-            toks.append(t)
-        prev = t
-    return "".join(id2tok.get(i, "") for i in toks).replace("▁", " ").strip()
+    """Delega ao shared kernel (M9/T3.1) — equivalência medida antes da migração."""
+    import ctc
+
+    return ctc.greedy_text(lp[0], id2tok)
 
 
 def main():

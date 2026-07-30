@@ -8,7 +8,9 @@ import sys
 import pathlib
 
 _ROOT = pathlib.Path(__file__).parent
-for _pipe in ("finetune", "batch", "realtime", "eval"):
+# `common` é o shared kernel (M9/T3.1) — único destino permitido para import
+# cross-pipeline pela guarda de layout.
+for _pipe in ("finetune", "batch", "realtime", "eval", "common"):
     _p = str(_ROOT / _pipe)
     if _p not in sys.path:
         sys.path.insert(0, _p)

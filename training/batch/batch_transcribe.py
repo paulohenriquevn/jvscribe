@@ -20,6 +20,8 @@ from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
+
+import ctc  # shared kernel (training/common)
 from lhotse import Fbank, FbankConfig
 
 SR = 16000
@@ -39,15 +41,12 @@ def load_tokens(path: str) -> dict[int, str]:
 
 
 def greedy(log_probs_row: np.ndarray, valid_len: int, id2tok: dict[int, str]) -> str:
-    """Colapso CTC greedy de UMA linha (T,V), usando só os `valid_len` frames válidos."""
-    ids = log_probs_row[:valid_len].argmax(-1)
-    toks, prev = [], -1
-    for t in ids:
-        t = int(t)
-        if t != prev and t != BLANK:
-            toks.append(t)
-        prev = t
-    return "".join(id2tok.get(i, "") for i in toks).replace(WORD_START, " ").strip()
+    """Colapso CTC greedy de UMA linha (T,V), usando só os `valid_len` frames válidos.
+
+    Delega ao shared kernel (M9/T3.1). A equivalência com a implementação anterior foi
+    medida antes da migração — ver `training/tests/test_ctc_equivalence.py`.
+    """
+    return ctc.greedy_text(log_probs_row, id2tok, valid_len)
 
 
 def decode_audio(path: str, sr: int = SR) -> np.ndarray:

@@ -33,6 +33,15 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   11,5s = **47,8× RTFx** em CPU. 7 testes (incl. smoke ponta-a-ponta).
 
 ### Added
+- `training/common/` — shared kernel das pipelines (M9/T3.1). `ctc.py` consolida o colapso CTC
+  greedy que estava replicado em 5 arquivos. A consolidação só foi feita **depois de medir** a
+  equivalência (`training/tests/test_ctc_equivalence.py`): o laço de colapso é idêntico entre
+  as cópias; o que divergia era a detokenização — 4 usam `join + replace("▁"," ")` e
+  `measure_realcodec` usa `sp.decode()`. As duas convenções ficaram como funções distintas e
+  nomeadas, em vez de uma unificação cega que mudaria um número publicado.
+- Guarda de layout mais forte (M9/T3.3): import cross-pipeline agora é permitido **apenas** a
+  partir de `common/`, e a varredura passou a cobrir todo arquivo versionado — antes ela via
+  só `training/`, e por isso não enxergava as cópias que escaparam para fora da árvore.
 - CI com dois jobs (M9/T2.3): `test-model-free` (obrigatório, runner limpo, sem nenhum
   artefato de modelo) e `test-with-artifact` (condicional, roda os testes `#[ignore]`).
   Separar as camadas elimina o falso verde por **design** em vez de detectá-lo por relatório —
