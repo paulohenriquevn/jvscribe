@@ -22,6 +22,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `training/tests/test_mic_transcribe.py` (LocalAgreement + colapso CTC).
 
 ### Added
+- Pool de codecs telefônicos realistas (`scripts/corpus/codec_pool.py`) — G.711 μ/a (audioop),
+  GSM-FR e Opus baixo-bitrate (ffmpeg em pipes, sem WAV em disco), amostrável por pesos. Substitui
+  o G.711-fixo que causava o platô de 8 kHz (ADR D3/D4 do plano m5-8khz). 7 testes.
 - Plano da fatia que fecha o DoD#3 telefônico
   (`knowledge-base/plans/m5-8khz-telephone-wer-plan.md`) — FT gentil corrigido + codec-pool
   realista + n-gram LM + métrica CORAA mono-falante real-codec. plan-confidence
