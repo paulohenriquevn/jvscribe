@@ -13,6 +13,31 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added
+- Teto de threads no runtime Rust (M6/R1): `AsrEngine::load` passa a chamar
+  `with_intra_threads`, default 2, override por `MACAW_THREADS`. Antes o ONNX Runtime
+  reivindicava todos os 12 cores lógicos desta máquina, contra um orçamento declarado de
+  ≤ 2 P-cores (o produto divide a CPU com um softphone).
+
+### Fixed
+- **Medição de RTFx corrigida por método** (M6): a comparação que sugeria o runtime Rust
+  lento era inválida — confrontava o RTFx do Rust (pipeline completo: fbank + inferência +
+  decode) com o do `bench_rtfx.py` (só inferência). É a falácia § 3 #11 da
+  `asr-evidence-discipline.md`. `[MEDIDO]` 2026-07-30, mesma clip de 17,76 s, mesmo pipeline,
+  2 threads: **Python 5,7–8,0× (mediana 6,7)** vs **Rust 3,0–14,7× (mediana 6,9)** — os dois
+  runtimes são indistinguíveis, e ambos ficam colados no piso de 6× do RNF-07 nesta máquina
+  sob carga.
+
+### Known issues
+- Os RTFx de 41–90× registrados em `training/results/m6-realtime-current-model.md` vêm de
+  medição **de componente** em máquina ociosa. Sob pipeline completo e carga real, o número
+  desta máquina é ~6–7×. O `m6-realtime-current-model.md` precisa ser reetiquetado.
+- `models/current` (symlink de M9/T1.3) aponta para um diretório cujo modelo se chama
+  `model.int8.onnx`, enquanto `batch_transcribe.py` tem default `m5_avg.int8.onnx`. Os dois
+  artefatos usam nomes diferentes e a unificação não foi feita.
+
 ## [0.8.0] - 2026-07-30
 
 ### Known issues

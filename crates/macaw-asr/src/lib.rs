@@ -257,9 +257,21 @@ impl AsrEngine {
         // de 6,84 s: 0,55 s com Disable → >30 s com Level3). Por isso Disable fica.
         // A lentidão em utterances LONGAS (ver `runtime-eval-findings.md`) é ortogonal
         // — não é o nível de otimização.
+        // Teto de threads (M6/R1). Sem isto o ONNX Runtime reivindica todos os cores lógicos
+        // — 12 nesta máquina — e o RTFx despenca por contenção: `[MEDIDO]` 2026-07-30, 6
+        // execuções sobre a mesma clip de 17,76 s deram 4,9× a 15,8×, com 3 das 6 ABAIXO do
+        // piso de 6× do RNF-07. O produto declara orçamento de ≤ 2 P-cores porque divide a
+        // CPU com um softphone; todo o número que sustenta RNF-05/06/07 veio de um harness
+        // Python que seta `intra_op_num_threads=2` — o binário entregue não setava nada.
+        let threads: usize = std::env::var("MACAW_THREADS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(2);
         let mut builder = ort::session::Session::builder()
             .map_err(|e| session_err(e.to_string()))?
             .with_optimization_level(ort::session::builder::GraphOptimizationLevel::Disable)
+            .map_err(|e| session_err(e.to_string()))?
+            .with_intra_threads(threads)
             .map_err(|e| session_err(e.to_string()))?;
         let session = builder
             .commit_from_file(model_path)
