@@ -13,6 +13,27 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Removed
+- **`train_phoneme_small.log` (55 MB) removido** — o GitHub avisou no push que passa do limite
+  recomendado de 50 MB. Eram **480.955 linhas**, das quais **49,2% eram `FutureWarning`
+  repetidos** do torch e apenas **1.410 (0,29%) carregavam métrica**.
+  O sinal foi extraído para `train_phoneme_small.metrics.log` (356 KB) antes de descartar o
+  resto — não é apagar evidência, é separar sinal de ruído. Nenhuma conclusão dependia das
+  479.545 linhas restantes: o que sustenta o número da ablação são os `recogs-*`, dos quais
+  WER e CER são recomputáveis.
+  Diretório: 56 MB → 1,3 MB. Documentado em
+  `jvscribe/results/m4-phoneme-ablation/README.md`.
+
+### Added
+- Regra no `.gitignore` para `train_*.log` — logs de treino brutos não são versionados; versione
+  as métricas extraídas.
+
+### Notes
+- ⚠️ **A remoção não apaga o arquivo do histórico.** Todo clone continua baixando os 55 MB do
+  commit que o introduziu. Apagar de verdade exige `git filter-repo` + force-push, que as
+  regras do projeto proíbem em `develop`.
+
+
 ### Changed
 - **Todas as menções a "macaw" passam a ser "jvscribe"** — 25 arquivos. Duas eram interface,
   não texto, e receberam tratamento próprio:

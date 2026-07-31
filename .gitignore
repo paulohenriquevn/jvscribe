@@ -72,3 +72,7 @@ training/results/**/_eval_wavs/
 
 # profiles do ONNX Runtime (enable_profiling) — artefato de medição, não fonte
 onnxruntime_profile__*.json
+
+# Logs de treino brutos: o sinal cabe em <1% das linhas. Extraia as métricas
+# (grep -E 'loss|Epoch|WER') e versione só isso.
+train_*.log
