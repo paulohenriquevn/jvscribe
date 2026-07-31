@@ -29,6 +29,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E0 do protocolo do portão: `common/ctc.greedy_palavras`** — confiança por palavra (margem
+  top-1 sobre top-2, em nats) extraída do **mesmo** colapso que já produz o texto. `[MEDIDO]`
+  custo **+0,368 ms absolutos = +0,31%** do decode, contra uma predição pré-registrada de < 2%.
+  **O desenho do plano foi refutado durante a execução**: ele previa `greedy_text` virar invólucro
+  da função nova, mas o `tokens.txt` do artefato tem o token id **7 == `'▁'`** — emitido, vira
+  espaço solto e `detok_pieces` produz `"a  b"` onde uma junção por palavras produziria `"a b"`.
+  Como `greedy_text` tem **seis chamadores de produção**, isso teria alterado todo WER publicado
+  (risco R4). O contrato passou a ser `[p.texto for p in greedy_palavras(x)] ==
+  greedy_text(x).split()` — exato nos dois casos e sem tocar em nada. Verificado contra **300
+  utterances reais**: 0 divergências; saída do `batch_transcribe` byte-idêntica.
+  Evidência: `wiki/medicoes/e0-instrumento-de-confianca.md`.
+
+### Added
 - **`knowledge-base/plans/portao-de-confianca-plan.md`** — protocolo experimental, não plano de
   construção: cinco fases, cada uma com **predição pré-registrada** e **critério de morte**
   declarados antes de rodar. O motivo de ser protocolo é um número: o teto medido do caminho de

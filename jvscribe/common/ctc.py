@@ -16,6 +16,7 @@ mão no próprio teste, e proíbe que as cópias voltem.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 # O id do símbolo blank no vocabulário do modelo. Declaração ÚNICA: estava replicado em
@@ -55,3 +56,95 @@ def detok_pieces(ids: Sequence[int], id2tok: dict[int, str]) -> str:
 def greedy_text(log_probs_row, id2tok: dict[int, str], valid_len: int | None = None) -> str:
     """Atalho `(T,V) → texto` com a convenção `join + replace`."""
     return detok_pieces(greedy_ids(log_probs_row, valid_len), id2tok)
+
+
+@dataclass(frozen=True)
+class Palavra:
+    """Uma palavra do decode e a confiança que o modelo teve ao emiti-la.
+
+    `margem` é `log P(top-1) − log P(top-2)` em nats, reduzida ao **mínimo** entre os tokens da
+    palavra: o elo mais fraco. `[MEDIDO]` sobre FLEURS pt_br (n=100): palavras corretas têm
+    mediana 6,18 e as erradas 1,32 — a τ=1,0 o corte contém 49,8% dos erros sinalizando 10,3%
+    das palavras, precisão 4,8× a taxa base.
+    """
+
+    texto: str
+    margem: float
+
+
+def greedy_palavras(
+    log_probs_row,
+    id2tok: dict[int, str],
+    valid_len: int | None = None,
+    blank: int = BLANK,
+) -> list[Palavra]:
+    """`(T,V)` → palavras com confiança, **sem tocar** no texto que `greedy_text` produz.
+
+    A confiança sai de graça: o `argmax` já percorre o eixo do vocabulário, e o segundo colocado
+    custa uma partição parcial no mesmo passo. Nenhum modelo extra, nenhuma memória extra.
+
+    ⚠️ **A invariante que fecha o risco R4** (`knowledge-base/plans/portao-de-confianca-plan.md`)
+    é verificável e está em `tests/test_ctc_palavras.py`::
+
+        [p.texto for p in greedy_palavras(x)] == greedy_text(x).split()
+
+    O plano previa `greedy_text` virar invólucro desta função. Foi **refutado na execução**: o
+    vocabulário canônico tem o token id 7 == `'▁'`; emitido, ele vira espaço solto e
+    `detok_pieces` produz `"a  b"` enquanto uma junção por palavras produziria `"a b"`. Comparar
+    por `.split()` é exato nos dois casos, e `greedy_text` — com seus seis chamadores de
+    produção — não é tocada.
+
+    A margem de um token que dura vários frames é a do **primeiro** frame da emissão. É a regra
+    com que os números do protocolo foram medidos; trocar por "máximo sobre o span" muda a
+    distribuição e invalidaria as predições pré-registradas de E1/E2.
+    """
+    import numpy as np
+
+    linha = np.asarray(log_probs_row[:valid_len] if valid_len is not None else log_probs_row)
+    if linha.size == 0:
+        return []
+
+    ids = linha.argmax(-1)
+    if linha.shape[-1] < 2:
+        # Vocabulário degenerado: não há segundo colocado. Margem infinita é a leitura honesta
+        # (nada compete), e não um IndexError no meio de uma corrida.
+        margens = np.full(len(ids), np.inf)
+    else:
+        topo = np.partition(linha, -2, axis=-1)
+        margens = topo[..., -1] - topo[..., -2]
+
+    palavras: list[Palavra] = []
+    pecas: list[str] = []
+    ms: list[float] = []
+    prev = -1
+
+    def _fechar() -> None:
+        if not pecas:
+            return
+        texto = detok_pieces_bruto(pecas)
+        if texto:
+            palavras.append(Palavra(texto, min(ms)))
+
+    for t, tid in enumerate(ids):
+        tid = int(tid)
+        if tid == prev or tid == blank:
+            prev = tid
+            continue
+        prev = tid
+        peca = id2tok.get(tid, "")
+        if peca.startswith(WORD_START) and pecas:
+            _fechar()
+            pecas, ms = [], []
+        pecas.append(peca)
+        ms.append(float(margens[t]))
+    _fechar()
+    return palavras
+
+
+def detok_pieces_bruto(pecas: Sequence[str]) -> str:
+    """Detokeniza um GRUPO de peças pela mesma convenção de `detok_pieces`.
+
+    Existe para que a segmentação em palavras não reimplemente a regra de detokenização — a
+    duplicação que este kernel foi criado para eliminar.
+    """
+    return "".join(pecas).replace(WORD_START, " ").strip()

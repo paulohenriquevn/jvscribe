@@ -45,7 +45,7 @@ Estado em `git 9a30c66`, `develop`, 501 testes verdes, ruff `F,E9,B` limpo.
 
 | arquivo | LoC hoje | papel hoje | mudança prevista |
 |---|---|---|---|
-| `jvscribe/common/ctc.py` | 57 | colapso greedy: `collapse`, `greedy_ids`, `detok_pieces`, `greedy_text` | **+** `greedy_palavras` devolvendo texto **e** margem; `greedy_text` vira invólucro |
+| `jvscribe/common/ctc.py` | 57 | colapso greedy: `collapse`, `greedy_ids`, `detok_pieces`, `greedy_text` | ✅ **E0** — `+ greedy_palavras`, `+ Palavra`, `+ detok_pieces_bruto`. `greedy_text` **NÃO** tocada (ver revisão abaixo) |
 | `jvscribe/tests/test_ctc_equivalence.py` | — | guarda a equivalência do colapso | **+** RED de que texto novo == texto antigo em toda fixture |
 | `jvscribe/probes/portao_correcao_probe.py` | — | **novo** | o experimento das fases E2/E3 |
 | `jvscribe/tests/test_portao_confianca.py` | — | **novo** | RED do portão e do corretor (lógica pura) |
@@ -83,6 +83,14 @@ por isso `greedy_palavras` é adição, não substituição.
 função ao kernel exige que ela seja domínio de kernel — a confiança é propriedade do **mesmo
 colapso**, logo é (D1). O probe vive em `jvscribe/probes/`, cujo domínio declarado é hipótese de
 pesquisa que pode dar nulo.
+
+> **Revisão 1 (E0, 2026-07-31) — o passo 5 do loop em ação.** O plano previa `greedy_text` virar
+> invólucro de `greedy_palavras`. **Refutado antes da primeira linha de código:** o `tokens.txt`
+> do artefato tem o token id **7 == `'▁'`**; emitido, ele vira espaço solto e `detok_pieces`
+> produz `"a  b"` enquanto uma junção por palavras produziria `"a b"`. Como invólucro,
+> `greedy_text` mudaria de saída — e ela tem seis chamadores de produção (R4). O contrato passou
+> a ser `[p.texto for p in greedy_palavras(x)] == greedy_text(x).split()`, que é exato nos dois
+> casos e não toca em nada. Verificado contra **300 utterances reais**: 0 divergências.
 
 ## Prior Art & Related Work
 
@@ -243,6 +251,11 @@ def test_palavra_sem_token_emitido_nao_entra():
 **Predição pré-registrada:** custo adicional < 2% do tempo de decode (a margem é uma subtração
 sobre um `argsort` que já acontece).
 **Critério de morte:** RTFx cai fora do IC95% → reverter e reavaliar o desenho.
+
+> ✅ **E0 CONCLUÍDA — predição CONFIRMADA.** `[MEDIDO]` +0,368 ms absolutos = **+0,31%** do decode
+> (< 2%). Colapso medido isolado da sessão ONNX, que tem variância de 2× nesta máquina e
+> mascararia o efeito. 514 testes verdes, ruff limpo, saída do `batch_transcribe` **byte-idêntica**
+> (md5 `5329b677…`). Evidência: [`wiki/medicoes/e0-instrumento-de-confianca.md`](../../wiki/medicoes/e0-instrumento-de-confianca.md).
 
 ---
 
