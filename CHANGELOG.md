@@ -29,6 +29,15 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **`knowledge-base/plans/portao-de-confianca-plan.md`** — protocolo experimental, não plano de
+  construção: cinco fases, cada uma com **predição pré-registrada** e **critério de morte**
+  declarados antes de rodar. O motivo de ser protocolo é um número: o teto medido do caminho de
+  correção é ~8% dos erros (63% substituições × 50% sinalizados × 26% alcançáveis), e teto de 8%
+  não justifica construir antes de medir. Registra a decisão que a medição refutou — gatear o
+  beam pela confiança destruiria o benefício, porque o portão pega só 32% da classe que o LM
+  conserta. Resultado nulo é entregável por contrato (D5).
+
+### Added
 - **`wiki/medicoes/composicao-do-erro-e-o-que-cada-remedio-alcanca.md`** — onde está a massa do
   erro, e qual ferramenta alcança cada parte. `[MEDIDO]` FLEURS pt_br, n=100, 2552 palavras, WER
   16,07% (bate com os 15,99% publicados — o instrumento se valida antes do resultado): o erro se
