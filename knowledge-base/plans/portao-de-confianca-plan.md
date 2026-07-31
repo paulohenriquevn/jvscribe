@@ -48,7 +48,8 @@ Estado em `git 9a30c66`, `develop`, 501 testes verdes, ruff `F,E9,B` limpo.
 | `jvscribe/common/ctc.py` | 57 | colapso greedy: `collapse`, `greedy_ids`, `detok_pieces`, `greedy_text` | ✅ **E0** — `+ greedy_palavras`, `+ Palavra`, `+ detok_pieces_bruto`. `greedy_text` **NÃO** tocada (ver revisão abaixo) |
 | `jvscribe/tests/test_ctc_equivalence.py` | — | guarda a equivalência do colapso | **+** RED de que texto novo == texto antigo em toda fixture |
 | `jvscribe/probes/portao_correcao_probe.py` | — | **novo** | ✅ **E1** — modo `--curva`; `--corrigir` chega em E2 |
-| `jvscribe/tests/test_portao_confianca.py` | — | **novo** | ✅ **E1** — 11 testes da lógica pura |
+| `jvscribe/tests/test_portao_confianca.py` | — | **novo** | ✅ **E1/E2** — 24 testes da lógica pura |
+| `jvscribe/probes/beam_ctc_probe.py` | — | **novo** | ✅ **E4** — beam de prefixo CTC, para medir custo |
 
 Nada em `common/` é promovido antes da fase que o autoriza (D2).
 
@@ -433,6 +434,20 @@ couber no RNF-07, o ganho é irrelevante.
 **Predição pré-registrada:** 10–20% relativo `[LITERATURA]` (`CLAUDE.md`), ou seja WER 16,07% →
 12,9–14,5%.
 **Critério de morte:** nenhum beam ≥ 2 mantém RTFx ≥ 6× → registrar o custo e parar.
+
+> ✅ **E4 — metade do CUSTO concluída; o portão passa no lote.** `[MEDIDO]` beam 8 custa
+> **15,2 ms** contra **134 ms** de encoder: RTFx **45,77×**, a 7,6× do limiar. Beam 2 e 4 idem.
+> **O argumento de custo contra o beam está morto no caminho de lote** — era a objeção principal
+> a explorar os 36,6% de `real_word_hyp`.
+>
+> ⚠️ **`[DESCONHECIDO]` no tempo real, e é lá que o RNF-01 vive.** § 4 da disciplina: benchmark
+> de componente não transfere (a afinidade de CPU já provou: 25% melhor isolada, 46% pior no
+> pipeline). Ao vivo o RTFx medido é **2,5× a 4,6×** contra um RNF-01 de ≥ 3×; +12% em cima de
+> 3,0× derruba abaixo do limiar.
+>
+> **A metade do GANHO não rodou:** exige LM de PT-BR, nenhum instalado
+> (`pyctcdecode`/`kenlm`/`torchaudio` ausentes) — entra com `/deps-audit` próprio, como previsto.
+> Evidência: [`wiki/medicoes/e4-custo-do-beam.md`](../../wiki/medicoes/e4-custo-do-beam.md).
 
 ---
 

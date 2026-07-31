@@ -27,6 +27,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |
 | [e2-correcao-com-portao.md](e2-correcao-com-portao.md) | A correção funciona — 0,27 p.p. — e menos do que eu previ |
+| [e4-custo-do-beam.md](e4-custo-do-beam.md) | O custo do beam não é o obstáculo — no lote. No tempo real, desconhecido |
 | [reprodutibilidade.md](reprodutibilidade.md) | O artefato publicado transcreve **e** treina |
 | [benchmarks-publicos.md](benchmarks-publicos.md) | FLEURS, CORAA, telefônico — com comando de reprodução |
 

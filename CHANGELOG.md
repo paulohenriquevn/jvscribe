@@ -29,6 +29,17 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E4 do protocolo (metade do custo): o argumento de custo contra o beam search está morto — no
+  lote.** `[MEDIDO]` beam 8 custa **15,2 ms** contra **134 ms** de encoder → RTFx **45,77×**, a
+  7,6× do limiar de 6×; beam 2 e 4 idem. Consistente com o profile publicado (`ctc_output` é 0,3%
+  do custo do modelo). Era a objeção principal a explorar `real_word_hyp`, que é **36,6%** do erro
+  e o único bloco que nenhuma outra fase toca. ⚠️ **`[DESCONHECIDO]` no tempo real**, e é lá que o
+  RNF-01 vive: ao vivo o RTFx é 2,5×–4,6× contra um requisito de ≥ 3×, e +12% em cima de 3,0×
+  derruba abaixo. § 4 da disciplina — benchmark de componente não transfere; a afinidade de CPU já
+  provou. A metade do **ganho** não rodou: exige LM de PT-BR, nenhum instalado.
+  Evidência: `wiki/medicoes/e4-custo-do-beam.md`.
+
+### Added
 - **E2 do protocolo: a correção pós-decode funciona — e menos do que a predição dizia.**
   `[MEDIDO]` a τ=1,0 (o ponto pré-registrado): WER **16,07% → 15,79%**, redução **0,27 p.p.**
   [IC95 **0,04; 0,54**], `consertou/quebrou = 6,0`. A predição era 0,3 a 1,3 p.p. — **errada por
