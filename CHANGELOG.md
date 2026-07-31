@@ -13,6 +13,42 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Fixed
+- **Nove entrypoints carregavam modelo e vocabulário sem validar se o par combina.** É a
+  proteção declarada fechada na revisão anterior, e ela existia em apenas **4 dos 13** lugares
+  que carregam o motor. As duas gerações do artefato têm 500 tokens emitíveis e **492 dos 500
+  ids mapeiam tokens diferentes**: o par errado transcreve português **plausível e errado**,
+  sem erro nenhum.
+
+  | | antes | depois |
+  |---|---|---|
+  | Entrypoints que validam o par | 4/13 | **8/8** |
+  | Implementações do parser de `tokens.txt` | 6 | **1** |
+  | Sequência de carga remontada à mão | 13 | **0** |
+
+  Afetados: `bench/bench_rtfx`, `bench/calibrate`, `bench/runtime_bench`, `bench/stress_test`,
+  `eval/measure_callcenter`, `probes/blank_penalty_probe`, `probes/tta_feature_align_probe`,
+  `realtime/mic_transcribe`.
+
+  **A causa foi fragmentação, não esquecimento**: a sequência `resolver → validar → sessão →
+  vocabulário` estava replicada em 13 entrypoints, então a validação só existia onde alguém
+  lembrou. A contagem de `def main()` foi o que revelou — 37 entrypoints, com `--model` e
+  `--tokens` declarados à mão em 8 deles.
+
+  ⚠️ **E a guarda que deveria ter pego isso enumerava 4 caminhos à mão.** Terceira vez nesta
+  sessão que uma lista escrita à mão esconde justamente o que deveria vigiar. Agora descobre
+  por AST.
+
+### Added
+- **`common/engine.py` — a sequência de carga do motor, uma vez.** `Motor.carregar` faz a
+  sequência completa; `resolver` só resolve e valida, para `bench_rtfx` e `runtime_bench`,
+  onde a configuração de sessão **é** a variável sob teste e a sessão não pode vir da fábrica.
+  Validar não é opcional; montar a sessão à mão, quando justificado, é.
+- Duas guardas em `tests/test_dominios.py`: a sequência de carga não pode ser remontada à mão,
+  e existe **um só** parser de `tokens.txt`. As 6 implementações anteriores eram equivalentes
+  `[MEDIDO]` — o que é o perigo, não o alívio: equivalentes hoje, nada garante amanhã, e só a
+  do kernel recusa vocabulário vazio (que decodifica para string vazia em silêncio).
+
 ### Changed
 - **Reorganização por domínio — o sistema tinha 7 pipelines para 15 domínios.** A divisão por
   pastas não era a divisão por domínio, e a medição mostrou o custo: **5 violações** da regra
