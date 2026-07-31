@@ -109,14 +109,33 @@ por um caminho independente.
 - A sonda de termos de domínio usa **fala sintética**, que pronuncia limpo demais, com 6 termos e
   3 vozes.
 
-## Prior art — três artigos, mapeados nas três classes
+## Prior art — quatro artigos, mapeados nas três classes
 
 | artigo | mecanismo | classe que ataca | aplica-se? |
 |---|---|---|---|
 | [`arXiv:2409.06062`](https://arxiv.org/abs/2409.06062) | retrieval por similaridade **acústica** + LLM corretor sobre texto | `non_word_hyp` + `rare_ref` | **parcialmente** |
 | [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) | dados **sintéticos** de termos raros no treino | `rare_ref` na origem | **parcialmente** |
+| [`arXiv:2509.19567`](https://arxiv.org/abs/2509.19567) | **descoberta automática** de contexto por embedding + biasing | `rare_ref` | **retrieval sim, biasing não** |
 | beam + LM (`CLAUDE.md`) | fusão com modelo de linguagem no decode | `real_word_hyp` | sim, não explorado |
 | [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) | RAG no decoder do LLM | — | **não** |
+
+
+### O padrão que os quatro desenham — e é o achado mais forte
+
+Três grupos independentes, arquiteturas e idiomas diferentes, mediram a **mesma coisa**:
+**o conhecimento externo faz o trabalho; o LLM é embalagem cara.**
+
+| grupo | ablação | sem o conhecimento externo | com ele |
+|---|---|---|---|
+| Apple `2409.06062` | LLM corretor sem/com entidades recuperadas | 6,98 → **6,90** (nada) | → **4,68** (−33%) |
+| Hitachi `2505.17410` | N-best sem/com dados sintéticos | 15,5 → **15,6** (nada) | recall 44,5 → **81,1** |
+| Samsung+CERTH `2509.19567` | embedding barato vs LLM | — | **WER melhor a 1/5 do custo** |
+
+Em nenhum dos três o LLM, sozinho, entregou algo. Isso importa para nós mais que para eles:
+**a parte que carrega o ganho é justamente a que cabe em CPU.**
+
+Corolário desconfortável, e honesto: se o ganho é o retrieval, a pergunta deixa de ser *"qual
+LLM?"* e vira *"de onde vem a lista, e o que a consome?"* — e a segunda metade é o que não temos.
 
 ### `arXiv:2409.06062` — o mais próximo de nós
 
@@ -169,6 +188,59 @@ Importa porque temos uma **cabeça de fonema auxiliar** com inventário IPA
 tentador, e este número — somado à paridade ortografia/fonema medida acima — sugere que ela
 custaria mais do que renderia.
 
+### `arXiv:2509.19567` — o contexto se descobre sozinho, e o barato ganha
+
+> Siskos, Papadopoulos, Peso Parada, Zhang, Saravanan, Drosou (CERTH + Samsung R&D UK).
+> *Retrieval Augmented Generation based context discovery for ASR*, 2025-09-23.
+
+Três coisas que só este artigo dá.
+
+**1. A latência é o argumento, não o WER.** Comparando as três estratégias plug-and-play no
+mesmo pipeline:
+
+| método | WER (TED-LIUM) | sobreposição de contexto | custo relativo |
+|---|---|---|---|
+| sem contexto | 18,9% | — | 1× |
+| **CB-RAG [250,10]** (embedding) | **16,4%** | 17,8% | **1,16×** |
+| CB-LLM (contexto por prompt) | 16,9% | 45,3% | **4,66×** |
+| CB-LLM + LLM-fix (correção pós-ASR) | 16,8% | 48,7% | **6,16×** |
+| oráculo (contexto perfeito) | 15,4% | 100% | — |
+
+O método barato tem **WER melhor** e custa **4 a 6× menos**. Em média, 83,5% menos latência que
+as alternativas com LLM.
+
+**2. A intuição sobre "recuperar as palavras certas" está errada.** O CB-RAG tem sobreposição de
+contexto muito **menor** (8,8–21,4%) que os métodos com LLM (42,6–56,1%) e ainda assim ganha em
+WER. O que dirige o ganho não é a precisão da recuperação — é o candidato certo estar **em algum
+lugar** de um conjunto maior e mais diverso. Consequência direta para nós: **uma lista de domínio
+ampla vale mais que uma lista curada**.
+
+**3. O teto está medido.** Contexto oráculo leva o TED-LIUM de 18,9% para 15,4% — **24,1%
+relativo**. O melhor método real chega a 16,4%, ou seja, captura ~55% do máximo teórico. Saber o
+teto muda a decisão de investir.
+
+E o desenho do contexto é o que mais se encaixa em call center: a consulta é o **embedding dos
+`k` segmentos anteriores** (`q_t = f(Ŷ_{t-1})`) — o contexto se descobre da própria ligação, sem
+lista fornecida por ninguém, e é causal. Medido: **k=10 bate k=100** — contexto recente e focado
+vence histórico longo.
+
+⚠️ **Mas a metade que nos falta é a que importa.** O pipeline deles assume
+`ŷ_t = A(s_t | C_t)` — um ASR que **aceita lista de contexto**. Somos greedy CTC sem entrada de
+contexto nenhuma; eles usam um reconhecedor caixa-preta que **já tinha** módulo de biasing, e a
+própria seção de trabalhos relacionados diz que as técnicas anteriores de CB exigem camadas
+próprias ou acesso ao interior do modelo. **A metade de recuperação transfere; a de biasing não
+existe aqui.**
+
+⚠️ E o sinal negativo tem de ser dito: a **correção pós-ASR foi o método mais fraco** deles.
+Isso é cautela contra o plano "correção primeiro" — com uma ressalva honesta: o LLM-fix deles
+roda sobre um ASR **já enviesado** e usa um Llama de 3B, o que não é a mesma coisa que uma
+correção por distância de edição sobre saída não enviesada.
+
+⚠️ **A razão de latência não transfere.** Os 1,02–1,36× são relativos ao ASR **deles**. O nosso
+custa `[MEDIDO]` **120 ms para 6,8 s de áudio** (RTFx 56,8×, máquina quase ociosa) — um
+denominador muito menor, então o mesmo custo absoluto de embedding pesaria uma fração bem maior.
+Qualquer adoção precisa medir aqui, não herdar a razão.
+
 ### `arXiv:2502.15264` — não se aplica
 
 > Shen, Lu, Kawai (NICT). *Retrieval-Augmented Speech Recognition Approach for Domain
@@ -186,9 +258,14 @@ avaliada e recusada neste projeto pelo mesmo motivo.
 |---|---|---|---|
 | 1 | Medir a composição do erro em **áudio real do domínio** | define tudo abaixo | bloqueado por LGPD |
 | 2 | Correção pós-hoc por distância contra lista, com falso positivo medido | ~31% (`non_word_hyp`) | horas, CPU |
-| 3 | Beam search + LM | ~37% (`real_word_hyp`) | medir contra RNF-07 |
+| 3 | Beam search + LM — **também é pré-requisito de qualquer biasing** | ~37% (`real_word_hyp`) | medir contra RNF-07 |
 | 4 | Dados sintéticos de termos raros → finetune | ~32% (`rare_ref`) | GPU |
 | ❌ | LLM na inferência · cabeça de fonema em rescoring | — | fora do orçamento; IPA é bandeira vermelha |
+
+`arXiv:2509.19567` acrescenta duas coisas ao plano: o contexto pode ser **descoberto da própria
+ligação** (embedding dos segmentos anteriores, sem lista fornecida) e o **teto está medido** —
+contexto oráculo dá 24,1% relativo, e o melhor método real captura ~55% disso. Mas a metade que
+consome o contexto (biasing no decode) não existe aqui, o que empurra o passo 3 para antes do 4.
 
 O passo 1 vem primeiro porque **esta medição é sobre FLEURS**, e a distribuição dos três terços
 no domínio real pode ser outra. Ordenar 2–4 sem ela é otimizar contra a régua errada.

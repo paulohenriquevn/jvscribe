@@ -45,8 +45,17 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) transfere a **geração sintética** (~90%
   do ganho), e o resultado **negativo** dele fica registrado: IPA no contexto quase dobrou o CER
   (14,2% → 27,3%) — relevante porque temos cabeça de fonema IPA fora do grafo.
-  [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) **não se aplica** (exige decoder
-  autoregressivo).
+  [`arXiv:2509.19567`](https://arxiv.org/abs/2509.19567) (Samsung+CERTH) mede o que faltava — o
+  **teto** (contexto oráculo dá 24,1% relativo; o melhor método real captura ~55% disso) e a
+  **latência**: retrieval por embedding custa **1,02–1,36×** contra **4,66–6,16×** dos métodos com
+  LLM, e ainda tem WER melhor. Registra também o contraintuitivo: o método barato tem sobreposição
+  de contexto MENOR (8,8–21,4% contra 42,6–56,1%) e mesmo assim ganha — lista ampla vale mais que
+  lista curada. [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) **não se aplica** (exige
+  decoder autoregressivo).
+  **O padrão entre os quatro é o achado mais forte**: três grupos independentes mediram que o
+  conhecimento externo faz o trabalho e o LLM é embalagem cara — sem o conhecimento, a ablação de
+  cada um move o número em nada (6,98→6,90; 15,5→15,6). A parte que carrega o ganho é justamente a
+  que cabe em CPU.
   Registra também um **erro de método próprio**: a primeira medição plantou termos raros numa
   amostra sintética e reportou "77,8% do erro é `rare_ref`" — isso mede o desenho da amostra, não
   o modelo. Em áudio não viciado são 31,9%.
