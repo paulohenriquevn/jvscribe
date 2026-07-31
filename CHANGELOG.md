@@ -29,19 +29,27 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
-- **`wiki/medicoes/termos-de-dominio-recall.md`** — por que **BACEN** sai errado, medido em vez de
-  suposto. `[MEDIDO]` 6 termos × 3 vozes neurais PT-BR (`edge_tts`) pela cadeia telefônica do
-  projeto: recall do termo **61%** em 8 kHz. O achado é *como* erra — `bacen` → `bacem`,
-  `pix` → `pixa`, **distância 1**. O modelo acústico acertou e escreveu errado no último
-  caractere, então o gargalo é **decoding/correção, não vocabulário** (18/18 termos são
-  emitíveis pelo BPE). A sonda de composição classifica **77,8%** [IC95 50; 100] como `rare_ref`
-  — alvo de **biasing**, porque o dicionário do sistema não contém termo de domínio.
-  Prior art avaliada: [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) (RASR) **não se
-  aplica** — exige decoder autoregressivo e somos CTC puro;
-  [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) transfere **em parte**, e o que
-  transfere é a **geração sintética** (~90% do ganho nos números do próprio artigo), não o LLM
-  corretor. Registrado também o resultado **negativo** dele: IPA no contexto quase dobrou o CER
-  (14,2% → 27,3%) — relevante porque temos uma cabeça de fonema IPA fora do grafo de inferência.
+- **`wiki/medicoes/composicao-do-erro-e-o-que-cada-remedio-alcanca.md`** — onde está a massa do
+  erro, e qual ferramenta alcança cada parte. `[MEDIDO]` FLEURS pt_br, n=100, 2552 palavras, WER
+  16,07% (bate com os 15,99% publicados — o instrumento se valida antes do resultado): o erro se
+  divide em **três terços quase iguais** — `non_word_hyp` 31,5% [25,0; 38,4] (lista/léxico),
+  `real_word_hyp` 36,6% [29,9; 43,1] (só LM alcança: `de→da`, `segundo→segunda`, `logo→longo`) e
+  `rare_ref` 31,9% [25,8; 38,8] (biasing). **Nenhuma intervenção isolada alcança mais que um
+  terço.** O falso positivo de uma correção pós-hoc é **0,49%** das palavras corretas — razão
+  ~7:1 a favor.
+  Prior art mapeada nas três classes: [`arXiv:2409.06062`](https://arxiv.org/abs/2409.06062)
+  (Apple) é o mais próximo — **ASR também CTC**, correção só sobre texto, e mede que similaridade
+  **acústica** bate semântica (84,8% contra 80,7% de recall top-1) e que **top-1 basta**, porque o
+  LLM não discrimina entre candidatos acusticamente similares; a ablação deles mostra o ganho
+  vindo do **retrieval**, não do LLM (6,98 → 6,90 sem entidades; → 4,68 com).
+  [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) transfere a **geração sintética** (~90%
+  do ganho), e o resultado **negativo** dele fica registrado: IPA no contexto quase dobrou o CER
+  (14,2% → 27,3%) — relevante porque temos cabeça de fonema IPA fora do grafo.
+  [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) **não se aplica** (exige decoder
+  autoregressivo).
+  Registra também um **erro de método próprio**: a primeira medição plantou termos raros numa
+  amostra sintética e reportou "77,8% do erro é `rare_ref`" — isso mede o desenho da amostra, não
+  o modelo. Em áudio não viciado são 31,9%.
 
 ### Fixed
 - **O rótulo `[MEDIDO]` sumia da tabela renderizada do baseline.** `run_baseline.render_report`
