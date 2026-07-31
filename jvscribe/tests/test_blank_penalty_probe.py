@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 pytest.importorskip("lhotse")
 pytest.importorskip("onnxruntime")
 from blank_penalty_probe import greedy_penalized  # noqa: E402

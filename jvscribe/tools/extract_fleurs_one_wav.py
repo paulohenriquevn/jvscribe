@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Extrai o wav 16 kHz da MESMA utterance FLEURS pt_br usada por
-`data/eval/fleurs/fleurs_one.f32` / `jvscribe/tests/fixtures/fleurs_one.txt` (consumidos por
-`crates/macaw-asr/tests/real_speech_test.rs`), para fechar o teste end-to-end
-real (wav → `jvscribe_audio::kaldi_fbank` → `AsrEngine::transcribe`) em
-`crates/macaw-asr/tests/real_speech_from_wav_test.rs`.
+`data/eval/fleurs/fleurs_one.f32` / `jvscribe/tests/fixtures/fleurs_one.txt`.
+
+Consumido originalmente pelos testes end-to-end do runtime Rust, removido em 2026-07-30
+(commit 266253f). O script permanece porque é a **proveniência reproduzível** da fixture de
+fala real — o `.f32` e o `.txt` que ele acompanha continuam versionados e em uso. Os dois
+destinos antigos (`jvscribe/results/`, `crates/`) não existem mais e foram repontados.
 
 Por que não versionamos o wav resultante: mesma decisão já registrada em
 `real_speech_test.rs` para `fleurs_one.f32` — dado derivado do FLEURS (licença
@@ -28,8 +30,8 @@ import pyarrow.parquet as pq
 import soundfile as sf
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REFERENCE_TXT = REPO_ROOT / "jvscribe" / "results" / "onnx" / "fleurs_one.txt"
-OUT_WAV = REPO_ROOT / "crates" / "macaw-audio" / "tests" / "fixtures" / "fleurs_one_16k.wav"
+REFERENCE_TXT = REPO_ROOT / "jvscribe" / "tests" / "fixtures" / "fleurs_one.txt"
+OUT_WAV = REPO_ROOT / "data" / "eval" / "fleurs" / "fleurs_one_16k.wav"   # gitignored, derivado
 
 
 def find_test_parquet() -> Path:

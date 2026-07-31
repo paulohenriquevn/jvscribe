@@ -31,13 +31,24 @@ import soundfile as sf  # noqa: E402
 from huggingface_hub import hf_hub_download  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(__file__))
+# `common/` também: `run_baseline` → `eval_wer` → `text_normalize_ptbr`. Sob pytest o
+# `jvscribe/conftest.py` cobria e a suíte ficava verde; standalone — o modo de uso deste
+# script — quebrava em ModuleNotFoundError.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "common"))
 from run_baseline import measure_baseline, render_report  # noqa: E402
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AUGMENT = os.path.join(REPO, "scripts", "telephone_augment.sh")
+# `dirname(dirname(__file__))` de `jvscribe/eval/…` é `jvscribe/`, não a raiz do repositório —
+# o nome `REPO` era enganoso e o caminho montado (`jvscribe/scripts/`) não existe desde a
+# reorganização. Resultado: este módulo, que produziu o baseline de M1, quebrava ao augmentar.
+PKG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AUGMENT = os.path.join(PKG, "corpus", "telephone_augment.sh")
 
 
 def _augment(src: str, out: str) -> None:
+    if not os.path.isfile(AUGMENT):
+        # Falha ANTES do subprocess: `bash` num caminho inexistente devolve 127 com uma
+        # mensagem que não diz o que configurar (error-handling.md § 2).
+        raise FileNotFoundError(f"cadeia de augmentação ausente: {AUGMENT}")
     r = subprocess.run(["bash", AUGMENT, src, out], capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"augmentação falhou: {r.stderr.strip()}")

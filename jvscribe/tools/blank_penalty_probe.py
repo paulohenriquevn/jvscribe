@@ -20,14 +20,22 @@ import numpy as np
 import onnxruntime as ort
 
 REPO = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(REPO / "jvscribe" / "scripts"))
+# Standalone: o `jvscribe/conftest.py` só roda sob pytest. Apontava para `jvscribe/scripts`,
+# pasta que deixou de existir — o probe quebrava em ModuleNotFoundError ao ser executado.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from tta_feature_align_probe import BLANK, build_dataset, load_id2tok, wer  # noqa: E402
 from bootstrap_wer_ci import paired_bootstrap  # noqa: E402
 from wer_core import word_edit_distance  # noqa: E402
 
 
 def greedy_penalized(logp: np.ndarray, id2tok: dict[int, str], beta: float) -> str:
-    """Greedy CTC com penalidade β no logit de blank (β=0 → greedy padrão)."""
+    """Greedy CTC com penalidade β no logit de blank (β=0 → greedy padrão).
+
+    ⚠️ Reimplementa o colapso de propósito, e não usa o shared kernel (`common/ctc.py`): a
+    penalidade é aplicada ao logit de blank **antes** do argmax, o que muda o caminho
+    escolhido. Delegar ao kernel mediria o greedy padrão — ou seja, nada do que esta sonda
+    existe para investigar.
+    """
     lp = logp.copy()
     lp[:, BLANK] -= beta
     ids = lp.argmax(axis=-1)

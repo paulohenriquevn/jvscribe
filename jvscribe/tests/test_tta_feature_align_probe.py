@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 pytest.importorskip("lhotse")  # o módulo instancia um Fbank no import
 from tta_feature_align_probe import greedy  # noqa: E402

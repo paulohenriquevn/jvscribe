@@ -10,8 +10,6 @@ import sys
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "corpus"))
 
 pytest.importorskip("scipy", reason="scipy não instalado")
 pytest.importorskip("lhotse", reason="lhotse não instalado")

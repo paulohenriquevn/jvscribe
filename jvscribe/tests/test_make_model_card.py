@@ -9,12 +9,15 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "scripts"))
 
-# Fingerprint MEDIDO pela implementação Rust (Vocab::fingerprint) em 2026-07-30 sobre
-# jvscribe/tests/fixtures/tokens-m4.txt (vocabulário da geração M4). O Python DEVE
-# reproduzi-lo bit a bit — é o teste de
-# conformidade cross-language que o blueprint recomendou.
+# Fingerprint MEDIDO pela implementação Rust (`Vocab::fingerprint`) em 2026-07-30 sobre
+# jvscribe/tests/fixtures/tokens-m4.txt (vocabulário da geração M4).
+#
+# ⚠️ Nasceu como conformidade cross-language, mas o runtime Rust saiu do repositório em
+# 2026-07-30 — hoje isto é um GOLDEN CONGELADO, não uma verificação entre duas linguagens
+# vivas. Continua valendo: o valor foi medido por uma implementação independente, então uma
+# regressão no cálculo do Python ainda é pega. O que se perdeu é a capacidade de re-derivá-lo;
+# se este teste falhar, o defeito é do Python — o golden não pode ser "atualizado" para casar.
 RUST_FINGERPRINT_RUNTIME = "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2754140212647"
 
 

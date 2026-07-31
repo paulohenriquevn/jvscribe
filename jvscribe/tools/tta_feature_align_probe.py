@@ -30,12 +30,18 @@ from lhotse import Fbank, FbankConfig
 from scipy.signal import resample_poly
 
 REPO = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(REPO / "jvscribe" / "scripts"))
-sys.path.insert(0, str(REPO / "scripts" / "corpus"))
+# Sob pytest o `jvscribe/conftest.py` já expõe as pipelines; rodando standalone (o modo de
+# uso deste probe) ele não roda, então o path é montado aqui. As entradas apontavam para
+# `jvscribe/scripts` e `scripts/corpus` — pastas que deixaram de existir na reorganização, o
+# que quebrava `python3 jvscribe/tools/tta_feature_align_probe.py` em ModuleNotFoundError.
+_PKG = Path(__file__).resolve().parents[1]
+for _pipe in ("tools", "corpus", "common"):
+    sys.path.insert(0, str(_PKG / _pipe))
 from eval_runtime_wer import normalize_ptbr, find_test_parquet  # noqa: E402
 from wer_core import word_edit_distance  # noqa: E402
 from bootstrap_wer_ci import paired_bootstrap  # noqa: E402
 from telephone_channel import apply_telephone_channel  # noqa: E402
+import ctc  # noqa: E402  — shared kernel
 
 BLANK = 0
 _FBANK = Fbank(FbankConfig(num_mel_bins=80))  # MESMO extrator do treino (prep_mls/prep_icefall)
@@ -58,13 +64,13 @@ def load_id2tok(path: Path) -> dict[int, str]:
 
 
 def greedy(logp: np.ndarray, id2tok: dict[int, str]) -> str:
-    ids = logp.argmax(axis=-1)
-    out, prev = [], -1
-    for i in ids:
-        if i != BLANK and i != prev:
-            out.append(int(i))
-        prev = i
-    return "".join(id2tok.get(i, "") for i in out).replace("▁", " ").strip()
+    """Colapso CTC greedy, delegado ao shared kernel.
+
+    Tinha implementação própria — a mesma que já apareceu 7× no repositório. A detokenização
+    aqui é `join + replace ▁`, que é exatamente a convenção do kernel, então a delegação é
+    total.
+    """
+    return ctc.greedy_text(logp, id2tok)
 
 
 def decode(sess: ort.InferenceSession, in_names, fbank: np.ndarray, id2tok) -> str:
@@ -133,7 +139,9 @@ def main() -> None:
     h_tel = [decode(sess, in_names, f, id2tok).split() for f in tel]
     h_al = [decode(sess, in_names, (f - mu_tel) / sd_tel * sd_src + mu_src, id2tok).split() for f in tel]
 
-    print(f"[MEDIDO] probe DISC-05 — TTA forward-only por alinhamento de features (n={done})")
+    # `len(refs)` e não `done`: `done` é local de `build_dataset` e levantava NameError aqui —
+    # depois de todo o decode das 3 condições, que é a parte cara do probe.
+    print(f"[MEDIDO] probe DISC-05 — TTA forward-only por alinhamento de features (n={len(refs)})")
     print(f"  1. wideband limpo   WER = {wer(refs, h_wb):6.2f}%  (teto)")
     print(f"  2. telefone CRU     WER = {wer(refs, h_tel):6.2f}%  (gap de domínio)")
     print(f"  3. telefone ALINHADO WER = {wer(refs, h_al):6.2f}%  (tratamento)")

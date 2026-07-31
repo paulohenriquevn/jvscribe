@@ -2,22 +2,44 @@
 """Phase 2: WER de um checkpoint no CORAA mono-falante degradado por CODEC REALISTA
 (métrica âncora D1). Aplica band+codec-pool on-the-fly ao áudio, fbank@16k, greedy CTC.
 Roda na CPU (CUDA_VISIBLE_DEVICES="") para não tocar a GPU."""
-import argparse, sys
-sys.path.insert(0, "/workspace/icefall/egs/commonvoice/ASR/zipformer")
-sys.path.insert(0, "/workspace")           # codec_pool + telephone_channel
+import argparse, os, pathlib, sys
 import numpy as np, torch, sentencepiece as spm
 from lhotse import load_manifest_lazy, Fbank, FbankConfig
 from scipy.signal import resample_poly
 from math import gcd
-from train import get_parser as train_parser, get_params, get_model
-from icefall.utils import write_error_stats
-import codec_pool
-from telephone_channel import apply_band
+
+# `codec_pool` e `telephone_channel` vivem em `jvscribe/corpus/` — apontavam para `/workspace`,
+# que só existe na máquina de treino. `ctc` é o shared kernel.
+_PKG = pathlib.Path(__file__).resolve().parents[1]
+for _pipe in ("corpus", "common"):
+    sys.path.insert(0, str(_PKG / _pipe))
+import codec_pool  # noqa: E402
+import ctc  # noqa: E402  — shared kernel
+from telephone_channel import apply_band  # noqa: E402
 
 SR = 16000
+# Único caminho genuinamente externo: a recipe zipformer do icefall (não é do repositório).
+# Era hardcoded em `/workspace/icefall/...`; agora falha alto e claro quando não resolve, em
+# vez de morrer num ImportError que não diz o que configurar.
+ICEFALL_ROOT_PADRAO = "/workspace/icefall"
 
 
-def build_model(ckpt, bpe, phon):
+def _importar_do_icefall(raiz: str):
+    """Importa a recipe do icefall — fail-fast com instrução, não ImportError cru."""
+    recipe = pathlib.Path(raiz) / "egs/commonvoice/ASR/zipformer"
+    if not recipe.is_dir():
+        raise FileNotFoundError(
+            f"recipe do icefall não encontrada em {recipe}. Passe --icefall-root <caminho> "
+            f"ou exporte ICEFALL_ROOT. Este script só roda onde o icefall está clonado."
+        )
+    sys.path.insert(0, str(recipe))
+    sys.path.insert(0, str(pathlib.Path(raiz).parent))
+    from train import get_parser, get_params, get_model  # noqa: E402
+    from icefall.utils import write_error_stats  # noqa: E402
+    return get_parser, get_params, get_model, write_error_stats
+
+
+def build_model(ckpt, bpe, phon, train_parser, get_params, get_model):
     p = train_parser()
     a = p.parse_args(["--use-ctc", "1", "--use-transducer", "0", "--use-phoneme-ctc", "1",
         "--phoneme-targets-json", phon, "--num-encoder-layers", "2,2,3,4,3,2",
@@ -38,15 +60,14 @@ def _rs(x, a, b):
 
 
 def greedy(logp, lens, sp):
-    ids = logp.argmax(-1)
-    outs = []
-    for i in range(ids.size(0)):
-        seq = ids[i, :lens[i]].tolist(); toks, prev = [], -1
-        for t in seq:
-            if t != prev and t != 0: toks.append(t)
-            prev = t
-        outs.append(sp.decode(toks))
-    return outs
+    """Colapso CTC greedy por linha, detokenizando com o SentencePiece.
+
+    O **colapso** é delegado ao shared kernel (`common/ctc.py`) — era reimplementado aqui. A
+    **detokenização** continua sendo `sp.decode()`: o kernel usa a convenção
+    `join + replace ▁`, e o SentencePiece resolve pieces que essa convenção não cobre. As duas
+    são legítimas; o que não podia era duplicar o colapso.
+    """
+    return [sp.decode(ctc.greedy_ids(logp[i], int(lens[i]))) for i in range(logp.shape[0])]
 
 
 def main():
@@ -54,14 +75,17 @@ def main():
     ap.add_argument("--checkpoint", required=True)
     ap.add_argument("--test", default="data/coraa/cv-pt_cuts_test.jsonl.gz")
     ap.add_argument("--bpe", default="data/lang_bpe_500/bpe.model")
-    ap.add_argument("--phon", default="/workspace/phoneme_targets_m5.json")
+    ap.add_argument("--phon", default="phoneme_targets_m5.json")
     ap.add_argument("--n", type=int, default=500)
-    ap.add_argument("--out", default="/workspace/wer_realcodec.txt")
+    ap.add_argument("--out", default="wer_realcodec.txt")
     ap.add_argument("--codec", default="pool", help="'pool' sorteia; ou nome fixo (gsm/g711a/...)")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--icefall-root", default=os.environ.get("ICEFALL_ROOT", ICEFALL_ROOT_PADRAO),
+                    help="raiz do clone do icefall (env ICEFALL_ROOT)")
     a = ap.parse_args()
 
-    m, sp = build_model(a.checkpoint, a.bpe, a.phon)
+    train_parser, get_params, get_model, write_error_stats = _importar_do_icefall(a.icefall_root)
+    m, sp = build_model(a.checkpoint, a.bpe, a.phon, train_parser, get_params, get_model)
     fb = Fbank(FbankConfig(num_mel_bins=80))
     rng = np.random.default_rng(a.seed)
     cuts = list(load_manifest_lazy(a.test))[: a.n]
