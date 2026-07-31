@@ -32,9 +32,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **Auditoria de código morto (`/loop-deadcode-audit`)**: 665 símbolos cruzados contra 2.914
   referências; **zero implementações órfãs**. Os 373 símbolos sem referência de entrada
   explicam-se integralmente — 357 são testes coletados pelo pytest, 10 são dunders, 3 são
-  passados por valor, 1 é `@property`, 1 é protocolo do Lhotse. Cobertura de inspeção 96,5%
-  (os 4 pendentes são scripts `.sh`, sem ferramenta de dead-code shell disponível).
-  `deadcode-output/` é trilha local, gitignorada como `code-review-output/`.
+  passados por valor, 1 é `@property`, 1 é protocolo do Lhotse. **Cobertura de inspeção 100%**
+  (113 arquivos: 109 `.py` + 4 `.sh`). Os shells não têm ferramenta de dead-code, então a
+  cobertura foi fechada com análise de alcance manual — nenhum script órfão, nenhuma
+  referência quebrada. `deadcode-output/` é trilha local, gitignorada como `code-review-output/`.
 
 ### Added
 - **RNF-04 exercitado pela primeira vez — soak de 30 min** (`wiki/medicoes/m6-soak-30min-rnf04.md`).
