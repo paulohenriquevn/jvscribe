@@ -125,8 +125,9 @@ def test_leitor_de_card_aceita_o_schema_antigo():
 # invocada por reflexo.
 #
 # Aconteceu comigo nesta revalidação: rodei para inspecionar e reescreveu. O conteúdo saiu
-# idêntico por sorte (o peso não tinha mudado), e `docs/LIVE-TEST.md` já registrava
-# "regenerou model_card.json" como ✅ sem ninguém notar o que "regenerou" significa.
+# idêntico por sorte (o peso não tinha mudado), e o inventário de entrypoints daquele dia
+# registrava "regenerou model_card.json" como ✅ — sem ninguém notar o que "regenerou"
+# significa.
 # ─────────────────────────────────────────────────────────────────────────────────────────
 
 

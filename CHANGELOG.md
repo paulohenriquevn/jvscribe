@@ -65,9 +65,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   cenário para o qual o script existe (`error-handling.md` § 2).
 
 ### Added
-- **`docs/COBERTURA.md`** — o mapa: cobertura por domínio e **por script**, o que cada número
-  esconde, e a lista honesta do que NÃO está coberto com o motivo de cada lacuna. `[MEDIDO]`
-  60,6% → **63,7%**, 484 testes, 38/38 entrypoints respondendo a `--help`.
+- **Cobertura medida por domínio, não estimada** `[MEDIDO]`: 60,6% → **63,4%** de linha em
+  código de produção, com os maiores ganhos onde o risco era maior — `audit` +13,5 (detectores de
+  vazamento treino/teste, que tinham zero teste), `bench` +5,3, `realtime` +6,4, `finetune` +5,1.
+  501 testes, 38/38 entrypoints respondendo a `--help` sem traceback.
 - **Testes do núcleo de `bench/`** — `_Janela.rtfx()/p99_ms()` (os dois números sobre os quais o
   veredito de RNF-04 repousa) e a ordem **round-robin** de `medir()`, que é o que impede a
   flutuação de carga de eleger um vencedor falso — o erro que este projeto já cometeu três vezes.
@@ -202,10 +203,9 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   relatório agora declara `INDETERMINADO` acima do limiar e aponta o que continua válido.
 
 ### Added
-- **`docs/LIVE-TEST.md`** — os 37 entrypoints executados de verdade, com argumentos reais.
-  Mapeia: testado sim/não · funcional ou não · utilidade real ou ruído. A prova mais forte é o
-  `live_transcribe` transcrevendo fala ao vivo pelos dois canais — nenhum teste unitário
-  demonstra isso.
+- **Os 37 entrypoints executados de verdade, com argumentos reais** — a origem dos quatro
+  defeitos corrigidos acima. A prova mais forte foi o `live_transcribe` transcrevendo fala ao
+  vivo pelos dois canais, com rótulo de falante: nenhum teste unitário demonstra isso.
 
 ### Fixed
 - **Nove entrypoints carregavam modelo e vocabulário sem validar se o par combina.** É a
@@ -286,8 +286,6 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   sem motivo documentado, e foi por isso que as 5 violações passaram. Agora enumera as nove.
 
 ### Added
-- `docs/FRAGMENTACAO.md` — o mapa domínio × arquivo com o método, o resultado e as duas
-  armadilhas de método que ele registrou.
 - **`tests/test_dominios.py` — as quatro invariantes de desenho viram teste.** Reorganizar é
   barato; manter reorganizado não é. Cada guarda corresponde a um defeito que existiu:
   cross-pipeline só a partir do kernel · um símbolo, um caminho de import · toda pipeline
