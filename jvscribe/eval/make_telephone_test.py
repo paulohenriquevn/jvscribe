@@ -23,10 +23,10 @@ from lhotse.utils import fastcopy
 from scipy.signal import resample_poly
 
 import sys
-# `telephone_channel` vive em `jvscribe/corpus`. Sob pytest o `conftest.py` cobre; standalone — o modo de
+# O canal telefônico vive em `common/audio/`. Sob pytest o `conftest.py` cobre; standalone — o modo de
 # uso deste script — quebrava em ModuleNotFoundError sem que nada na suíte falhasse.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "corpus"))
-from telephone_channel import apply_telephone_channel  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
+from audio.channel import apply_telephone_channel  # noqa: E402
 
 
 def _resample(x, sr_from: int, sr_to: int):

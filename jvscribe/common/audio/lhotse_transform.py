@@ -89,8 +89,10 @@ from lhotse.cut.mixed import MixedCut
 from lhotse.utils import fastcopy
 from scipy.signal import resample_poly
 
-from telephone_channel import apply_band, apply_telephone_channel  # noqa: F401
-import codec_pool
+# Irmãos no mesmo subpacote — import relativo, para que o módulo funcione tanto
+# importado como `audio.lhotse_transform` quanto copiado para a instância de treino.
+from .channel import apply_band, apply_telephone_channel  # noqa: F401
+from . import codecs as codec_pool
 
 
 def _resample_to(samples: np.ndarray, sr_from: int, sr_to: int) -> np.ndarray:

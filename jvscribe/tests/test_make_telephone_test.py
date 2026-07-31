@@ -33,5 +33,5 @@ def test_resample_metade_comprimento_ao_metade_sr():
 
 
 def test_reusa_apply_telephone_channel_do_m3_sem_duplicar():
-    import telephone_channel
-    assert M.apply_telephone_channel is telephone_channel.apply_telephone_channel
+    from audio import channel
+    assert M.apply_telephone_channel is channel.apply_telephone_channel

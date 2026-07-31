@@ -57,7 +57,7 @@ def test_todo_script_invocado_por_subprocess_existe():
 
 # ── As duas implementações da cadeia telefônica ──────────────────────────────────────────
 #
-# `corpus/telephone_augment.sh` (sox) e `corpus/telephone_channel.py` (audioop) implementam a
+# `common/audio/augment.sh` (sox) e `common/audio/channel.py` (audioop) implementam a
 # MESMA degradação: 16k→8k, banda 300-3400, G.711 A-law round-trip. A duplicação é deliberada
 # e documentada (o shell não arrasta numpy; o Python não arrasta sox/subprocess), mas até aqui
 # NADA provava que as duas concordam — e o baseline de M1 saiu do shell enquanto todo o resto
@@ -80,8 +80,8 @@ def test_as_duas_cadeias_telefonicas_produzem_o_mesmo_canal():
     import numpy as np
     import soundfile as sf
 
-    sys.path.insert(0, str(PKG / "corpus"))
-    from telephone_channel import apply_telephone_channel
+    sys.path.insert(0, str(PKG / "common"))
+    from audio.channel import apply_telephone_channel
 
     sr = 16000
     t = np.arange(sr) / sr
@@ -91,7 +91,7 @@ def test_as_duas_cadeias_telefonicas_produzem_o_mesmo_canal():
         entrada, saida = f"{d}/in.wav", f"{d}/out.wav"
         sf.write(entrada, x, sr)
         r = subprocess.run(
-            ["bash", str(PKG / "corpus" / "telephone_augment.sh"), entrada, saida],
+            ["bash", str(PKG / "common" / "audio" / "augment.sh"), entrada, saida],
             capture_output=True, text=True, timeout=120,
         )
         assert r.returncode == 0, f"cadeia em shell falhou: {r.stderr}"

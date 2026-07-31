@@ -6,7 +6,7 @@
 # Correções (ADR D2/D3 do plano):
 #   - base-lr 0.002 (~1/10 do treino, como manda o icefall FT)
 #   - warm-start de checkpoint ÚNICO (checkpoint-124000.pt, 24,73% wideband), NÃO o avg
-#   - codec-pool realista (GSM/Opus/G.711) via telephone_channel_transform atualizado, p=0.5
+#   - codec-pool realista (GSM/Opus/G.711) via audio.lhotse_transform atualizado, p=0.5
 #     (metade do batch fica limpa = âncora de alinhamento do CTC, antídoto ao colapso)
 #   - fp32 (--use-fp16 0) para não repetir o colapso de grad_scale sob choque de augmentação
 #   - warmup_batches=4000 já é default no train.py:709

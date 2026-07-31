@@ -3,7 +3,7 @@ ffmpeg (skip se ausente). Determinístico; sem WAV em disco (pipes)."""
 import numpy as np
 import pytest
 
-from codec_pool import sample_codec, apply_codec, POOL_DEFAULT, _ffmpeg_available
+from audio.codecs import sample_codec, apply_codec, POOL_DEFAULT, _ffmpeg_available
 
 
 def _tone(sr=16000, dur=0.5, f=1000.0):
@@ -68,7 +68,7 @@ def test_bug_real_no_torchaudio_nao_e_engolido_pelo_fallback(monkeypatch):
     se for engolido, a augmentação aplica outro codec do que o declarado e o efeito só
     aparece como WER pior semanas depois, sem nenhum erro no log.
     """
-    import codec_pool as cp
+    from audio import codecs as cp
 
     def _explode(*a, **k):
         raise ValueError("shape errado — defeito de programação, não backend ausente")
@@ -85,7 +85,7 @@ def test_backend_ausente_cai_para_ffmpeg_avisando(monkeypatch, erro):
     O fallback silencioso escondia que a máquina roda o caminho lento; o aviso torna a
     degradação de performance visível sem quebrar a execução.
     """
-    import codec_pool as cp
+    from audio import codecs as cp
 
     if not _ffmpeg_available():
         pytest.skip("ffmpeg ausente — o fallback não tem para onde cair")

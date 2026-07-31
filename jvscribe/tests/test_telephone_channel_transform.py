@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "corpus"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
 
 pytest.importorskip("lhotse", reason="lhotse não instalado")
 pytest.importorskip("soundfile", reason="soundfile não instalado")
@@ -27,8 +27,8 @@ from lhotse.audio import RecordingSet  # noqa: E402
 from lhotse.cut.mixed import MixedCut  # noqa: E402
 from lhotse.dataset.cut_transforms import CutMix, ReverbWithImpulseResponse  # noqa: E402
 
-import telephone_channel  # noqa: E402 -- import FLAT (nao `corpus.telephone_channel`):
-import telephone_channel_transform as tct  # noqa: E402
+from audio import channel as telephone_channel  # noqa: E402
+from audio import lhotse_transform as tct  # noqa: E402
 # `telephone_channel_transform.py` importa `telephone_channel` FLAT internamente
 # (mesma convencao de `make_telephone_test.py` -- ver docstring do modulo); import
 # via `corpus.telephone_channel` carregaria um 2o objeto de modulo (mesmo arquivo,

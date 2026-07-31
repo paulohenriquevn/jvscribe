@@ -2,7 +2,7 @@
 
 Orquestra a régua ponta-a-ponta: lê um manifesto de test set (transcrição
 humana, NUNCA pseudo-label — invariante `PRD.md` § 7.3), aplica a cadeia de
-augmentação telefônica (`telephone_augment.sh`), transcreve com um modelo
+augmentação telefônica (`common/audio/augment.sh`), transcreve com um modelo
 baseline, e computa WER+IC via `eval_wer`. Emite um relatório com rótulo de
 proveniência `[MEDIDO]` (`.claude/rules/asr-evidence-discipline.md` § 1).
 

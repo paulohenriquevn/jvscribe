@@ -17,7 +17,7 @@ from __future__ import annotations
 import numpy as np
 from lhotse import CutSet, RecordingSet, SupervisionSegment, SupervisionSet
 
-from corpus.telephone_channel import apply_telephone_channel
+from audio.channel import apply_telephone_channel
 
 
 def build_cutset(wav_dir: str, labels: dict[str, str]) -> CutSet:

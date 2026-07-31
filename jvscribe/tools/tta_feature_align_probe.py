@@ -35,11 +35,11 @@ REPO = Path(__file__).resolve().parent.parent.parent
 # `jvscribe/scripts` e `scripts/corpus` — pastas que deixaram de existir na reorganização, o
 # que quebrava `python3 jvscribe/tools/tta_feature_align_probe.py` em ModuleNotFoundError.
 _PKG = Path(__file__).resolve().parents[1]
-for _pipe in ("tools", "corpus", "common"):
+for _pipe in ("tools", "common"):
     sys.path.insert(0, str(_PKG / _pipe))
 from eval_runtime_wer import normalize_ptbr, find_test_parquet  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
-from telephone_channel import apply_telephone_channel  # noqa: E402
+from audio.channel import apply_telephone_channel  # noqa: E402
 import ctc  # noqa: E402  — shared kernel
 
 BLANK = 0

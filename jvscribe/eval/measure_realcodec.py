@@ -8,14 +8,12 @@ from lhotse import load_manifest_lazy, Fbank, FbankConfig
 from scipy.signal import resample_poly
 from math import gcd
 
-# `codec_pool` e `telephone_channel` vivem em `jvscribe/corpus/` — apontavam para `/workspace`,
-# que só existe na máquina de treino. `ctc` é o shared kernel.
-_PKG = pathlib.Path(__file__).resolve().parents[1]
-for _pipe in ("corpus", "common"):
-    sys.path.insert(0, str(_PKG / _pipe))
-import codec_pool  # noqa: E402
+# O canal telefônico virou `common/audio/` (é sinal, não corpus) e o `ctc` é o shared
+# kernel. Antes isto apontava para `/workspace`, que só existe na máquina de treino.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 import ctc  # noqa: E402  — shared kernel
-from telephone_channel import apply_band  # noqa: E402
+from audio import codecs as codec_pool  # noqa: E402
+from audio.channel import apply_band  # noqa: E402
 
 SR = 16000
 # Único caminho genuinamente externo: a recipe zipformer do icefall (não é do repositório).

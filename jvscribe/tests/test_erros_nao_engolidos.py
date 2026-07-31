@@ -6,7 +6,7 @@ programação que você não previu, e o programa segue com o comportamento erra
 
 Duas ocorrências reais deste repositório, ambas no caminho de DADOS, ambas invisíveis:
 
-  `corpus/codec_pool.py`      qualquer defeito trocava o codec aplicado ao dado de treino
+  `common/audio/codecs.py`      qualquer defeito trocava o codec aplicado ao dado de treino
                               pelo fallback ffmpeg, em silêncio
   `finetune/prep_tagarela.py` `TypeError`/`ValueError` eram contados como "áudio corrompido"
                               e o item descartado do corpus de treino
@@ -49,8 +49,9 @@ def _handlers_largos(arquivo: Path) -> list[tuple[int, str]]:
 
 
 def _producao():
+    # `common/audio/` é subpacote — `glob("*.py")` não desce, `rglob` sim.
     for d in ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools"):
-        for f in sorted((PKG / d).glob("*.py")):
+        for f in sorted((PKG / d).rglob("*.py")):
             if f.name not in ISENTOS:
                 yield f
 

@@ -287,4 +287,4 @@ def test_alguns_flacs_corrompidos_nao_derrubam_o_run(monkeypatch, tmp_path):
 
 
 # A guarda de `except` largo virou `test_erros_nao_engolidos.py`, do PACOTE inteiro —
-# a mesma classe apareceu em `corpus/codec_pool.py`. Escopar por arquivo era DRY ao contrário.
+# a mesma classe apareceu em `common/audio/codecs.py`. Escopar por arquivo era DRY ao contrário.

@@ -41,7 +41,7 @@ from run_baseline import measure_baseline, render_report  # noqa: E402
 # o nome `REPO` era enganoso e o caminho montado (`jvscribe/scripts/`) não existe desde a
 # reorganização. Resultado: este módulo, que produziu o baseline de M1, quebrava ao augmentar.
 PKG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AUGMENT = os.path.join(PKG, "corpus", "telephone_augment.sh")
+AUGMENT = os.path.join(PKG, "common", "audio", "augment.sh")
 
 
 def _augment(src: str, out: str) -> None:

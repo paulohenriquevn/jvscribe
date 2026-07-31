@@ -8,7 +8,7 @@ não bate 1×.
 Não testa o comportamento em runtime do datamodule (isso precisa de icefall +
 manifests reais na instância) — testa o MECANISMO de patch offline, mesmo
 idioma de `test_prep_finetune.py`. O comportamento do adapter em si (a peça
-DSP nova) é testado em `jvscribe/tests/test_telephone_channel_transform.py`
+DSP nova) é testado em `jvscribe/tests/test_audio.lhotse_transform.py`
 com `lhotse` real.
 """
 
@@ -99,7 +99,7 @@ def test_injeta_as_cinco_pecas_e_compila(tmp_path):
     prep_augment_datamodule.patch_datamodule_py(f)
     out = f.read_text()
     assert "    ReverbWithImpulseResponse,\n" in out
-    assert "from telephone_channel_transform import TelephoneChannelTransform" in out
+    assert "from audio.lhotse_transform import TelephoneChannelTransform" in out
     assert '"--enable-telephone-aug"' in out
     assert '"--rir-manifest"' in out
     assert "if self.args.rir_manifest:" in out
@@ -127,7 +127,7 @@ def test_idempotente_quando_marcador_presente(tmp_path):
     prep_augment_datamodule.patch_datamodule_py(f)  # 2a vez: marcador presente -> no-op
     assert f.read_text() == first
     assert first.count("class TelephoneChannelTransform") == 0  # nunca duplica a import
-    assert first.count("from telephone_channel_transform import TelephoneChannelTransform") == 1
+    assert first.count("from audio.lhotse_transform import TelephoneChannelTransform") == 1
 
 
 def test_falha_alto_quando_anchor_ausente(tmp_path):

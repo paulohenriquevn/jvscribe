@@ -23,7 +23,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from corpus.telephone_channel import apply_telephone_channel, TELEPHONE_SR  # noqa: E402
+from audio.channel import apply_telephone_channel, TELEPHONE_SR  # noqa: E402
 
 
 def _sine(freq: float, sr: int, dur: float = 1.0) -> np.ndarray:
