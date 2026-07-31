@@ -8,19 +8,28 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Benchmarks públicos (reprodutíveis) — modelo M5 entregue
 
-Medido com `training/batch_transcribe.py` + `training/eval_public_hf.py` (ONNX int8, CPU, greedy).
-Todo número `[MEDIDO]`.
+Medido com `jvscribe/batch/batch_transcribe.py` + `jvscribe/batch/eval_public_hf.py`
+(ONNX int8, CPU, greedy). Todo número `[MEDIDO]`.
 
 ## FLEURS pt_br (test) — fala LIDA/limpa, banda-larga
 
-`python3 training/eval_public_hf.py 100`
+`python3 jvscribe/batch/eval_public_hf.py --n 100`
 
-| Métrica | Valor |
-|---|---|
-| WER | **16,14%** |
-| acertos / subs / del / ins | 87,9% / 10,9% / 1,3% / 4,0% |
-| amostras / palavras-ref | 100 / 2552 |
-| RTFx agregado (batch, CPU) | 24,6× |
+| Métrica | Valor | (antes — régua local) |
+|---|---|---|
+| WER | **15,83%** | ~~16,14%~~ |
+| acertos / subs / del / ins | 88,2% / 10,6% / 1,3% / 4,0% | 87,9% / 10,9% / 1,3% / 4,0% |
+| amostras / palavras-ref | 100 / 2552 | idem |
+| RTFx agregado (batch, CPU) | 44,8× ⚠️ | 24,6× |
+
+**Re-medido em 2026-07-31 com a régua canônica** (`normalize_for_wer_compare`). Os 16,14%
+anteriores saíram de uma `norm()` LOCAL do próprio script, que **preservava acento** — cada
+acento errado contava como palavra inteira errada. Δ = **−0,31 p.p.**
+
+> ⚠️ **O RTFx desta tabela não vale como medição.** Ambos os valores foram obtidos com a
+> máquina sob carga (load 1,7–5,1 durante a re-medição) — `asr-evidence-discipline.md` § 5:
+> "máquina sob carga não mede". WER é determinístico e não sofre com isso; RTFx sofre. Para
+> RTFx use `jvscribe/tools/runtime_bench.py` (pareado, round-robin) em máquina ociosa.
 
 **Leitura:** em áudio de **boa qualidade banda-larga** (perfil de 128 kbps), o modelo entrega
 ~16% WER — melhor que os 23% de fala espontânea (CORAA) e muito abaixo do telefônico 8 kHz

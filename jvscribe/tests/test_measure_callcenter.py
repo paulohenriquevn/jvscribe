@@ -39,8 +39,17 @@ def test_parse_descarta_warning_e_junta_linhas():
     assert blocks == [(9, "linha um linha dois"), (31, "segundo bloco")]
 
 
-def test_normalize_remove_pontuacao_mantem_acento():
-    assert normalize("Alô? Alô! Tudo bem, é você?") == "alô alô tudo bem é você"
+def test_normalize_usa_a_regua_canonica_e_remove_acento():
+    """Este teste asseverava `"alô alô tudo bem é você"` — ele CODIFICAVA o defeito.
+
+    A régua canônica de WER (`normalize_for_wer_compare`) **remove** acento; o `normalize()`
+    local preservava. Enquanto o teste travava o comportamento errado, ele impedia a correção
+    em vez de protegê-la — um teste verde defendendo um número incomparável.
+
+    ⚠️ Consequência: o WER de call center medido antes desta mudança **não é comparável** com
+    o dos outros recortes e precisa ser re-medido (registrado no CHANGELOG).
+    """
+    assert normalize("Alô? Alô! Tudo bem, é você?") == "alo alo tudo bem e voce"
 
 
 def test_normalize_remove_mascaras_pii_e_warning():

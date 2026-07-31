@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Composição do erro do ASR: quanto é ATACÁVEL por "corrigir palavra fora do léxico"?
 
+⚠️ O `main()` depende do runtime Rust, REMOVIDO deste repositório em 2026-07-30 (commit
+266253f). O módulo fica pela proveniência da medição e porque `normalize_ptbr` continua
+importada pelos testes. Ver `tools/eval_runtime_wer.py` para o mesmo caso, documentado.
+
 Testa empiricamente a ideia (Paulo, 2026-07-26): "se a palavra existe em PT-BR não
 mexe; se não existe, corrige". Classifica cada erro de substituição do runtime contra
 um dicionário PT-BR (hashmap = /usr/share/dict/brazilian ∪ hunspell), medindo:
@@ -12,16 +16,17 @@ um dicionário PT-BR (hashmap = /usr/share/dict/brazilian ∪ hunspell), medindo
 
 Alinhamento por difflib (stdlib). Transcrição pelo runtime real (macaw-cli). `[MEDIDO]`.
 
-Uso: ORT_DYLIB_PATH=.../libonnxruntime.so python3 jvscribe/tools/analyze_error_composition.py --n 100
+Uso (histórico): ORT_DYLIB_PATH=... python3 jvscribe/tools/analyze_error_composition.py --n 100
 """
 from __future__ import annotations
 
 import argparse
 import difflib
 import io
+import pathlib
 import re
 import subprocess
-import unicodedata
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -29,15 +34,19 @@ import numpy as np
 import pyarrow.parquet as pq
 import soundfile as sf
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+# Este módulo compara ref×hyp para classificar erro → régua de COMPARAÇÃO (remove acento).
+# Rodava a régua de TREINO, que preserva — inflando o erro por acento `[MEDIDO]`.
+#
+# A régua tem de ser a MESMA nos três usos deste arquivo (léxico, ref, hyp): o léxico é
+# consultado com as palavras do hyp já normalizadas. Se o dicionário guardasse acento e o hyp
+# não, toda palavra acentuada ficaria inalcançável e um acerto viraria "palavra inexistente"
+# — o `false_flag` que esta análise existe justamente para contar.
+from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[2]
-MODEL_DIR = REPO / "jvscribe" / "results" / "onnx"
-CLI = REPO / "target" / "release" / "macaw-cli"
+CLI = REPO / "target" / "release" / "macaw-cli"   # runtime removido — ver docstring
 
-
-def normalize_ptbr(text: str) -> str:
-    text = unicodedata.normalize("NFC", (text or "").lower().strip())
-    text = re.sub(r"[^\w\sáàâãéêíóôõúçü]", " ", text, flags=re.UNICODE)
-    return re.sub(r"\s+", " ", text).strip()
 
 
 def load_lexicon() -> set[str]:
@@ -76,8 +85,15 @@ def main() -> None:
         raise SystemExit(f"léxico suspeito ({len(lex)} palavras) — cheque /usr/share/dict")
     print(f"[léxico] {len(lex)} palavras PT-BR carregadas\n")
 
+    if not CLI.exists():
+        raise SystemExit(
+            f"runtime Rust ausente ({CLI}). Removido deste repositório em 2026-07-30 "
+            f"(commit 266253f) — não há crate para `cargo build`. Faça checkout do commit "
+            f"anterior para reproduzir a medição."
+        )
     pf = pq.ParquetFile(find_test_parquet())
-    tmp = MODEL_DIR / "_eval_wavs"
+    # Era `jvscribe/results/onnx/_eval_wavs` — pasta removida junto com `results/`.
+    tmp = REPO / "data" / "eval" / "_eval_wavs"
     tmp.mkdir(parents=True, exist_ok=True)
 
     c = Counter()          # contadores de classes

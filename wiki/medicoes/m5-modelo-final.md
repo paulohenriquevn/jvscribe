@@ -64,6 +64,14 @@ eager-load + num-workers 2, encoder do M4 + heads frescos (bpe.model do M4 perdi
   `knowledge-base/discoveries/blueprints/m5-8khz-telephone-wer-blueprint.md`.
   **Caveats do 40,13%** (direciona, não conclui — § 3 #12): 9 min → IC largo; 2 interlocutores
   no mono; granularidade de 30s; máscaras de PII contam como erro.
+  ⚠️ **RESSALVA DE RÉGUA (2026-07-31, revisão de código):** os 40,13% saíram de uma
+  normalização LOCAL do `measure_callcenter.py` que **preservava acento**, enquanto a régua
+  canônica do projeto o remove — o mesmo defeito já corrigido em `eval_public_hf.py` (16,14%
+  vs 15,99%). O número **não é comparável** com os 23,31% wideband nem com os 15,99% do
+  FLEURS. O script já foi corrigido (compõe a limpeza de PII com a canônica), mas a
+  **re-medição está pendente**: o áudio de call center é local por LGPD e não está versionado.
+  A direção do achado (telefônico real é pior que o proxy bandpass) **não muda** — os dois
+  lados daquela comparação usaram a mesma régua.
 
 ## Validação real-world (qualitativa)
 

@@ -1,3 +1,6 @@
+from __future__ import annotations
+import sys
+import pathlib
 """Prepara o corpus no formato do datamodule REAL do icefall (M4 — piloto). Roda NA GPU.
 
 O ÚNICO código nosso para o piloto (o resto é a recipe real do icefall — Regra 9). Emite
@@ -14,14 +17,12 @@ Uso (na instância, HF_TOKEN no ambiente):
   python3 prep_icefall.py --out data/pt --lang pt --sources fleurs mls
 """
 
-from __future__ import annotations
 
 import argparse
 import io
 import os
 import re
 import subprocess
-import unicodedata
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -29,6 +30,12 @@ import soundfile as sf
 from lhotse import CutSet, Fbank, FbankConfig, Recording, SupervisionSegment, SupervisionSet
 from lhotse.audio import RecordingSet
 from lhotse.utils import fastcopy
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+# `normalize_train_target` PRESERVA acento — é o alvo de treino, e o modelo precisa
+# aprender a escrever com acento. NÃO trocar pela régua de comparação de WER, que os
+# remove: são duas semânticas distintas, e `common/text.py` expõe as duas de propósito.
+from text import normalize_train_target as normalize_ptbr  # noqa: E402
 
 PQ_DIR = os.environ.get("PARQUET_DIR", "/workspace/pq")
 _TOK = os.environ.get("HF_TOKEN", "")
@@ -45,11 +52,6 @@ SOURCES = {
                 text_col="transcript"),
 }
 
-
-def normalize_ptbr(text: str) -> str:
-    text = unicodedata.normalize("NFC", (text or "").lower().strip())
-    text = re.sub(r"[^\w\sáàâãéêíóôõúçü]", " ", text, flags=re.UNICODE)
-    return re.sub(r"\s+", " ", text).strip()
 
 
 def _download(repo: str, path: str, dest: str) -> str:

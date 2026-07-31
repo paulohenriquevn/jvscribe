@@ -22,8 +22,6 @@ import pytest
 pytest.importorskip("lhotse")
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "scripts"))
-sys.path.insert(0, str(REPO / "jvscribe" / "scripts"))
 
 ACENTUADO = "coração, ATENÇÃO! não é ótimo?"
 
@@ -57,14 +55,30 @@ def test_common_reproduz_exatamente_as_implementacoes_originais():
         assert normalize_train_target(amostra) == preserva_acento(amostra), amostra
 
 
-def test_as_tres_copias_da_semantica_de_treino_sao_equivalentes():
-    """Medição do inventário: 3 cópias, 1 semântica."""
-    from prep_icefall import normalize_ptbr as a
-    from eval_runtime_wer import normalize_ptbr as b
-    from analyze_error_composition import normalize_ptbr as c
+def test_cada_modulo_usa_a_regua_do_seu_proposito():
+    """Este teste asseverava que os TRÊS módulos compartilham a semântica de treino.
+
+    Eles nunca deveriam concordar. `prep_icefall` prepara o **corpus de treino** (preserva
+    acento — o modelo tem de aprender a acentuar); os outros dois **medem WER** (removem, ou
+    o acento errado conta como palavra errada). Enquanto os três casavam, o teste travava o
+    agrupamento defeituoso como se fosse o desenho — e o WER de runtime (29,92%) saiu daí,
+    incomparável com os números medidos pela régua canônica.
+
+    Medido: numa frase em que só o acento difere, a régua de treino dá 62,5% de WER onde a
+    canônica dá 0%.
+    """
+    from analyze_error_composition import normalize_ptbr as mede_erro
+    from eval_runtime_wer import normalize_ptbr as mede_wer
+    from prep_icefall import normalize_ptbr as prepara_corpus
 
     for amostra in (ACENTUADO, "ÁÉÍÓÚ ãõ çÇ", "sem acento aqui"):
-        assert a(amostra) == b(amostra) == c(amostra), amostra
+        # os dois medidores concordam entre si
+        assert mede_wer(amostra) == mede_erro(amostra), amostra
+
+    # e divergem de quem prepara corpus — exatamente no acento
+    assert prepara_corpus("coração") == "coração"
+    assert mede_wer("coração") == "coracao"
+    assert mede_erro("coração") == "coracao"
 
 
 def test_nao_existe_mais_normalize_ptbr_com_semantica_divergente():

@@ -21,6 +21,22 @@ produção (`macaw-cli transcribe` = wav → `jvscribe_audio::kaldi_fbank` → `
 → `ctc_greedy`) e computa WER real (Levenshtein de palavras) vs a referência normalizada
 com a **mesma `normalize_ptbr` do treino**.
 
+> ⚠️ **RESSALVA DE RÉGUA (registrada em 2026-07-31, revisão de código).** Os WERs desta
+> tabela foram medidos com a régua de **TREINO** (`normalize_train_target`), que **preserva
+> acento** — cada acento errado conta como palavra inteira errada. A régua canônica de
+> comparação do projeto (`normalize_for_wer_compare`) **remove** acento. `[MEDIDO]`: numa
+> frase em que só o acento difere, a de treino dá **62,5%** onde a canônica dá **0%**.
+>
+> **Consequência:** estes números **não são comparáveis** com os 15,99% do FLEURS nem com
+> qualquer outro número medido pela canônica. A comparação INTERNA da tabela (runtime 29,92%
+> vs decode Python 29,97%) permanece válida — os dois lados usaram a mesma régua, e a
+> conclusão "o runtime não degrada" não depende de qual régua foi usada.
+>
+> **Não é re-medível:** o runtime Rust foi removido do repositório em 2026-07-30 (commit
+> 266253f). Reproduzir exige checkout do commit anterior. `jvscribe/tools/eval_runtime_wer.py`
+> já foi corrigido para a canônica, então uma re-medição futura daria número diferente **e
+> correto**.
+
 | Caminho | WER | CER | n |
 |---|---|---|---|
 | **Runtime Rust** (macaw-cli) — amostra grande | **29,92%** | — | 470 utterances |

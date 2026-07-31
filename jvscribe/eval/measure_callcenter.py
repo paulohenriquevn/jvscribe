@@ -7,12 +7,16 @@ de ~30s), normaliza ref/hyp, computa WER agregado via jiwer. Caveats honestos: 9
 → IC largo; 2 interlocutores no mesmo mono; granularidade de 30s; PII mascarada conta
 como erro. Direciona, não conclui (asr-evidence-discipline § 3 #12).
 """
-import argparse, re
+import argparse, pathlib, re, sys
 import numpy as np
 import onnxruntime as ort
 import soundfile as sf
 from lhotse import Fbank, FbankConfig
 import jiwer
+
+# Régua única de WER (`common/text_normalize_ptbr`) — ver o docstring de `normalize()`.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
 
 SR = 16000
 TS_RE = re.compile(r'^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$')
@@ -40,10 +44,20 @@ def parse_transcript(path):
 
 
 def normalize(t):
-    t = t.lower().replace("⚠️", " ")
+    """Limpeza específica de transcrição de call center, DEPOIS a régua canônica de WER.
+
+    ⚠️ Isto era uma régua PRÓPRIA e ela **preservava acento** — enquanto
+    `normalize_for_wer_compare` (a régua de todo WER do projeto) **remove**. Ou seja: o WER de
+    call center medido antes desta correção não é comparável com o de FLEURS, ainda que os
+    dois estejam publicados lado a lado. É o mesmo modo de falha do `eval_public_hf.py`
+    (16,14% vs 15,99%), documentado em `tests/test_regua_unica.py`.
+
+    O que é legítimo aqui e a canônica não faz: máscaras de PII (`___`) e o marcador `⚠️` do
+    anotador. Isso é PRÉ-processamento de domínio — vem antes, e a régua canônica fecha.
+    """
+    t = t.replace("⚠️", " ")
     t = re.sub(r"_+", " ", t)                          # máscaras de PII
-    t = re.sub(r"[^0-9a-zàáâãéêíóôõúüç ]", " ", t)      # tira pontuação, mantém acento
-    return re.sub(r"\s+", " ", t).strip()
+    return normalize_for_wer_compare(t)
 
 
 def load_tokens(path):

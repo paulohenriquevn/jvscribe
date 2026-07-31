@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Eval de ACURÁCIA do runtime Rust — WER através do caminho de produção.
 
-Responde "qual a qualidade do runtime?": extrai N utterances do FLEURS pt_br
-test (cache local HF), roda CADA UMA pelo **runtime Rust** (`macaw-cli transcribe`,
-i.e. wav -> jvscribe_audio::kaldi_fbank -> AsrEngine::transcribe), e computa o WER
-real (edit-distance de palavras) contra a referência normalizada com a MESMA
-`normalize_ptbr` do treino. Compara com o WER do decode Python do icefall
-(29,97% no FLEURS test completo) — a equivalência que importa: o runtime Rust
-degrada a acurácia vs o decode de treino?
+⚠️ **O `main()` deste módulo não roda mais neste repositório.** O runtime Rust foi removido
+em 2026-07-30 (`feat!: remove o runtime Rust; jvscribe passa a ser Python-only`) e existe só
+no histórico do git. O script fica porque é a **proveniência** do WER de runtime publicado
+(29,92%, n=470) e porque seus helpers continuam em uso: `normalize_ptbr` e
+`find_test_parquet` são importados por `tools/tta_feature_align_probe.py` e pelos testes.
 
-Sem dependência nova: WER por Levenshtein de palavras (stdlib). `[MEDIDO]`.
+O que ele fazia: extrai N utterances do FLEURS pt_br test (cache local HF), roda CADA UMA
+pelo runtime (wav → kaldi_fbank → transcribe) e computa o WER real contra a referência
+normalizada com a MESMA régua do treino. Compara com o decode Python do icefall (29,97% no
+FLEURS test completo) — a equivalência que importa: o runtime degrada a acurácia?
 
-Uso:
+Uso (histórico):
     python3 jvscribe/tools/eval_runtime_wer.py --n 50
 """
 from __future__ import annotations
@@ -19,10 +20,10 @@ from __future__ import annotations
 import argparse
 import glob
 import io
+import pathlib
 import re
 import subprocess
 import sys
-import unicodedata
 from pathlib import Path
 
 import numpy as np
@@ -30,18 +31,20 @@ import pyarrow.parquet as pq
 import soundfile as sf
 
 REPO = Path(__file__).resolve().parents[2]
-MODEL_DIR = REPO / "jvscribe" / "results" / "onnx"
-CLI = REPO / "target" / "release" / "macaw-cli"
-
-
-def normalize_ptbr(text: str) -> str:
-    """Idêntica a jvscribe/prep_icefall.py:49 (a normalização dos alvos de treino)."""
-    text = unicodedata.normalize("NFC", (text or "").lower().strip())
-    text = re.sub(r"[^\w\sáàâãéêíóôõúçü]", " ", text, flags=re.UNICODE)
-    return re.sub(r"\s+", " ", text).strip()
-
+CLI = REPO / "target" / "release" / "macaw-cli"   # binário do runtime removido — ver docstring
 
 from wer_core import word_edit_distance  # Levenshtein puro, reusado (Regra 9 / DRY)
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+from artifact import default_model_path  # noqa: E402  — resolvedor canônico de artefato
+# Este módulo MEDE WER → régua de COMPARAÇÃO (remove acento). Não confundir com
+# `finetune/prep_icefall.py`, que prepara o CORPUS DE TREINO e por isso usa
+# `normalize_train_target` (preserva acento — o modelo precisa aprender a acentuar).
+#
+# ⚠️ Aqui rodava a régua de treino. Numa frase em que só o acento difere isso dá WER 62,5%
+# onde a régua canônica dá 0% `[MEDIDO]` — o WER de runtime publicado (29,92%) saiu daí e
+# NÃO é comparável com os números medidos pela canônica.
+from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 
 
 def find_test_parquet() -> Path:
@@ -62,12 +65,23 @@ def main() -> None:
     args = ap.parse_args()
 
     if not CLI.exists():
-        raise SystemExit(f"CLI ausente: {CLI} — rode `cargo build -p macaw-cli --release`")
-    if not (MODEL_DIR / "model.int8.onnx").exists():
-        raise SystemExit(f"modelo ausente em {MODEL_DIR}")
+        # Falha CLARA: mandar rodar `cargo build` seria mandar rodar um comando impossível —
+        # não há mais crate neste repositório (error-handling.md § 2, "fail clear").
+        raise SystemExit(
+            f"runtime Rust ausente ({CLI}). Ele foi REMOVIDO deste repositório em 2026-07-30 "
+            f"(commit 266253f, 'jvscribe passa a ser Python-only') e não pode ser reconstruído "
+            f"aqui — `cargo build` não tem o que compilar. Para reproduzir a medição, faça "
+            f"checkout do commit anterior à remoção. Para medir WER hoje, use "
+            f"`jvscribe/batch/eval_public_hf.py` (decode Python, mesma régua)."
+        )
+    modelo = pathlib.Path(default_model_path())
+    if not modelo.exists():
+        raise SystemExit(f"modelo ausente: {modelo} (defina JVSCRIBE_MODEL_DIR)")
+    MODEL_DIR = modelo.parent
 
     pf = pq.ParquetFile(find_test_parquet())
-    tmp = REPO / "jvscribe" / "results" / "onnx" / "_eval_wavs"
+    # Era `jvscribe/results/onnx/_eval_wavs` — pasta removida junto com `results/`.
+    tmp = REPO / "data" / "eval" / "_eval_wavs"
     tmp.mkdir(parents=True, exist_ok=True)
 
     tot_err, tot_words, done = 0, 0, 0
