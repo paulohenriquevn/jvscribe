@@ -231,8 +231,26 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
           "para trás e preferiu texto recente a texto completo"
           if m.audio_descartado_s > 0 else "- nenhum áudio descartado por backpressure"), "",
          "## Critérios medidos", "", "| critério | medido | alvo | veredito |", "|---|---|---|---|"]
-    for chave, c in {**m.veredito(), **m.veredito_condicoes(carga)}.items():
-        L.append(f"| {chave} | {c.medido} | {c.alvo} | {'✅' if c.aprovado else '❌'} |")
+
+    # A carga entra ANTES da tabela porque decide o SÍMBOLO, não só o rodapé. Enquanto o
+    # caveat vivia só na prosa, a tabela estampava ❌ em RNF-01/02/03 na mesma corrida que o
+    # texto declarava indeterminada — e quem bate o olho num relatório lê a tabela.
+    # Reprovar e não-medir são resultados diferentes: um manda consertar o produto, o outro
+    # manda repetir a medição numa máquina ociosa.
+    carga_atual = _carga_media()
+    tempo_e_confiavel = carga_atual is not None and carga_atual <= LIMIAR_LOAD
+
+    def _simbolo(c: Criterio, depende_de_tempo: bool) -> str:
+        if depende_de_tempo and not tempo_e_confiavel:
+            return "⚠️ indeterminado"
+        return "✅" if c.aprovado else "❌"
+
+    # RNF-01/02/03 medem TEMPO (RTFx, p99, backlog) → contenção os corrompe.
+    # RNF-04/05 medem a CONDIÇÃO da corrida (duração, carga declarada) → seguem verdadeiros.
+    for chave, c in m.veredito().items():
+        L.append(f"| {chave} | {c.medido} | {c.alvo} | {_simbolo(c, True)} |")
+    for chave, c in m.veredito_condicoes(carga).items():
+        L.append(f"| {chave} | {c.medido} | {c.alvo} | {_simbolo(c, False)} |")
     L += ["", "> RNF-04 e RNF-05 são condições da execução, não resultados: um RTFx alto numa",
           "> corrida curta e sem carga não sustenta conclusão sobre chip U de 15 W."]
 
@@ -240,7 +258,6 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     # já marcava o veredito INDETERMINADO acima do limiar; este relatório emitia ❌ para
     # RNF-01/02/03 sem dizer que a máquina estava ocupada — e um p99 medido em load 11,8 diz
     # mais sobre contenção do que sobre o produto (asr-evidence-discipline § 5).
-    carga_atual = _carga_media()
     if carga_atual is None:
         L += ["", "> ⚠️ **load average indisponível** — não dá para atestar que a máquina "
                   "estava ociosa. Os vereditos acima podem refletir contenção."]

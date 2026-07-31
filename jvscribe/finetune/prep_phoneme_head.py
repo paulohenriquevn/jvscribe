@@ -52,11 +52,30 @@ sem duplicar. Faz backup .orig-phoneme-patch de cada arquivo tocado antes de esc
 
 from __future__ import annotations
 
+import argparse
+
 import py_compile
 import sys
 from pathlib import Path
 
 ZIPFORMER_DIR = Path("/workspace/icefall/egs/commonvoice/ASR/zipformer")
+
+# A REVISÃO do icefall contra a qual estes patches foram escritos — `[MEDIDO]` 2026-07-31,
+# bissecção sobre o histórico do upstream.
+#
+# Os três patchers (`prep_phoneme_head`, `prep_finetune`, `prep_augment_datamodule`) aplicam
+# `PATCH_OK` neste commit e o resultado compila. Contra o `HEAD` do icefall, `model.py` falha:
+# `693d84a` (2024-10-21, "Add Consistency-Regularized CTC" #1766) inseriu `forward_ctc` com
+# `return ctc_loss, cr_loss` ENTRE a âncora e `def forward_transducer`, e o padrão deixou de
+# casar. `f84270c` é o pai desse commit — o último em que a âncora bate.
+#
+# Isto não estava registrado em lugar nenhum do repositório. Sem o pino, a falha só aparece
+# na hora de preparar o treino — numa GPU alugada, com a instância já rodando.
+#
+# `egs/commonvoice/ASR/zipformer/model.py` é SYMLINK para o de `librispeech`; a bissecção tem
+# de ser feita no alvo, senão o histórico parece ter um commit só.
+ICEFALL_REV_TESTADO = "f84270c"
+ICEFALL_REV_QUEBROU = "693d84a"
 
 
 def apply_patch(path: Path, repls: list[tuple[str, str]], already_applied_marker: str) -> None:
@@ -75,7 +94,14 @@ def apply_patch(path: Path, repls: list[tuple[str, str]], already_applied_marker
         if count != 1:
             sys.exit(
                 f"FALHA: padrão não bate 1x em {path} (bateu {count}x):\n"
-                f"{old[:200]!r}"
+                f"{old[:200]!r}\n\n"
+                f"Causa provável: o icefall mudou. Estes patches foram escritos contra "
+                f"`{ICEFALL_REV_TESTADO}` e param de casar a partir de "
+                f"`{ICEFALL_REV_QUEBROU}` (Consistency-Regularized CTC, #1766).\n"
+                f"  git -C <icefall> worktree add --detach ../icefall-{ICEFALL_REV_TESTADO} "
+                f"{ICEFALL_REV_TESTADO}\n"
+                f"e aponte --zipformer-dir/--train-py/--datamodule-py para lá. Reescrever a "
+                f"âncora para o icefall novo exige revalidar o treino — não é troca de string."
             )
         src = src.replace(old, new)
 
@@ -84,8 +110,8 @@ def apply_patch(path: Path, repls: list[tuple[str, str]], already_applied_marker
     print(f"[phoneme-head] {path.name}: patch aplicado e compila OK")
 
 
-def patch_zipformer_py() -> None:
-    path = ZIPFORMER_DIR / "zipformer.py"
+def patch_zipformer_py(zipformer_dir: Path = ZIPFORMER_DIR) -> None:
+    path = zipformer_dir / "zipformer.py"
     marker = "aux_ctc_layer_idx"
     repls = [
         (
@@ -131,8 +157,8 @@ def patch_zipformer_py() -> None:
     apply_patch(path, repls, marker)
 
 
-def patch_model_py() -> None:
-    path = ZIPFORMER_DIR / "model.py"
+def patch_model_py(zipformer_dir: Path = ZIPFORMER_DIR) -> None:
+    path = zipformer_dir / "model.py"
     marker = "forward_phoneme_ctc"
     repls = [
         (
@@ -246,8 +272,8 @@ def patch_model_py() -> None:
     apply_patch(path, repls, marker)
 
 
-def patch_train_py() -> None:
-    path = ZIPFORMER_DIR / "train.py"
+def patch_train_py(zipformer_dir: Path = ZIPFORMER_DIR) -> None:
+    path = zipformer_dir / "train.py"
     marker = "use_phoneme_ctc"
     repls = [
         (
@@ -469,11 +495,19 @@ def patch_train_py() -> None:
 
 
 def main() -> None:
-    if not ZIPFORMER_DIR.exists():
-        sys.exit(f"FALHA: {ZIPFORMER_DIR} não existe -- rodando fora da instância?")
-    patch_zipformer_py()
-    patch_model_py()
-    patch_train_py()
+    # Os dois irmãos que patcham a MESMA árvore (`prep_finetune`, `prep_augment_datamodule`)
+    # aceitam o caminho por flag; este o tinha cravado, e só rodava numa máquina onde
+    # `/workspace/icefall` existisse. Um clone em qualquer outro lugar era inalcançável.
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--zipformer-dir", type=Path, default=ZIPFORMER_DIR,
+                    help="diretório egs/commonvoice/ASR/zipformer do icefall")
+    d = ap.parse_args().zipformer_dir
+    if not d.exists():
+        sys.exit(f"FALHA: {d} não existe — passe --zipformer-dir apontando para o clone "
+                 f"do icefall (egs/commonvoice/ASR/zipformer).")
+    patch_zipformer_py(d)
+    patch_model_py(d)
+    patch_train_py(d)
     print("PATCH_OK: cabeça de fonema auxiliar aplicada em zipformer.py + model.py + train.py")
 
 

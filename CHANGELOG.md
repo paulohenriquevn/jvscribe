@@ -29,6 +29,24 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Fixed
+- **Os patches do icefall pararam de casar com o upstream, e a revisão-alvo não estava
+  registrada em lugar nenhum.** Clonar o icefall e rodar os três patchers mostrou que a receita
+  está intacta e mesmo assim não roda: contra o `HEAD`, `model.py` falha. `[MEDIDO]` por
+  bissecção — a âncora casa em **`f84270c`** (2024-10-16) e para em **`693d84a`** (2024-10-21,
+  "Add Consistency-Regularized CTC" #1766), que inseriu um `forward_ctc` entre os dois trechos
+  ancorados. Nessa revisão os três aplicam `PATCH_OK` e o resultado compila. Sem o pino, a falha
+  só apareceria ao preparar o treino — numa GPU alugada, com a instância já faturando. A
+  mensagem de erro agora nomeia a revisão e dá o comando de saída.
+- **`finetune/prep_phoneme_head.py` tinha `/workspace/icefall` cravado** enquanto os dois irmãos
+  que patcham a MESMA árvore aceitam o caminho por flag — um clone em qualquer outro lugar era
+  inalcançável. Ganhou `--zipformer-dir`.
+- **A tabela de vereditos do relatório ao vivo contradizia o caveat logo abaixo dela.**
+  `realtime/live_transcribe.py` já declarava `INDETERMINADO` em prosa sob carga, mas a tabela
+  estampava **❌** em RNF-01/02/03 na mesma corrida. Quem bate o olho num relatório lê a tabela:
+  a conclusão era "o produto reprovou a latência", quando o que houve foi medição inválida.
+  Reprovar e não-medir são resultados diferentes — um manda consertar o produto, o outro manda
+  repetir a medição. Os critérios de tempo agora saem `⚠️ indeterminado`; RNF-04/05, que medem a
+  condição da corrida e não dependem de contenção, seguem sendo julgados.
 - **`common/artifact.py` reescrevia o `model_card.json` quando alguém só queria olhar — e isso
   desarmava a própria detecção de peso trocado.** O card guarda `model_sha256` e
   `vocab_fingerprint` justamente para denunciar um peso que não é o medido. O CLI recomputava os
