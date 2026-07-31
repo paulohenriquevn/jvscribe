@@ -77,11 +77,16 @@ def test_variavel_ausente_no_template_levanta_em_vez_de_render_vazio():
 
     A guarda existe porque a saída natural, ao ver `UndefinedError`, é trocar o ambiente pelo
     default e "resolver" — o que devolve exatamente o modo de falha silencioso.
+
+    Testa o helper do kernel (`common/report.ambiente`), não o ambiente de um consumidor:
+    a invariante tem de valer para **todos**, e `test_dominios` garante que ninguém constrói
+    o ambiente por fora.
     """
     import jinja2
 
-    from corpus.run_pipeline import _AMBIENTE
+    from common.report import ambiente
 
-    assert _AMBIENTE.undefined is jinja2.StrictUndefined
+    env = ambiente(Path(__file__).parent)
+    assert env.undefined is jinja2.StrictUndefined
     with pytest.raises(jinja2.UndefinedError):
-        _AMBIENTE.from_string("τ = {{ tau_com_nome_errado }}").render(tau=0.2)
+        env.from_string("τ = {{ tau_com_nome_errado }}").render(tau=0.2)

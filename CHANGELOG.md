@@ -29,6 +29,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Fixed
+- **A sonda de composição do erro imprimia percentual sem denominador e sem intervalo.**
+  `eval/analyze_error_composition.py` usava `max(subs, 1)` em cinco lugares: com zero
+  substituições o relatório saía `0,0% ATACÁVEL` sob rótulo `[MEDIDO]` — conclusão a partir de
+  evidência nenhuma. E publicava fração de n=100 **sem IC**, que é a falácia § 3 #12 do próprio
+  contrato de evidência do projeto. Agora `fracao()` devolve `None` quando não há o que
+  classificar (e o relatório diz isso), e o IC95% reamostra **utterances**, não substituições —
+  substituições da mesma utterance são correlacionadas, e tratá-las como independentes
+  estreitaria o intervalo artificialmente. Recusa IC com n < 3, mesma postura de
+  `common/stats.comparar_pareado`.
+- **O resultado da sonda só existia como stdout.** Zero ocorrências dos seus números em `wiki/`
+  ou `docs/`: ela testou uma hipótese real (correção por léxico, 2026-07-26), decidiu algo, e a
+  evidência evaporou com o terminal. Agora grava artefato em `wiki/medicoes/dados-brutos/`.
 - **O relatório de corrida do pipeline de corpus se contradizia sobre a própria configuração.**
   O caveat H-1 é prosa **condicional** — só vale quando a corrida se desvia do par de
   transcritores que o ADR-3 especifica (`small`+`medium`). Escrito como f-string, era emitido
@@ -38,6 +50,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (`tests/test_corpus_relatorio.py`, RED antes do fix).
 
 ### Changed
+- **A ciência da sonda de composição do erro sai de dentro do `main()` e ganha teste.** A
+  classificação nas três classes (`non_word_hyp` / `real_word_hyp` / `rare_ref`) decide se vale
+  construir correção por léxico, e vivia num laço aninhado junto com `subprocess` e escrita de
+  WAV — não era importável, logo não era testável; os dois testes que citavam o módulo testavam
+  a régua de texto. Agora `classificar` / `analisar` / `Composicao` são puros e cobertos por 11
+  testes (`tests/test_composicao_do_erro.py`), e `main()` ficou só com I/O.
+- **`common/report.py`** centraliza a construção do ambiente Jinja com `StrictUndefined`.
+  Promovido com dois consumidores em vez de esperar o terceiro porque o que se compartilha não é
+  estilo, é uma decisão de segurança: um consumidor que montasse o ambiente por fora poderia
+  omitir a flag, e o teste que guarda a invariante continuaria verde olhando o outro ambiente.
+  Guarda estrutural em `tests/test_dominios.py`.
+- **`find_test_parquet` tinha três implementações** — a do kernel mais duas cópias. A de
+  `analyze_error_composition.py` foi removida; sobra a de `eval/extract_fleurs_one_wav.py`.
 - **O corpo do relatório sai do código para um template** (`corpus/templates/*.md.j2`, Jinja2).
   A motivação não é estética: f-string com prosa condicional **esconde a condição** — nada no
   código dizia "esta frase só vale se o par for outro". Em template a condição é `{% if %}`,

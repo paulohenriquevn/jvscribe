@@ -191,6 +191,37 @@ def test_a_sequencia_de_carga_do_motor_nao_e_remontada_a_mao():
     )
 
 
+def test_o_ambiente_de_template_nao_e_construido_fora_do_kernel():
+    """`jinja2.Environment(...)` à mão replica uma decisão de SEGURANÇA, não de estilo.
+
+    O ambiente do kernel liga `StrictUndefined`: sem ele, uma variável com nome errado
+    renderiza **string vazia** — num documento de evidência, um número que some sem ninguém
+    notar. É o mesmo modo de falha do vocabulário trocado: saída plausível e errada.
+
+    Um consumidor que monta o próprio ambiente pode omitir a flag, e o teste que guarda a
+    invariante continuaria verde porque olha o ambiente do kernel. Daí a guarda ser
+    estrutural: só `common/report.py` constrói.
+    """
+    culpados = []
+    for f in sorted(PKG.rglob("*.py")):
+        if "__pycache__" in f.parts or f.parent.name == "tests":
+            continue
+        if f.name == "report.py" and f.parent.name == KERNEL:
+            continue                                  # o kernel É a implementação
+        try:
+            arvore = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for n in ast.walk(arvore):
+            if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                    and n.func.attr == "Environment"):
+                culpados.append(f"{f.relative_to(PKG)}:{n.lineno}")
+    assert not culpados, (
+        "ambiente Jinja construído fora do kernel — use `common.report.ambiente`:\n  "
+        + "\n  ".join(culpados)
+    )
+
+
 def test_um_so_parser_de_tokens_txt():
     """Havia SEIS implementações do mesmo parser de `tokens.txt`.
 

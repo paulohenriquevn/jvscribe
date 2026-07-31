@@ -22,14 +22,16 @@ import statistics
 import sys
 from pathlib import Path
 
-import jinja2
 import numpy as np
 import pyarrow.parquet as pq
 import soundfile as sf
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # scripts/
+_PKG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _PKG)                      # para `corpus.*`
+sys.path.insert(0, os.path.join(_PKG, "common"))  # kernel: um caminho só, o do repositório
 
-from common.metrics import escrever_relatorio  # noqa: E402
+from metrics import escrever_relatorio  # noqa: E402
+from report import ambiente as ambiente_de_relatorio  # noqa: E402
 from corpus.agreement_filter import agree, calibrate_tau, pairwise_cer  # noqa: E402
 from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_audio  # noqa: E402
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
@@ -41,18 +43,7 @@ PAR_DO_ADR3 = ("small", "medium")  # o par de transcritores que o ADR-3 especifi
 # do código porque ela tem CONDIÇÕES: o caveat H-1 só vale quando a corrida se desvia do par
 # do ADR-3, e como f-string era emitido sempre — a corrida com o par certo produzia
 # "usou small+medium, não o small+medium do ADR-3". Num template a condição é visível.
-#
-# `StrictUndefined` é o ponto que justifica o ambiente explícito: no default do Jinja, uma
-# variável com nome errado renderiza VAZIO. Num documento de evidência isso é um número que
-# some sem ninguém notar. Aqui levanta.
-_AMBIENTE = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(Path(__file__).resolve().parent / "templates"),
-    undefined=jinja2.StrictUndefined,
-    trim_blocks=True,
-    lstrip_blocks=True,
-    keep_trailing_newline=True,
-    autoescape=False,  # destino é Markdown, não HTML — escapar quebraria `&`, `<`, aspas
-)
+_AMBIENTE = ambiente_de_relatorio(Path(__file__).resolve().parent / "templates")
 
 # `wiki/medicoes/*.md` é CONCLUSÃO — curada por humano, uma por assunto. `dados-brutos/` é
 # EVIDÊNCIA de corrida, e a convenção de lá é nomear pela CONDIÇÃO que a produziu
