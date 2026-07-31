@@ -14,6 +14,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **`docs/ARCHITECTURE.md` — arquitetura do modelo e do motor de inferência.** Todo número foi
+  extraído do artefato ou do código, não da memória: estrutura via `onnx.load` e `state_dict`;
+  custo via profiler por operador. Cobre o grafo (subamostragem 4,1× medida → um frame de
+  saída a cada ~41 ms), a distribuição de parâmetros por stack (o stack 3 concentra 48% do
+  encoder), o contraste entre peso e custo (`encoder_embed` tem 1,0% dos parâmetros e 22,0%
+  do custo), a ativação Swoosh expandida em elementwise pelo export, o pipeline de lote, o de
+  tempo real com LocalAgreement-2, e o envelope operacional medido.
+  Os fatores de downsampling foram confirmados **nos pesos** (`encoders.N.downsample.bias` com
+  shapes 2/4/8/4/2 e `downsample_output.bias` 2), não assumidos do default do icefall.
+
+
+### Added
 - **Profile por operador do runtime** (`jvscribe/results/m6-runtime-profile-2026-07-31.md`),
   usando o profiler embutido do ONNX Runtime — que estava disponível desde sempre e não vinha
   sendo usado. Ele mostra o que cronometrar blocos não mostra: `encoder` 75,6%,
