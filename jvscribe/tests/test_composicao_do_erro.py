@@ -112,3 +112,23 @@ class TestComposicao:
         ex = self._com(*us).exemplos("non_word_hyp", limite=3)
         assert len(ex) == 3
         assert ex == self._com(*us).exemplos("non_word_hyp", limite=3)
+
+
+def test_exemplos_de_falso_positivo_respeitam_o_limite_e_a_ordem():
+    """A lacuna que eu mesmo deixei: escrevi o método e não o exercitei.
+
+    O `limite` existe para o relatório não virar dump — e o corte tem de ser determinístico,
+    senão duas corridas idênticas produzem documentos diferentes.
+    """
+    us = [analisar([f"oov{i}"], [f"oov{i}"], LEXICO) for i in range(20)]
+    c = Composicao(tuple(us))
+    assert c.corretas_fora_do_lexico == 20
+    ex = c.exemplos_de_falso_positivo(limite=5)
+    assert ex == ["oov0", "oov1", "oov2", "oov3", "oov4"]
+    assert ex == Composicao(tuple(us)).exemplos_de_falso_positivo(limite=5)
+
+
+def test_sem_falso_positivo_a_lista_e_vazia_e_nao_um_placeholder():
+    c = Composicao((analisar(["casa"], ["casa"], LEXICO),))
+    assert c.exemplos_de_falso_positivo() == []
+    assert c.risco_de_falso_positivo() == 0.0

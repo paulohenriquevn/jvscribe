@@ -28,6 +28,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
   novo, e `FORCE=1` sobrescreve.
 
+### Added
+- **`docs/COBERTURA.md`** — o mapa: cobertura por domínio e **por script**, o que cada número
+  esconde, e a lista honesta do que NÃO está coberto com o motivo de cada lacuna. `[MEDIDO]`
+  60,6% → **63,7%**, 484 testes, 38/38 entrypoints respondendo a `--help`.
+- **Testes do núcleo de `bench/`** — `_Janela.rtfx()/p99_ms()` (os dois números sobre os quais o
+  veredito de RNF-04 repousa) e a ordem **round-robin** de `medir()`, que é o que impede a
+  flutuação de carga de eleger um vencedor falso — o erro que este projeto já cometeu três vezes.
+  Um teste cruza as **duas** implementações de percentil do repositório (`stress_test` e
+  `live_transcribe`) e exige que concordem enquanto coexistirem.
+- **Testes de `download_shard`** — cache, URL, token e o caso do arquivo **truncado**: um
+  download interrompido deixa um `.parquet` de 0 byte, e aceitá-lo como cache faria o manifesto
+  sair menor sem ninguém notar (treino com menos dados do que se acredita ter).
+
 ### Fixed
 - **`LIMIAR_LOAD` — a constante que decide se qualquer medição do projeto CONTA — estava
   declarada em três lugares**, e num deles como número mágico solto (`elif carga > 1.0`). Mesma
