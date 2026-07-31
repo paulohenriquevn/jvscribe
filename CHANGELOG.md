@@ -37,6 +37,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E6 etapa 1 — o beam sem LM não move o WER, e era esse o objetivo da corrida**
+  (`probes/beam_lm_probe.py`, pré-registro em `wiki/medicoes/e6-preregistro-beam-lm.md`).
+  `[MEDIDO]` FLEURS pt_br n=100: greedy 16,07% contra beam 2/4/8 em 15,99% / 16,11% / 16,18% —
+  deltas de +0,08, −0,04 e −0,12 p.p., **todos com IC95 cruzando zero**. H1 foi escrita antes da
+  corrida e confirmou: CTC assume independência condicional entre frames e as posteriores são
+  *peaky*, então o beam reencontra o caminho greedy. É um **controle, não um candidato** — o valor
+  está na atribuição: se beam+LM render X, agora está provado que X vem do **modelo de linguagem**,
+  não de "busca melhor". Sem o controle, a conclusão excederia a evidência. Os ms medidos viram o
+  **piso** do custo do LM, que só encarece. As posteriores são extraídas uma vez por utterance e
+  compartilhadas por todos os decoders — não por velocidade, mas porque isso torna a comparação
+  pareada por construção, eliminando a variância que já produziu três vencedores de corrida única
+  errados neste projeto.
 - **Cancelamento de eco acústico (AEC) opcional, com o RNF-01 negociado por escrito**
   (`common/aec.py`, `--aec` em `realtime/live_transcribe.py`). **O padrão continua sem AEC**:
   com fone de ouvido não há vazamento e o desenho `mic = atendente / loopback = cliente` vale sem
