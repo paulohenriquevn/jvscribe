@@ -159,3 +159,61 @@ def test_nenhuma_constante_de_dominio_duplicada():
         "constante de domínio declarada em mais de um lugar — mova para o kernel e importe: "
         f"{duplicadas}"
     )
+
+
+def test_a_sequencia_de_carga_do_motor_nao_e_remontada_a_mao():
+    """Um entrypoint não reimplementa "resolver → validar → sessão → vocabulário".
+
+    Estava replicada em **treze** entrypoints, e a consequência não foi estética: o passo de
+    VALIDAÇÃO existia em apenas quatro deles. Os outros nove carregavam um par (modelo,
+    vocabulário) sem conferir se combinam — o defeito que a validação existe para impedir,
+    sobrevivendo porque a sequência estava fragmentada.
+
+    A contagem de `def main()` foi o que revelou isso: 37 entrypoints, e `--model`/`--tokens`
+    declarados à mão em 8 deles.
+    """
+    reincidentes = []
+    for f in sorted(PKG.rglob("*.py")):
+        if "__pycache__" in f.parts or f.parent.name == "tests":
+            continue
+        fonte = f.read_text(encoding="utf-8", errors="replace")
+        if '__name__ == "__main__"' not in fonte:
+            continue
+        if not ("criar_sessao" in fonte or "InferenceSession" in fonte):
+            continue
+        usa_kernel = any(s in fonte for s in ("from engine import", "Motor.carregar", "resolver("))
+        if not usa_kernel:
+            reincidentes.append(str(f.relative_to(PKG)))
+    assert not reincidentes, (
+        "entrypoint monta a sequência de carga à mão — use `engine.Motor.carregar` (sequência "
+        "completa) ou `engine.resolver` (quando a sessão é a variável sob teste):\n  "
+        + "\n  ".join(reincidentes)
+    )
+
+
+def test_um_so_parser_de_tokens_txt():
+    """Havia SEIS implementações do mesmo parser de `tokens.txt`.
+
+    `load_tokens` × 3, `carregar_tokens` × 2, `load_id2tok` × 1 — todas equivalentes
+    `[MEDIDO]`, o que é justamente o perigo: equivalentes hoje, e nada garante amanhã. Só a do
+    kernel recusa vocabulário vazio, e um vocabulário vazio decodifica para string vazia sem
+    erro nenhum.
+    """
+    NOMES = {"load_tokens", "carregar_tokens", "load_id2tok"}
+    definem = []
+    for f in sorted(PKG.rglob("*.py")):
+        if "__pycache__" in f.parts or f.parent.name == "tests":
+            continue
+        if f.name == "engine.py":
+            continue          # o kernel É a implementação
+        try:
+            arvore = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for n in arvore.body:
+            if isinstance(n, ast.FunctionDef) and n.name in NOMES:
+                definem.append(f"{f.relative_to(PKG)}:{n.lineno} {n.name}")
+    assert not definem, (
+        "parser de tokens.txt reimplementado — use `engine.carregar_tokens`:\n  "
+        + "\n  ".join(definem)
+    )

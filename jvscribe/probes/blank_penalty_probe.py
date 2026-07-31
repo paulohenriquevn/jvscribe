@@ -23,10 +23,11 @@ REPO = Path(__file__).resolve().parent.parent.parent
 # Standalone: o `jvscribe/conftest.py` só roda sob pytest. Apontava para `jvscribe/scripts`,
 # pasta que deixou de existir — o probe quebrava em ModuleNotFoundError ao ser executado.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "probes"))
-from tta_feature_align_probe import build_dataset, load_id2tok, wer  # noqa: E402
+from tta_feature_align_probe import build_dataset, wer  # noqa: E402
 # `BLANK` vem do KERNEL, não re-exportado pelo probe vizinho — era o terceiro caminho
 # de import do mesmo símbolo, exatamente o que `test_dominios` proíbe.
 from ctc import BLANK  # noqa: E402
+from engine import carregar_tokens, resolver  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 
 
@@ -65,8 +66,12 @@ def main() -> None:
     ap.add_argument("--model", default=str(REPO / "models/m4-legacy-onnx/model.int8.onnx"))
     ap.add_argument("--tokens", default=str(REPO / "models/m4-legacy-onnx/tokens.txt"))
     args = ap.parse_args()
-    id2tok = load_id2tok(Path(args.tokens))
-    sess = ort.InferenceSession(args.model, providers=["CPUExecutionProvider"])
+    # A sonda mede sobre o artefato da geração M4 de propósito (é o baseline do DISC-05).
+    # Isso não dispensa validar que o vocabulário é o DAQUELE modelo — as duas gerações
+    # têm 500 tokens e 492 ids divergentes.
+    modelo, vocab = resolver(args.model, args.tokens)
+    id2tok = carregar_tokens(vocab)
+    sess = ort.InferenceSession(str(modelo), providers=["CPUExecutionProvider"])
     in_names = [i.name for i in sess.get_inputs()]
     refs, wb, tel = build_dataset(args.n)
 

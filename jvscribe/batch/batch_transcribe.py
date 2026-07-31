@@ -32,6 +32,10 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 import ctc  # noqa: E402  — shared kernel
 from artifact import default_model_path as _default_model_path  # noqa: E402
+# `load_tokens` era uma das SEIS implementações do mesmo parser de `tokens.txt` no
+# repositório. Todas equivalentes `[MEDIDO]` — mas só a do kernel recusa vocabulário
+# vazio, e um vocabulário vazio decodifica para string vazia sem erro nenhum.
+from engine import carregar_tokens as load_tokens  # noqa: E402,F401
 from artifact import default_sibling as _default_sibling  # noqa: E402
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
@@ -40,16 +44,6 @@ from onnx_session import criar_sessao  # noqa: E402
 from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 WORD_START = "▁"
 AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".mp4", ".webm"}
-
-
-def load_tokens(path: str) -> dict[int, str]:
-    d = {}
-    with open(path) as f:
-        for line in f:
-            p = line.split()
-            if len(p) == 2:
-                d[int(p[1])] = p[0]
-    return d
 
 
 def greedy(log_probs_row: np.ndarray, valid_len: int, id2tok: dict[int, str]) -> str:

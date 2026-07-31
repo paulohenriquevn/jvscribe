@@ -38,6 +38,11 @@ _PKG = Path(__file__).resolve().parents[1]
 for _pipe in ("probes", "common"):
     sys.path.insert(0, str(_PKG / _pipe))
 from metrics import find_test_parquet  # noqa: E402
+# `load_id2tok` era uma das SEIS implementações do mesmo parser de `tokens.txt` no
+# repositório. Todas equivalentes `[MEDIDO]` — mas só a do kernel recusa vocabulário
+# vazio, e um vocabulário vazio decodifica para string vazia sem erro nenhum.
+from engine import carregar_tokens as load_id2tok  # noqa: E402,F401
+from engine import carregar_tokens, resolver  # noqa: E402
 from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 from audio.channel import apply_telephone_channel  # noqa: E402
@@ -51,15 +56,6 @@ def fbank16k(samples: np.ndarray) -> np.ndarray:
     import torch
     feats = _FBANK.extract(torch.from_numpy(samples.astype(np.float32)), sampling_rate=16000)
     return np.asarray(feats, dtype=np.float32)
-
-
-def load_id2tok(path: Path) -> dict[int, str]:
-    d = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        parts = line.split()
-        if len(parts) == 2:
-            d[int(parts[1])] = parts[0]
-    return d
 
 
 def greedy(logp: np.ndarray, id2tok: dict[int, str]) -> str:
@@ -121,8 +117,12 @@ def main() -> None:
     ap.add_argument("--model", default=str(REPO / "models/m4-legacy-onnx/model.int8.onnx"))
     ap.add_argument("--tokens", default=str(REPO / "models/m4-legacy-onnx/tokens.txt"))
     args = ap.parse_args()
-    id2tok = load_id2tok(Path(args.tokens))
-    sess = ort.InferenceSession(args.model, providers=["CPUExecutionProvider"])
+    # A sonda mede sobre o artefato da geração M4 de propósito (é o baseline do DISC-05).
+    # Isso não dispensa validar que o vocabulário é o DAQUELE modelo — as duas gerações
+    # têm 500 tokens e 492 ids divergentes.
+    modelo, vocab = resolver(args.model, args.tokens)
+    id2tok = carregar_tokens(vocab)
+    sess = ort.InferenceSession(str(modelo), providers=["CPUExecutionProvider"])
     in_names = [i.name for i in sess.get_inputs()]
     refs, wb, tel = build_dataset(args.n)
 

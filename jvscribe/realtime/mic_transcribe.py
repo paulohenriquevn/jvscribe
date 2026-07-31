@@ -30,9 +30,7 @@ import pathlib
 # `common/` é o shared kernel. Um humano rodando este script direto só tem o diretório dele
 # no path — sem o insert explícito o script quebra standalone e a suíte inteira passa.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
-from artifact import default_model_path as _default_model_path  # noqa: E402
-from artifact import default_sibling as _default_sibling  # noqa: E402
-from onnx_session import criar_sessao  # noqa: E402
+from engine import Motor, argumentos_de_modelo  # noqa: E402
 
 # Motor de streaming: `streaming.py` (um por canal em live_transcribe.py). Re-exportado
 # aqui porque este script e seus testes já o consomem por este nome.
@@ -50,8 +48,7 @@ DIM, RESET, CLR = "\033[2m", "\033[0m", "\033[K"
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default=_default_model_path())
-    ap.add_argument("--tokens", default=_default_sibling("tokens.txt"))
+    argumentos_de_modelo(ap, threads=False)
     ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode (s) — menor = menos latência, mais flicker")
     ap.add_argument("--window", type=float, default=12.0, help="janela máx (s) antes do trim")
     ap.add_argument("--nl-sil", type=float, default=1.2, help="silêncio (s) sem texto novo p/ quebrar linha")
@@ -62,8 +59,8 @@ def main():
 
     print("[init] carregando modelo ONNX...", flush=True)
     # Fábrica do shared kernel — uma configuração medida para todos os entrypoints.
-    sess = criar_sessao(a.model, a.threads)
-    id2tok = load_tokens(a.tokens)
+    motor = Motor.carregar(a.model, a.tokens, a.threads)
+    sess, id2tok = motor.sessao, motor.id2tok
     dec = StreamingCTC(sess, id2tok, hop_s=a.hop, window_s=a.window)
 
     audio_q: "queue.Queue[np.ndarray]" = queue.Queue()

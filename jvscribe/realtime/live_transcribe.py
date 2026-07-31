@@ -31,12 +31,11 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
-from artifact import default_model_path, default_sibling  # noqa: E402
-from artifact import validar_par_modelo_vocabulario  # noqa: E402
+from engine import carregar_tokens, resolver  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
-from streaming import StreamingCTC, load_tokens  # noqa: E402
+from streaming import StreamingCTC  # noqa: E402
 
 # mic e loopback são papéis fixos por construção da captura — ver o docstring.
 FALANTES = {"mic": "ATENDENTE", "loopback": "CLIENTE"}
@@ -247,12 +246,11 @@ def main() -> int:
 
     from dual_capture import DualCapture
 
-    modelo = a.model or default_model_path()
-    tokens = a.tokens or default_sibling("tokens.txt")
-    # Fail-fast do par (modelo, vocabulário): trocar o tokens.txt produz português PLAUSÍVEL
-    # e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3). Validar aqui é o que separa
-    # "transcrição ruim inexplicável" de um erro que diz o que aconteceu.
-    validar_par_modelo_vocabulario(pathlib.Path(modelo).parent, tokens_path=tokens)
+    # Resolve E valida o par (modelo, vocabulário) — trocar o tokens.txt produz português
+    # PLAUSÍVEL e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3). A sequência vem do
+    # kernel: estava remontada à mão em treze entrypoints, e por isso a validação existia em
+    # apenas quatro deles.
+    modelo, tokens = resolver(a.model, a.tokens)
     print(f"{DIM}[init] modelo: {modelo}{RESET}", flush=True)
 
     # A topologia decide só a CONTAGEM de threads. Medido no soak de 2 canais: intra=2 dá
@@ -267,8 +265,8 @@ def main() -> int:
           + f"{RESET}", flush=True)
 
     # Fábrica do shared kernel — a mesma configuração medida para todos os entrypoints.
-    sess = criar_sessao(modelo, threads)
-    id2tok = load_tokens(tokens)
+    sess = criar_sessao(str(modelo), threads)
+    id2tok = carregar_tokens(tokens)
 
     # Uma sessão ONNX compartilhada pelos dois canais (`run()` é thread-safe e o modelo tem
     # 68 MB — duplicar custaria memória sem ganho); um StreamingCTC por canal, porque o

@@ -34,7 +34,7 @@ import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
-from artifact import default_model_path  # noqa: E402
+from engine import resolver  # noqa: E402
 from cpu import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
@@ -96,7 +96,8 @@ def main() -> int:
 
     carga = _carga_media()
     topo = detectar()
-    modelo = default_model_path()
+    modelo, _tokens = resolver(None, None)
+    modelo = str(modelo)
 
     print(f"  modelo  : {modelo}")
     print(f"  CPU     : {topo.total} lógicos"

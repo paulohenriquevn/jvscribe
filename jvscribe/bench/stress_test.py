@@ -28,10 +28,10 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
-from artifact import default_model_path, default_sibling  # noqa: E402
-from onnx_session import criar_sessao  # noqa: E402
+from artifact import default_model_path  # noqa: E402
+from engine import Motor  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
-from streaming import StreamingCTC, load_tokens  # noqa: E402
+from streaming import StreamingCTC  # noqa: E402
 
 # Mesmo limiar do `calibrate.py` — acima disto a medição vira ruído de contenção, e o
 # veredito de RNF-04 deixa de valer (`asr-evidence-discipline.md` § 5).
@@ -104,8 +104,8 @@ def main() -> int:
     # Fábrica do shared kernel: este script mede o PRODUTO, então tem de usar a
     # mesma sessão que a produção. (`runtime_bench` e `bench_rtfx` mantêm config
     # explícita de propósito — neles a configuração é a variável sob teste.)
-    sess = criar_sessao(modelo, a.threads)
-    id2tok = load_tokens(default_sibling("tokens.txt"))
+    motor = Motor.carregar(str(modelo), None, a.threads)
+    sess, id2tok = motor.sessao, motor.id2tok
     motores = [StreamingCTC(sess, id2tok, hop_s=a.hop, window_s=a.window)
                for _ in range(a.canais)]
 

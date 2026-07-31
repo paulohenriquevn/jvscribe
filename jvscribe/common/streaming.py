@@ -16,6 +16,10 @@ from lhotse import Fbank, FbankConfig
 # A taxa vem do domínio de áudio. Este módulo a USA; não a re-exporta — um símbolo
 # alcançável por dois caminhos foi o que deixou o defeito de régua sobreviver.
 from audio import SR
+# `load_tokens` era uma das SEIS implementações do mesmo parser de `tokens.txt` no
+# repositório. Todas equivalentes `[MEDIDO]` — mas só a do kernel recusa vocabulário
+# vazio, e um vocabulário vazio decodifica para string vazia sem erro nenhum.
+from engine import carregar_tokens as load_tokens  # noqa: E402,F401
 CHUNK = 512          # ~32ms @ 16kHz
 from ctc import BLANK  # noqa: E402 — id do blank: declaração única no kernel
 WORD_START = "▁"  # ▁ (marca início de palavra no BPE)
@@ -95,16 +99,6 @@ class FeatureCache:
         if n_frames > 0:
             self._feats = self._feats[n_frames:]
 DIM, RESET, CLR = "\033[2m", "\033[0m", "\033[K"
-
-
-def load_tokens(path):
-    id2tok = {}
-    with open(path) as f:
-        for line in f:
-            p = line.split()
-            if len(p) == 2:
-                id2tok[int(p[1])] = p[0]
-    return id2tok
 
 
 def longest_common_prefix(a, b):

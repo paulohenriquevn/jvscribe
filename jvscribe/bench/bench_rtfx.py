@@ -24,7 +24,7 @@ import numpy as np
 import onnxruntime as ort
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
-from artifact import default_model_path  # noqa: E402
+from engine import resolver  # noqa: E402
 
 
 def session_options(threads: int) -> ort.SessionOptions:
@@ -55,7 +55,10 @@ def main():
                     help="se >0: roda continuamente N min a 10s de áudio, logando RTFx por janela (RNF-04 soak térmico)")
     args = ap.parse_args()
 
-    modelo = args.model or default_model_path()
+    # Sessão montada à mão de propósito: a configuração É a variável sob teste. O que não
+    # se dispensa é validar o par — `resolver` faz isso e devolve os caminhos.
+    modelo, _tokens = resolver(args.model, None)
+    modelo = str(modelo)
     sess = make_session(modelo, args.threads)
     inputs = {i.name: i for i in sess.get_inputs()}
     print("=== ONNX I/O ===")

@@ -28,20 +28,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 import ctc  # noqa: E402  — shared kernel: colapso CTC e detokenização
 from artifact import default_model_path, default_sibling  # noqa: E402
+# `carregar_tokens` era uma das SEIS implementações do mesmo parser de `tokens.txt` no
+# repositório. Todas equivalentes `[MEDIDO]` — mas só a do kernel recusa vocabulário
+# vazio, e um vocabulário vazio decodifica para string vazia sem erro nenhum.
+from engine import carregar_tokens as carregar_tokens  # noqa: E402,F401
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from text import normalize_for_wer_compare  # noqa: E402
-
-
-def carregar_tokens(path: str) -> dict[int, str]:
-    """`{id: token}` do `tokens.txt`."""
-    id2tok = {}
-    with open(path, encoding="utf-8") as f:
-        for linha in f:
-            partes = linha.split()
-            if len(partes) == 2:
-                id2tok[int(partes[1])] = partes[0]
-    return id2tok
 
 
 def decodificar_lote(log_probs, lens, id2tok: dict[int, str]) -> list[str]:

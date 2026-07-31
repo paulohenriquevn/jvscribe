@@ -9,7 +9,6 @@ como erro. Direciona, não conclui (asr-evidence-discipline § 3 #12).
 """
 import argparse, pathlib, re, sys
 import numpy as np
-import onnxruntime as ort
 import soundfile as sf
 from lhotse import Fbank, FbankConfig
 import jiwer
@@ -17,6 +16,11 @@ import jiwer
 # Régua única de WER (`common/text_normalize_ptbr`) — ver o docstring de `normalize()`.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from text import normalize_for_wer_compare  # noqa: E402
+# `load_tokens` era uma das SEIS implementações do mesmo parser de `tokens.txt` no
+# repositório. Todas equivalentes `[MEDIDO]` — mas só a do kernel recusa vocabulário
+# vazio, e um vocabulário vazio decodifica para string vazia sem erro nenhum.
+from engine import carregar_tokens as load_tokens  # noqa: E402,F401
+from engine import Motor, argumentos_de_modelo  # noqa: E402
 
 from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 TS_RE = re.compile(r'^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$')
@@ -60,15 +64,6 @@ def normalize(t):
     return normalize_for_wer_compare(t)
 
 
-def load_tokens(path):
-    d = {}
-    for line in open(path):
-        p = line.split()
-        if len(p) == 2:
-            d[int(p[1])] = p[0]
-    return d
-
-
 def greedy(lp, id2tok):
     """Delega ao shared kernel (M9/T3.1) — equivalência medida antes da migração."""
     import pathlib
@@ -86,13 +81,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--wav", required=True)
     ap.add_argument("--transcript", required=True)
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--tokens", required=True)
+    argumentos_de_modelo(ap, threads=False)
     a = ap.parse_args()
 
-    so = ort.SessionOptions(); so.enable_cpu_mem_arena = False
-    sess = ort.InferenceSession(a.model, so, providers=["CPUExecutionProvider"])
-    id2tok = load_tokens(a.tokens)
+    # Sessão pela fábrica medida do kernel (arena LIGADA — a desligada custava −6,7%
+    # [IC95% −18,3; −3,9] ms) e par (modelo, vocabulário) validado antes de transcrever.
+    motor = Motor.carregar(a.model, a.tokens)
+    sess, id2tok = motor.sessao, motor.id2tok
     fb = Fbank(FbankConfig(num_mel_bins=80))
     audio, sr = sf.read(a.wav)
     assert sr == SR, sr

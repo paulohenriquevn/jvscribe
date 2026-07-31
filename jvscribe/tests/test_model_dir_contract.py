@@ -93,19 +93,50 @@ def test_todos_os_entrypoints_resolvem_o_MESMO_modelo_canonico():
     tempo real quebrou — porque cada entrypoint resolvia o modelo por conta própria.
     Default duplicado é default que diverge.
     """
-    import importlib
+    import ast
 
     sys.path.insert(0, str(REPO / "jvscribe" / "common"))
-    from batch_transcribe import _default_model_path
+    from artifact import default_model_path
 
-    canonico = Path(_default_model_path())
+    canonico = Path(default_model_path())
     if not (REPO / "models" / "current").exists():
         pytest.skip("models/current ausente")
 
-    mic = importlib.import_module("mic_transcribe")
-    assert Path(mic._default_model_path()).resolve() == canonico.resolve(), (
-        "mic_transcribe e batch_transcribe discordam sobre o modelo canônico"
+    # A guarda comparava `mic._default_model_path()` com o do batch — dois módulos expondo o
+    # resolvedor. Depois que `common/engine.py` unificou a sequência de carga, nenhum
+    # entrypoint reexporta o resolvedor, e comparar os dois deixou de fazer sentido.
+    #
+    # O contrato que importa continua o mesmo e ficou MAIS forte: nenhum entrypoint pode ter
+    # um caminho de modelo LITERAL no código — é isso que fez `mic_transcribe` quebrar em
+    # 2026-07-30, enquanto o lote seguia funcionando.
+    PKG = REPO / "jvscribe"
+    # Exceção DECLARADA: as duas sondas medem sobre a geração M4 de propósito — é o baseline
+    # contra o qual DISC-05 e DISC-06 foram formulados, e trocá-lo pelo artefato canônico
+    # invalidaria a comparação com os números já publicados. Elas validam o par contra o
+    # `model_card.json` DAQUELE diretório, então o risco que esta guarda existe para impedir
+    # (vocabulário de outra geração) continua coberto.
+    FIXAM_GERACAO_DE_PROPOSITO = {
+        "probes/blank_penalty_probe.py": "baseline M4 do DISC-06",
+        "probes/tta_feature_align_probe.py": "baseline M4 do DISC-05",
+    }
+    literais = []
+    for f in sorted(PKG.rglob("*.py")):
+        if "__pycache__" in f.parts or f.parent.name == "tests":
+            continue
+        fonte = f.read_text(encoding="utf-8", errors="replace")
+        if '__name__ == "__main__"' not in fonte:
+            continue
+        if str(f.relative_to(PKG)) in FIXAM_GERACAO_DE_PROPOSITO:
+            continue
+        for n in ast.walk(ast.parse(fonte)):
+            if (isinstance(n, ast.Constant) and isinstance(n.value, str)
+                    and n.value.endswith(".onnx") and "/" in n.value):
+                literais.append(f"{f.relative_to(PKG)}:{n.lineno} -> {n.value!r}")
+    assert not literais, (
+        "entrypoint com caminho de modelo LITERAL — use o resolvedor canônico:\n  "
+        + "\n  ".join(literais)
     )
+    assert canonico.suffix == ".onnx"
 
 
 # --- renomeação MACAW_MODEL_DIR → JVSCRIBE_MODEL_DIR ------------------------

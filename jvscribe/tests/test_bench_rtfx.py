@@ -43,7 +43,13 @@ def test_o_modelo_e_opcional_e_cai_no_artefato_canonico():
 
     fonte = inspect.getsource(bench_rtfx)
     assert 'ap.add_argument("model")' not in fonte, "modelo ainda é posicional obrigatório"
-    assert "default_model_path" in fonte
+    # Verifica o CONTRATO (o default sai do resolvedor canônico), não o nome da função que o
+    # implementa. A guarda quebrou quando `default_model_path` passou a ser chamado via
+    # `engine.resolver` — mas o contrato nunca mudou. Checar o literal transformaria uma
+    # consolidação correta em falha.
+    assert ("default_model_path" in fonte or "resolver(" in fonte), (
+        "o default do modelo tem de sair do resolvedor canônico, não de um literal"
+    )
 
 
 def test_a_config_de_sessao_permanece_EXPLICITA_aqui():

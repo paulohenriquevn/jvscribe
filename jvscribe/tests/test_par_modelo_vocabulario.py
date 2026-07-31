@@ -148,20 +148,42 @@ def test_tokens_passado_a_mao_tambem_e_validado(tmp_path):
         validar_par_modelo_vocabulario(d, tokens_path=outro)
 
 
-def test_todos_os_entrypoints_validam_o_par():
-    """Guarda de fiação: validação que ninguém chama é código morto que finge proteger."""
-    import ast
+def test_todo_entrypoint_que_carrega_modelo_valida_o_par():
+    """Guarda de fiação — **descoberta**, não lista escrita à mão.
 
-    entrypoints = ["batch/batch_transcribe.py", "batch/decode_onnx_local.py",
-                   "batch/eval_public_hf.py", "realtime/live_transcribe.py"]
-    faltando = []
-    for rel in entrypoints:
-        fonte = (PKG / rel).read_text(encoding="utf-8")
-        chamadas = [n for n in ast.walk(ast.parse(fonte))
-                    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
-                    and n.func.id == "validar_par_modelo_vocabulario"]
-        if not chamadas:
-            faltando.append(rel)
-    assert not faltando, (
-        "entrypoint carrega modelo+tokens sem validar o par: " + ", ".join(faltando)
+    A primeira versão desta guarda enumerava QUATRO entrypoints. Passou verde enquanto OITO
+    outros carregavam modelo e vocabulário sem conferir se combinam:
+
+        bench/bench_rtfx · bench/calibrate · bench/runtime_bench · bench/stress_test
+        eval/measure_callcenter · probes/blank_penalty_probe
+        probes/tta_feature_align_probe · realtime/mic_transcribe
+
+    A causa foi a fragmentação da sequência de carga: ela estava replicada em treze lugares, e
+    o passo de validação só existia onde alguém lembrou. `common/engine.py` unificou a
+    sequência; esta guarda garante que ninguém volte a montá-la à mão sem validar.
+
+    Validação que ninguém chama é código morto que finge proteger.
+    """
+
+    culpados = []
+    for f in sorted(PKG.rglob("*.py")):
+        if "__pycache__" in f.parts or f.parent.name == "tests":
+            continue
+        fonte = f.read_text(encoding="utf-8", errors="replace")
+        if '__name__ == "__main__"' not in fonte:
+            continue
+        carrega = "criar_sessao" in fonte or "InferenceSession" in fonte
+        if not carrega:
+            continue
+        # Vale tanto chamar a validação direto quanto usar o carregador que a embute.
+        valida = any(
+            s in fonte for s in ("validar_par_modelo_vocabulario", "Motor.carregar", "engine.resolver",
+                                 "from engine import")
+        )
+        if not valida:
+            culpados.append(str(f.relative_to(PKG)))
+    assert not culpados, (
+        "entrypoint carrega modelo sem validar o par (modelo, vocabulário) — use "
+        "`engine.Motor.carregar` ou chame `validar_par_modelo_vocabulario`:\n  "
+        + "\n  ".join(culpados)
     )

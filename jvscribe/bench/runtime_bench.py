@@ -33,7 +33,7 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
-from artifact import default_model_path  # noqa: E402
+from engine import resolver  # noqa: E402
 from stats import comparar_pareado  # noqa: E402
 
 from audio import SR  # noqa: E402 — declaração única do domínio de áudio
@@ -120,7 +120,10 @@ def main() -> int:
         2: (np.repeat(x1, 2, axis=0), np.array([x1.shape[1]] * 2, dtype=np.int64)),
     }
 
-    modelo = default_model_path()
+    # Idem bench_rtfx: a configuração de sessão é o que se compara, então ela não vem da
+    # fábrica — mas o par (modelo, vocabulário) é validado antes de qualquer medição.
+    modelo, _tokens = resolver(None, None)
+    modelo = str(modelo)
     print(f"  modelo : {modelo}")
     print(f"  janela : {a.janela:g}s ({x1.shape[1]} frames) · reps: {a.reps} · round-robin")
 
