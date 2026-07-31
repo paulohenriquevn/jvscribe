@@ -137,6 +137,14 @@ apontando para `jvscribe/results/`, removida).
 deliberada. Verificado: a mesma corrida `n=2` que apagou o baseline agora imprime o relatório
 e recusa gravar — md5 do arquivo publicado **inalterado**.
 
+**A recusa trata o sintoma; o destino fixo era a causa.** Em `corpus/run_pipeline.py` a causa
+também foi removida: cada corrida grava em `wiki/medicoes/dados-brutos/`, com o nome derivado
+da configuração que a define (`m3-cer-n200-keep0.80-small+base.md`). Duas configurações
+diferentes deixam de competir por um arquivo; a **mesma** configuração ainda colide de
+propósito, e aí recusar é o comportamento certo — re-medir um experimento idêntico é ato
+explícito (`--force`), não efeito colateral. Os dois baselines mantêm destino canônico único:
+lá o artefato **é** a conclusão curada, não evidência por corrida.
+
 ### D2 — `audit/tagarela_noise_audit.py` tem interface posicional não documentada
 
 ```python

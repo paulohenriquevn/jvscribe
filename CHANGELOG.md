@@ -27,6 +27,19 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Agora recusa, e ao recusar **imprime o relatório** em vez de descartar N transcrições com dois
   whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
   novo, e `FORCE=1` sobrescreve.
+
+### Changed
+- **O artefato de uma corrida do pipeline de corpus passa a ser nomeado pela configuração que a
+  define** (`corpus/run_pipeline.py`). O destino era fixo — `wiki/medicoes/m3-cer-distribution.md`
+  — e isso somava dois defeitos: corridas **incomparáveis** disputavam um arquivo (`--n 200`
+  contra `--n 5`), e o script escrevia no lugar da **conclusão curada por humano**. Agora cada
+  corrida grava em `wiki/medicoes/dados-brutos/` como `m3-cer-n{N}-keep{K}-{a}+{b}.md`, seguindo
+  a convenção que já existia lá (`small-idle.json`, `medium-load.json` — nomear pela condição).
+  O corolário é o ponto: a **mesma** configuração continua colidindo de propósito, e recusar é a
+  resposta certa — repetir um experimento idêntico é ato explícito (`--force`). Caminho ancorado
+  no repositório em vez de relativo ao CWD; `--out` e `--force` substituem as variáveis de
+  ambiente neste script (os dois baselines as mantêm — lá o artefato é conclusão única, não
+  evidência por corrida). Invariante guardada por `tests/test_corpus_run_path.py`.
 - **Quatro scripts falhavam com traceback cru da biblioteca** em vez de erro que diz o que
   buscar (`error-handling.md` § 2): `measure_callcenter`, `make_callcenter_cuts`,
   `coraa_speaker_overlap`, `tagarela_coraa_leak_check`.

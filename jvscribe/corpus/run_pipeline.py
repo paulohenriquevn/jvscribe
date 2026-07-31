@@ -5,7 +5,9 @@ Fluxo (Integration Validation do plano m3-corpus):
   filtro por concordância (aplicado AO MANIFEST) → manifest Lhotse com telephone
   on-the-fly → evidência [MEDIDO].
 
-Grava `wiki/medicoes/m3-cer-distribution.md`. Uso:
+Cada corrida grava a própria evidência em `wiki/medicoes/dados-brutos/`, com o nome derivado
+da configuração que a define (`caminho_da_corrida`) — duas configurações diferentes nunca
+competem pelo mesmo arquivo. Uso:
   python3 jvscribe/corpus/run_pipeline.py --n 20 --sizes small base
 """
 
@@ -31,11 +33,37 @@ from corpus.agreement_filter import agree, calibrate_tau, pairwise_cer  # noqa: 
 from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_audio  # noqa: E402
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
 
-# Destino sobrescrevível por env, e a gravação RECUSA sobrescrever: uma corrida de
-# teste (`--n 5`) não pode apagar uma corrida publicada (`--n 200`). Mesmo defeito que
-# `baseline_fleurs_ptbr.py` cometeu de verdade contra `m1-baseline.md`.
-REPORT = os.environ.get("JVSCRIBE_REPORT", "wiki/medicoes/m3-cer-distribution.md")
 _BOOTSTRAP_SEED = 20260725  # fixo → IC reprodutível
+
+# `wiki/medicoes/*.md` é CONCLUSÃO — curada por humano, uma por assunto. `dados-brutos/` é
+# EVIDÊNCIA de corrida, e a convenção de lá é nomear pela CONDIÇÃO que a produziu
+# (`small-idle.json`, `medium-load.json` — ver `dados-brutos/index.md`).
+# Ancorado no repositório, não no CWD: rodar de outro diretório escrevia no lugar errado.
+_DADOS_BRUTOS = Path(__file__).resolve().parents[2] / "wiki" / "medicoes" / "dados-brutos"
+
+
+def caminho_da_corrida(n: int, keep_fraction: float, sizes: tuple[str, str],
+                       *, raiz: Path | None = None) -> Path:
+    """Artefato desta corrida, nomeado pelos parâmetros que a **definem como experimento**.
+
+    Um destino fixo faz corridas diferentes competirem pelo mesmo arquivo: `--n 200` e
+    `--n 5` produzem experimentos DIFERENTES e o segundo apagava o primeiro. Foi por isso
+    que a proteção contra sobrescrita precisou existir — ela trata o sintoma; o nome
+    derivado da configuração remove a causa.
+
+    O corolário é a parte que interessa em ML: a **mesma** configuração ainda colide de
+    propósito, e aí a recusa é a resposta certa — você está prestes a substituir a evidência
+    de um experimento idêntico. Repetir uma corrida tem de ser um ato explícito
+    (`--force`), não um efeito colateral de rodar o script de novo.
+
+    Fora do nome porque não são livres nesta receita: o corpus (FLEURS pt_br `test`), a
+    métrica (CER direcional normalizado PT-BR) e a seed do bootstrap (`_BOOTSTRAP_SEED`).
+    Se algum deles virar parâmetro, entra aqui — senão duas corridas incomparáveis voltam a
+    dividir um nome.
+    """
+    return (raiz or _DADOS_BRUTOS) / (
+        f"m3-cer-n{n}-keep{keep_fraction:.2f}-{sizes[0]}+{sizes[1]}.md"
+    )
 
 
 def _cpu_model() -> str:
@@ -94,7 +122,8 @@ def _bootstrap_tau_ci(cers: list[float], keep_fraction: float,
 
 def write_report(cers: dict[str, float], tau: float, kept: set[str],
                  sizes: tuple[str, str], sr_proof: int, n_cuts: int,
-                 keep_fraction: float, cmd: str) -> None:
+                 keep_fraction: float, cmd: str, destino: Path,
+                 *, force: bool = False) -> None:
     vals = list(cers.values())
     n = len(vals)
     mean = statistics.mean(vals)
@@ -141,13 +170,15 @@ def write_report(cers: dict[str, float], tau: float, kept: set[str],
     ]
     texto = "\n".join(lines)
     try:
-        escrever_relatorio(REPORT, texto,
-                           force=os.environ.get("JVSCRIBE_REPORT_FORCE") == "1")
+        escrever_relatorio(destino, texto, force=force)
     except FileExistsError as e:
         # A corrida custou N transcrições com dois whisper: perder o resultado por
         # causa da recusa seria trocar um dano por outro. Imprime e sai com 1.
         print("\n" + texto)
-        raise SystemExit(f"\n⚠️  relatório NÃO gravado: {e}") from e
+        raise SystemExit(
+            f"\n⚠️  relatório NÃO gravado: {e}\n"
+            "Mesma configuração já medida — repetir é ato explícito (`--force`)."
+        ) from e
 
 
 def main() -> None:
@@ -155,8 +186,14 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--keep", type=float, default=0.8)
     ap.add_argument("--sizes", nargs=2, default=["small", "base"])
+    ap.add_argument("--out", type=Path, default=None,
+                    help="destino do relatório; por padrão deriva da configuração da corrida "
+                         "em wiki/medicoes/dados-brutos/")
+    ap.add_argument("--force", action="store_true",
+                    help="autoriza substituir a evidência de uma corrida com a MESMA configuração")
     args = ap.parse_args()
     sizes = (args.sizes[0], args.sizes[1])
+    destino = args.out or caminho_da_corrida(args.n, args.keep, sizes)
     cmd = f"python3 jvscribe/corpus/run_pipeline.py --n {args.n} --keep {args.keep} --sizes {sizes[0]} {sizes[1]}"
 
     import tempfile
@@ -184,8 +221,9 @@ def main() -> None:
     _audio, sr_proof = load_telephone_audio(list(cutset)[0])
     print(f"[pipeline] manifest FILTRADO: {n_cuts} cuts; telephone on-the-fly → {sr_proof} Hz", flush=True)
 
-    write_report(cers, tau, kept, sizes, sr_proof, n_cuts, args.keep, cmd)
-    print(f"[pipeline] evidência gravada em {REPORT}", flush=True)
+    write_report(cers, tau, kept, sizes, sr_proof, n_cuts, args.keep, cmd,
+                 destino, force=args.force)
+    print(f"[pipeline] evidência gravada em {destino}", flush=True)
 
 
 if __name__ == "__main__":
