@@ -23,12 +23,11 @@ from __future__ import annotations
 
 import pytest
 
-from diarizacao import (
-    SemDiarizacao,
-    cabe_no_orcamento,
-    rtfx_combinado,
-    rtfx_minimo_do_diarizador,
-)
+from diarizacao import SemDiarizacao
+# A aritmética do orçamento mora em `cpu` — capacidade da máquina é o domínio dela, e o AEC é o
+# segundo consumidor da mesma decisão. Importar daqui, e não de `diarizacao`, é o que mantém um
+# símbolo com um caminho só.
+from cpu import cabe_no_orcamento, rtfx_combinado, rtfx_minimo_do_estagio
 
 
 class TestAritmeticaDoOrcamento:
@@ -51,10 +50,10 @@ class TestAritmeticaDoOrcamento:
             rtfx_combinado(3.0, 0.0)
 
 
-class TestExigenciaDoDiarizador:
+class TestExigenciaDoEstagio:
     def test_calcula_o_minimo_necessario(self):
         """ASR a 4,6× e alvo 3× → o diarizador precisa de 8,6×."""
-        assert rtfx_minimo_do_diarizador(4.6, alvo=3.0) == pytest.approx(8.6, abs=0.1)
+        assert rtfx_minimo_do_estagio(4.6, alvo=3.0) == pytest.approx(8.6, abs=0.1)
 
     def test_devolve_None_quando_o_ASR_ja_esta_no_limite(self):
         """Sem folga não existe diarizador rápido o bastante — nem um infinitamente rápido.
@@ -62,24 +61,24 @@ class TestExigenciaDoDiarizador:
         Devolver um número grande aqui sugeriria que basta otimizar. `None` diz a verdade:
         o problema é o ASR, não o diarizador.
         """
-        assert rtfx_minimo_do_diarizador(3.0, alvo=3.0) is None
-        assert rtfx_minimo_do_diarizador(2.5, alvo=3.0) is None
+        assert rtfx_minimo_do_estagio(3.0, alvo=3.0) is None
+        assert rtfx_minimo_do_estagio(2.5, alvo=3.0) is None
 
 
 class TestPortaoDeOrcamento:
     def test_recusa_quando_a_conta_nao_fecha(self):
-        cabe, motivo = cabe_no_orcamento(rtfx_asr=3.58, rtfx_diarizador=5.0, alvo=3.0)
+        cabe, motivo = cabe_no_orcamento(rtfx_asr=3.58, rtfx_estagio=5.0, alvo=3.0)
         assert cabe is False
         assert "18.5" in motivo or "18,5" in motivo, "o motivo tem de dizer o que faltou"
 
     def test_aceita_quando_fecha(self):
-        cabe, _ = cabe_no_orcamento(rtfx_asr=10.0, rtfx_diarizador=50.0, alvo=3.0)
+        cabe, _ = cabe_no_orcamento(rtfx_asr=10.0, rtfx_estagio=50.0, alvo=3.0)
         assert cabe is True
 
     def test_o_motivo_nunca_e_vazio(self):
         """Recusa sem explicação vira flag que alguém remove por não entender."""
         for d in (1.0, 100.0):
-            _, motivo = cabe_no_orcamento(rtfx_asr=4.0, rtfx_diarizador=d, alvo=3.0)
+            _, motivo = cabe_no_orcamento(rtfx_asr=4.0, rtfx_estagio=d, alvo=3.0)
             assert motivo.strip()
 
 

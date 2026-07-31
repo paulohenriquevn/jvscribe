@@ -181,3 +181,67 @@ def medicao_de_tempo_e_confiavel(carga: float | None = None) -> bool:
     """
     c = carga_media() if carga is None else carga
     return c is not None and c <= LIMIAR_LOAD
+
+
+# ── Orçamento de estágios em série ────────────────────────────────────────────────────────
+#
+# Mora aqui porque é capacidade da MÁQUINA, não de um estágio específico: diarização, AEC,
+# beam search e qualquer outra coisa que entre em série no pipeline pagam a mesma conta.
+# Enquanto vivia em `diarizacao.py`, o segundo consumidor (AEC) teria de copiá-la — e é
+# decisão de SEGURANÇA replicada, a mesma classe do `LIMIAR_LOAD` em três arquivos.
+
+ALVO_RNF01 = 3.0
+"""RTFx mínimo do pipeline completo de tempo real (`PRD.md` § 6, RNF-01)."""
+
+
+def rtfx_combinado(*taxas: float) -> float:
+    """RTFx de estágios em série. **Taxas somam pelo inverso.**
+
+    O erro intuitivo é somar ou tomar o mínimo. Dois estágios a 3× dão **1,5×**: cada segundo de
+    áudio custa 1/3 s em cada um, e os custos é que somam.
+    """
+    if not taxas:
+        raise ValueError("nenhuma taxa informada")
+    if any(t <= 0 for t in taxas):
+        raise ValueError(f"toda taxa tem de ser positiva; veio {taxas}")
+    return 1.0 / sum(1.0 / t for t in taxas)
+
+
+def rtfx_minimo_do_estagio(rtfx_asr: float, alvo: float = ALVO_RNF01) -> float | None:
+    """Quão rápido um estágio adicional precisa ser para o pipeline ficar em `alvo`.
+
+    `None` quando o ASR **sozinho** já está no alvo ou abaixo: aí não existe diarizador rápido o
+    bastante, nem um infinitamente rápido. Devolver um número grande sugeriria que basta otimizar
+    o diarizador; `None` diz a verdade — o problema é o ASR.
+    """
+    if rtfx_asr <= 0 or alvo <= 0:
+        raise ValueError("taxas têm de ser positivas")
+    if rtfx_asr <= alvo:
+        return None
+    return 1.0 / (1.0 / alvo - 1.0 / rtfx_asr)
+
+
+def cabe_no_orcamento(
+    rtfx_asr: float, rtfx_estagio: float, alvo: float = ALVO_RNF01
+) -> tuple[bool, str]:
+    """`(cabe, motivo)`. O motivo **nunca** é vazio, inclusive quando cabe.
+
+    Uma recusa sem explicação vira uma flag que alguém remove por não entender o porquê.
+    """
+    minimo = rtfx_minimo_do_estagio(rtfx_asr, alvo)
+    if minimo is None:
+        return False, (
+            f"o ASR sozinho entrega {rtfx_asr:.2f}×, que já não supera o alvo de {alvo:g}× — "
+            "nenhum estágio cabe, nem um infinitamente rápido. O gargalo é o ASR."
+        )
+    combinado = rtfx_combinado(rtfx_asr, rtfx_estagio)
+    if combinado < alvo:
+        return False, (
+            f"não cabe: ASR {rtfx_asr:.2f}× + estágio {rtfx_estagio:.2f}× = "
+            f"{combinado:.2f}× (taxas somam pelo inverso), abaixo do alvo de {alvo:g}×. "
+            f"O diarizador precisaria de {minimo:.1f}×."
+        )
+    return True, (
+        f"cabe: ASR {rtfx_asr:.2f}× + estágio {rtfx_estagio:.2f}× = {combinado:.2f}× "
+        f"≥ {alvo:g}× (mínimo exigido do estágio: {minimo:.1f}×)."
+    )

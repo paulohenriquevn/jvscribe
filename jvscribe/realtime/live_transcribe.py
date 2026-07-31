@@ -32,8 +32,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from engine import carregar_tokens, resolver  # noqa: E402
-from cpu import LIMIAR_LOAD, carga_media  # noqa: E402
-from diarizacao import cabe_no_orcamento  # noqa: E402
+from cpu import LIMIAR_LOAD, cabe_no_orcamento, carga_media  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
@@ -48,7 +47,13 @@ ALVO_P99_MS = 500.0    # RNF-02 — fim da fala → texto disponível
 ALVO_BACKLOG_PCT = 0.1  # RNF-03 — backlog = 0 em 99,9% das amostras
 RTFX_ASR_AO_VIVO = 3.58
 """RTFx do pipeline completo `[MEDIDO]` 2026-07-31 ao vivo, dois canais. NÃO é o RTFx isolado
-do modelo (56,8×) — usar aquele aqui aprovaria diarizações que na prática derrubam o RNF-01."""
+do modelo (56,8×) — usar aquele aqui aprovaria estágios que na prática derrubam o RNF-01."""
+
+RTFX_AEC_LOCALVQE = 10.3
+"""RTFx do LocalVQE v1.4-AEC `[MEDIDO]` 2026-07-31 nesta CPU: mediana 10,3× (min 8,4 · max 10,7;
+7 blocos de 300 hops). O README do projeto anuncia 19,0× `[LITERATURA]` — a diferença é o lembrete
+de sempre: número de terceiro não substitui medição própria. Sai da topologia, então é grandeza a
+REMEDIR ao trocar de hardware (`docs/CALIBRATION.md`), não constante portável."""
 MIN_SOAK_S = 1800.0    # RNF-04 — 30 min; benchmark curto em chip U mente (falácia § 3 #4)
 
 CORES = {"ATENDENTE": "\033[36m", "CLIENTE": "\033[33m"}
@@ -212,7 +217,8 @@ class MetricasRNF:
 
 
 # Mesmo limiar de `bench/calibrate.py` e `bench/stress_test.py` — três ferramentas, um limiar.
-def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -> str:
+def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str,
+                     nota_aec: str | None = None) -> str:
     r = m.resumo()
     L = ["# Transcrição ao vivo — evidência de RNF", "",
          f"- modelo: `{modelo}`",
@@ -261,6 +267,19 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     else:
         L += ["", f"> load average {carga_atual:.1f} — máquina ociosa o bastante para medir."]
 
+    # Um RNF rebaixado por decisão tem de aparecer como decisão. Sem esta nota, a linha ❌ do
+    # RNF-01 pareceria defeito do produto, quando é o preço declarado de um canal sem eco.
+    if nota_aec:
+        L += ["", "## AEC ligado — e o que ele custa", "",
+              f"> {nota_aec}", "",
+              "O microfone estava captando o alto-falante: os dois canais recebiam a MESMA fonte "
+              "e o sistema produzia um diálogo falso — dois falantes onde havia um — com "
+              "confiança total. As duas transcrições do mesmo áudio divergiram 10,5% `[MEDIDO]`, "
+              "da ordem do WER inteiro do modelo. O AEC troca RTFx por essa correção.",
+              "",
+              "⚠️ O RTFx acima é o do pipeline **com** o AEC. Se o RNF-01 aparecer reprovado, "
+              "é o efeito esperado da troca aceita — não regressão do ASR."]
+
     L += ["", "## Diálogo", ""]
     L += t.linhas() or ["_(nenhuma fala transcrita)_"]
     return "\n".join(L) + "\n"
@@ -289,6 +308,30 @@ def _exigir_orcamento_de_diarizacao(rtfx_diarizador: float | None) -> None:
     print(f"{DIM}[init] diarização: {motivo}{RESET}", flush=True)
 
 
+def _montar_aec(a) -> tuple[object, str | None]:
+    """Constrói o AEC pedido — ou recusa antes de gastar um hop de áudio.
+
+    A ordem importa: a conta do orçamento é conferida **antes** de carregar a biblioteca. Ligar,
+    rodar e descobrir depois que o pipeline caiu abaixo do limiar é o modo de falha que a § 4 da
+    disciplina descreve, e que a afinidade de CPU já cobrou deste projeto.
+    """
+    from aec import CancelamentoDuplo, LocalVqeAec, SemAec, checar_orcamento_do_aec
+
+    if not a.aec:
+        return CancelamentoDuplo(SemAec()), None
+    if not (a.aec_lib and a.aec_modelo):
+        raise SystemExit(
+            "--aec exige --aec-lib e --aec-modelo.\n"
+            "O LocalVQE é artefato externo (Apache 2.0): compile a .so e baixe o .gguf de\n"
+            "  https://huggingface.co/LocalAI-io/LocalVQE"
+        )
+    cabe, motivo = checar_orcamento_do_aec(RTFX_ASR_AO_VIVO, a.rtfx_aec, a.aceitar_rtfx)
+    if not cabe:
+        raise SystemExit(f"AEC recusado — {motivo}")
+    print(f"{DIM}[init] AEC: {motivo}{RESET}", flush=True)
+    return CancelamentoDuplo(LocalVqeAec(a.aec_lib, a.aec_modelo, a.rtfx_aec)), motivo
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default=None)
@@ -310,6 +353,20 @@ def main() -> int:
     ap.add_argument("--rtfx-diarizador", type=float, default=None,
                     help="RTFx MEDIDO do diarizador; obrigatório com --diarizar, porque taxas "
                          "somam pelo inverso e a conta é conferida antes de ligar")
+    ap.add_argument("--aec", action="store_true",
+                    help="cancela o eco do alto-falante no microfone usando o loopback como "
+                         "referência. PADRÃO DESLIGADO: com FONE DE OUVIDO não há vazamento e "
+                         "isto só gastaria CPU. Ligue quando o áudio sair pela CAIXA")
+    ap.add_argument("--aec-lib", type=pathlib.Path, default=None,
+                    help="liblocalvqe.so compilada (artefato externo, Apache 2.0)")
+    ap.add_argument("--aec-modelo", type=pathlib.Path, default=None,
+                    help=".gguf do LocalVQE v1.4-AEC (203K params)")
+    ap.add_argument("--rtfx-aec", type=float, default=RTFX_AEC_LOCALVQE,
+                    help=f"RTFx MEDIDO do AEC nesta CPU (default {RTFX_AEC_LOCALVQE:g}× — medido "
+                         "aqui, NÃO os 19× do README do projeto). Re-meça ao trocar de máquina")
+    ap.add_argument("--aceitar-rtfx", type=float, default=None,
+                    help="rebaixa o alvo do RNF-01 EXPLICITAMENTE (ex.: 2.5). Sem isto, o AEC é "
+                         "recusado quando não cabe no orçamento. A negociação vai para o relatório")
     ap.add_argument("--com-carga", action="store_true",
                     help="declara que há carga concorrente real rodando (RNF-05)")
     a = ap.parse_args()
@@ -351,6 +408,7 @@ def main() -> int:
 
     if a.diarizar:
         _exigir_orcamento_de_diarizacao(a.rtfx_diarizador)
+    aec, nota_aec = _montar_aec(a)
     print(f"{DIM}[init] falando: ATENDENTE = mic · CLIENTE = loopback. Ctrl+C encerra.{RESET}\n",
           flush=True)
     try:
@@ -362,6 +420,14 @@ def main() -> int:
                     if chegada[label] is None:
                         chegada[label] = time.perf_counter()
                     x = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+                    # O CLIENTE (loopback) é o far-end: é o sinal que sai pela caixa e volta
+                    # pelo mic. Ele alimenta a referência ANTES de o mic ser limpo, para o
+                    # filtro ter contra o que cancelar. O próprio loopback não é filtrado — não
+                    # há eco no caminho digital.
+                    if label == "loopback":
+                        aec.alimentar_referencia(x)
+                    else:
+                        x = aec.limpar(x)
                     pendente[label] = np.concatenate([pendente[label], x])
 
                 backlog = cap.backlog()
@@ -387,7 +453,7 @@ def main() -> int:
     except KeyboardInterrupt:
         print(f"\n{DIM}[fim] encerrado pelo usuário{RESET}", flush=True)
 
-    rel = render_relatorio(met, trans, a.com_carga, modelo)
+    rel = render_relatorio(met, trans, a.com_carga, modelo, nota_aec)
     print("\n" + rel)
     if a.relatorio:
         a.relatorio.write_text(rel, encoding="utf-8")

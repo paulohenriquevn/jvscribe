@@ -13,6 +13,14 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **A aritmética do orçamento de RTFx saiu de `common/diarizacao.py` para `common/cpu.py`**
+  (`rtfx_minimo_do_diarizador` → `rtfx_minimo_do_estagio`). Capacidade da máquina é o domínio de
+  `cpu`, e o AEC virou o segundo consumidor da mesma decisão de segurança. O re-export de
+  conveniência que ficou em `diarizacao.py` foi **removido**: ele dava dois caminhos de import para
+  o mesmo símbolo, e `test_dominios.py::test_um_simbolo_do_kernel_tem_um_caminho_de_import` o
+  reprovou — é exatamente a ambiguidade que deixou o defeito das duas réguas de WER sobreviver.
+
 ### Fixed
 - **Um teste rápido apagava uma medição publicada.** `eval/baseline_fleurs_ptbr.py` gravava num
   caminho fixo dentro de `wiki/medicoes/`; rodá-lo com `n=2` durante o live test **substituiu o
@@ -29,6 +37,26 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **Cancelamento de eco acústico (AEC) opcional, com o RNF-01 negociado por escrito**
+  (`common/aec.py`, `--aec` em `realtime/live_transcribe.py`). **O padrão continua sem AEC**:
+  com fone de ouvido não há vazamento e o desenho `mic = atendente / loopback = cliente` vale sem
+  processar nada. A opção existe porque, com o áudio saindo pela caixa, o microfone capta o
+  alto-falante: os dois canais recebem a **mesma fonte** e o sistema produz um **diálogo falso —
+  dois falantes onde há um — com confiança total**. As duas transcrições do mesmo áudio divergiram
+  **10,5%** `[MEDIDO]` (53 edições em 503 palavras), da ordem do WER inteiro do modelo. Não é falha
+  de diarização: uma pessoa falou. O caso é privilegiado porque todo AEC exige o sinal do *far-end*
+  e nós **já capturamos o loopback por construção**.
+  O motor é o LocalVQE v1.4-AEC (203K params, GGML, Apache 2.0) via `ctypes` — stdlib, nenhuma
+  dependência Python nova. **O RTFx anunciado não se confirmou**: 19,0× no README `[LITERATURA]`
+  contra **10,3×** medidos nesta CPU (mediana de 7 blocos; min 8,4 · max 10,7), o que dá **2,66×**
+  combinados com o ASR ao vivo de 3,58× — abaixo do RNF-01. Ligar assim exige
+  `--aceitar-rtfx 2.5` **explícito**, e a negociação vai para o relatório da corrida: alvo
+  original, piso aceito, quanto se abriu mão. Rebaixar o alvo não é cheque em branco — se nem o
+  piso declarado for atingido, recusa. Verificado nos três caminhos ao vivo com a biblioteca real.
+- **Aviso de contenção registrado**: o LocalVQE sobe com `threads=4` numa CPU híbrida onde o ASR
+  já usa `intra=2`. Os dois disputam os mesmos P-cores — o modo de falha que a afinidade de CPU já
+  cobrou deste projeto (25% melhor isolada, 46% pior no pipeline). O RTFx combinado real pode ficar
+  **abaixo** dos 2,66× aritméticos; medir em soak antes de tratar 2,5× como piso confirmado.
 - **Diarização opcional, com portão de orçamento aritmético** (`common/diarizacao.py`,
   `--diarizar` em `realtime/live_transcribe.py`). **O padrão continua sem diarização**: no caso
   1:1 o canal **é** o falante, com custo zero e acurácia 100%. A opção destrava os casos que a
