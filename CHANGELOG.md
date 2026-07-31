@@ -37,6 +37,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E7 — a quantização int8 não custou acurácia, e isso fecha uma porta**
+  (`probes/quantizacao_probe.py`). Quando o dono relaxou o alvo de RTFx de 3× para 1,5×, a primeira
+  pergunta da escada de parcimônia é se ainda vale rodar o modelo *comprimido*. Teste controlado
+  com os MESMOS pesos (`ckpt124k`), variando só a precisão: `[MEDIDO]` FLEURS pt_br n=100, int8
+  **17,32%** contra fp32 **17,20%** — Δ +0,12 p.p. com **IC95 [−0,25; +0,49] cruzando zero**.
+  `comparar_pareado` devolveria `melhor=None`. O int8 reproduziu exatamente o WER publicado do
+  checkpoint único, de brinde como checagem de reprodutibilidade.
+  **Consequência:** relaxar o orçamento de CPU **não compra acurácia por esta via** — o compute
+  extra tem de ir para algo com massa de erro medida atrás. Vale como resultado negativo publicado:
+  evita gastar o orçamento novo na troca mais óbvia e errada.
+  Limitação registrada: são os pesos do checkpoint único (17,32%), não os do modelo entregue
+  (média, 15,99%) — a média altera a distribuição dos pesos, que é o que a quantização discretiza.
 - **E6 etapa 1 — o beam sem LM não move o WER, e era esse o objetivo da corrida**
   (`probes/beam_lm_probe.py`, pré-registro em `wiki/medicoes/e6-preregistro-beam-lm.md`).
   `[MEDIDO]` FLEURS pt_br n=100: greedy 16,07% contra beam 2/4/8 em 15,99% / 16,11% / 16,18% —

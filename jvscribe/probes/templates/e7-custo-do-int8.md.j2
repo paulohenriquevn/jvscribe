@@ -1,0 +1,85 @@
+---
+type: medicao
+title: E7 — o que o int8 custou em WER
+description: >-
+  Mesmos pesos (ckpt124k), só a precisão muda. Isola o custo de acurácia da quantização e testa se
+  o orçamento de RTFx relaxado para {{ "%.1f"|format(alvo) }}× compra o fp32 de volta.
+tags: [medicao, quantizacao, int8, fp32, rtfx, orcamento, e7]
+timestamp: 2026-07-31T00:00:00Z
+---
+
+# E7 — o custo de acurácia do int8
+
+## Hipóteses (pré-registradas no docstring de `probes/quantizacao_probe.py`)
+
+- **H1** — o int8 custou WER mensurável. Predição: fp32 melhor por **0,1 a 0,8 p.p.**, IC95
+  excluindo zero. Morte: IC95 cruzando zero.
+- **H2** — o fp32 cabe em lote no alvo novo de {{ "%.1f"|format(alvo) }}×, e não cabe ao vivo.
+
+## Desenho
+
+O par é **controlado**: `{{ int8 }}` e `{{ fp32 }}` são os **mesmos pesos**; só a precisão difere.
+As features de fbank são extraídas **uma vez** e reusadas — extrair por modelo adicionaria custo e
+a chance de os dois verem entradas diferentes, o que destruiria o pareamento.
+
+## Evidência
+
+`[MEDIDO]` FLEURS pt_br `test[0:{{ n }}]`, greedy CTC, `intra={{ threads }}`, régua
+`normalize_for_wer_compare`. IC95 por bootstrap de **utterance**, 10.000 reamostragens.
+
+| precisão | WER | RTFx | ms/utt |
+|---|---|---|---|
+| int8 | {{ "%.2f"|format(wer_int8) }}% | {{ "%.1f"|format(rtfx_int8) }}× | {{ "%.0f"|format(ms_int8) }} |
+| fp32 | {{ "%.2f"|format(wer_fp32) }}% | {{ "%.1f"|format(rtfx_fp32) }}× | {{ "%.0f"|format(ms_fp32) }} |
+
+**Δ (int8 → fp32): {{ "%+.2f"|format(delta) }} p.p.**, IC95 [{{ "%+.2f"|format(ci[0]) }}; {{ "%+.2f"|format(ci[1]) }}]
+— {% if cruza %}o intervalo **cruza zero**{% else %}o intervalo **exclui zero**{% endif %}.
+
+> Convenção de sinal do kernel: **Δ positivo = redução de WER** (o fp32 é melhor).
+
+{% if not confiavel %}
+> ⚠️ **{{ nota_carga }}** — o WER acima continua válido (não depende de tempo), mas **RTFx e ms
+> são indeterminados**: medem contenção, não o custo do produto. Repita numa máquina ociosa antes
+> de decidir orçamento por estes números.
+{% else %}
+> {{ nota_carga }}
+{% endif %}
+
+## Conclusão
+
+{% if cruza -%}
+**H1 refutada.** O IC95 do delta cruza zero: nesta amostra a quantização int8 **não custou
+acurácia mensurável**. `comparar_pareado` devolveria `melhor=None`.
+
+Isso tem consequência direta para o orçamento: **relaxar o RNF-01 não compra acurácia por esta
+via.** Se sobra compute, ele deve ser gasto em algo que a evidência mostre que rende — o modelo de
+linguagem no decode é o candidato com massa de erro medida atrás dele (`real_word_hyp`, 36,6%).
+
+Vale registrar o que isto **não** diz: não diz que o int8 é gratuito em todo regime. Diz que, em
+FLEURS wideband com n={{ n }}, não se enxerga custo. Em 8 kHz — onde o sinal tem menos energia e a
+faixa dinâmica dos ativações muda — o efeito da calibração pode ser outro, e isso é `[DESCONHECIDO]`.
+{%- else -%}
+**H1 confirmada.** O fp32 é melhor por {{ "%.2f"|format(delta) }} p.p. e o IC95 exclui zero — a
+compressão custou acurácia real, e o custo estava escondido porque nunca foi medido isoladamente.
+
+{% if cabe_fp32 -%}
+**E o orçamento novo compra de volta:** o fp32 roda a {{ "%.1f"|format(rtfx_fp32) }}×, acima do
+alvo de {{ "%.1f"|format(alvo) }}×. No caminho de **lote**, trocar para fp32 é acurácia por
+compute — sem tocar em pesos, dado, decode ou arquitetura.
+{%- else -%}
+**Mas o orçamento novo NÃO compra de volta:** o fp32 roda a {{ "%.1f"|format(rtfx_fp32) }}×, abaixo
+do alvo de {{ "%.1f"|format(alvo) }}×. O ganho existe e está fora de alcance neste caminho.
+{%- endif %}
+{%- endif %}
+
+## Limitações
+
+- ⚠️ **Estes são os pesos do checkpoint ÚNICO (WER 17,32%), não os do modelo entregue** (média de
+  112k+124k, 15,99%). Aplicar este delta ao modelo médio é `[ESTIMATIVA]`: a média de checkpoints
+  altera a distribuição dos pesos, que é exatamente o que a quantização discretiza. Para decidir
+  sobre o modelo entregue, é preciso exportar o fp32 dele — o `.pt` está em disco.
+- **n={{ n }}, uma corrida, FLEURS.** Leitura de notícias, banda larga. O regime do produto é call
+  center 8 kHz espontâneo, onde o WER medido é bem pior e o efeito da quantização é `[DESCONHECIDO]`.
+- **RTFx aqui é de lote, com features pré-extraídas.** Ao vivo há dois canais, subprocessos de
+  captura e reprocessamento de janela — `asr-evidence-discipline` § 4: benchmark de componente não
+  transfere para o sistema.
