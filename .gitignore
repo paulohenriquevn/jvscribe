@@ -79,3 +79,6 @@ train_*.log
 
 # Saída da revisão de código (loop-code-review) — artefato de auditoria, não fonte
 code-review-output/
+# Trilha de auditoria de codigo morto — mesma natureza: artefato local,
+# rotacionavel (audit-trail-rotation.md), nao faz parte do produto.
+deadcode-output/

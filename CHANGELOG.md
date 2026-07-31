@@ -13,6 +13,29 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Fixed
+- **`runtime_bench.py` documentava um método de decisão que não era o implementado.** O
+  docstring dizia "reporta mediana e IQR; o veredito sai quando o IQR não se sobrepõe ao do
+  baseline" — mas o veredito vem de bootstrap **pareado** com IC95%. O método real é mais
+  forte, porém numa ferramenta cujo propósito É rigor de método, descrever o errado faria
+  alguém citar a técnica errada num artefato de decisão. A função `_iqr`, que sustentava a
+  descrição antiga, tinha zero chamadores e foi removida.
+- **`calibrate.py` não distinguia "não sei" de "máquina ociosa".** `_carga_media` devolvia
+  `-1.0` como sentinela de falha, e esse `-1.0` **passava** no `if carga > 1.0` do chamador:
+  numa plataforma sem `getloadavg` o calibrate nunca avisaria sobre carga. Valor mágico para
+  sinalizar falha viola `error-handling.md` § 2 — agora devolve `None` e o chamador decide.
+  O parâmetro `base`, nunca usado (o único chamador passava `0`), saiu junto.
+- **27 imports mortos removidos**, em boa parte órfãos deixados pela revisão de código
+  anterior ao remover as linhas de `sys.path` dos testes.
+
+### Notes
+- **Auditoria de código morto (`/loop-deadcode-audit`)**: 665 símbolos cruzados contra 2.914
+  referências; **zero implementações órfãs**. Os 373 símbolos sem referência de entrada
+  explicam-se integralmente — 357 são testes coletados pelo pytest, 10 são dunders, 3 são
+  passados por valor, 1 é `@property`, 1 é protocolo do Lhotse. Cobertura de inspeção 96,5%
+  (os 4 pendentes são scripts `.sh`, sem ferramenta de dead-code shell disponível).
+  `deadcode-output/` é trilha local, gitignorada como `code-review-output/`.
+
 ### Added
 - **RNF-04 exercitado pela primeira vez — soak de 30 min** (`wiki/medicoes/m6-soak-30min-rnf04.md`).
   Nenhuma corrida do projeto tinha chegado a 30 minutos; `RNF-04`/`RNF-05` eram `[DESCONHECIDO]`
