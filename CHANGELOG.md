@@ -13,6 +13,23 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **`jvscribe/README.md` reescrito** — estava induzindo a erro: dizia que "o runtime de produção
+  é Rust em `crates/`" (removido em 2026-07-30), citava pastas que não existem (`scripts/`,
+  `smoke/`), omitia `common/`, `tools/` e `corpus/`, e trazia a sintaxe errada do
+  `batch_transcribe` (posicional, quando é `--input-dir`/`--out-dir`).
+  Agora traz as 5 pipelines com o comando certo, as ferramentas de medição, e a tabela
+  "o que os testes guardam" — cada guarda ao lado do defeito que a originou.
+
+### Fixed
+- **`corpus/run_pipeline.py` quebrava standalone** com `ModuleNotFoundError: No module named
+  'text_normalize_ptbr'`. O `sys.path.insert` de `agreement_filter.py` apontava para `..`, de
+  onde o módulo saiu na migração do shared kernel (M9/T3.1) — o insert ficou obsoleto e só o
+  `conftest.py` mantinha o import de pé. Passava na suíte inteira e falhava em produção.
+  É o mesmo defeito de M9/T3.1, num diretório que a guarda não cobria: `corpus/` não estava na
+  lista de `test_entrypoints_de_pipeline_rodam_standalone`. Agora está.
+
+
 ### Removed
 - **`train_phoneme_small.log` (55 MB) removido** — o GitHub avisou no push que passa do limite
   recomendado de 50 MB. Eram **480.955 linhas**, das quais **49,2% eram `FutureWarning`

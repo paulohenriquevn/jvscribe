@@ -160,6 +160,10 @@ def test_entrypoints_de_pipeline_rodam_standalone():
         "tools/compare_models.py",
         "tools/finetune_smoke.py",
         "tools/calibrate.py",
+        # `corpus/` estava FORA desta lista, e por isso `run_pipeline.py` quebrava standalone
+        # com `ModuleNotFoundError: No module named 'text_normalize_ptbr'` — o mesmo defeito
+        # de M9/T3.1, num diretório que a guarda não cobria.
+        "corpus/run_pipeline.py",
     ):
         script = TRAIN / rel
         if not script.exists():

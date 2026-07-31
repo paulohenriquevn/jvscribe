@@ -19,7 +19,11 @@ from collections.abc import Sequence
 import jiwer
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Aponta para `common/`, o shared kernel. Antes apontava para `..` (a raiz de `jvscribe/`),
+# de onde `text_normalize_ptbr` saiu na migração do kernel (M9/T3.1) — o insert ficou obsoleto
+# e só o `conftest.py` mantinha o import de pé. Resultado: passava na suíte inteira e
+# `corpus/run_pipeline.py` quebrava standalone.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
 
 from text_normalize_ptbr import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 
