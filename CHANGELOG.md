@@ -29,6 +29,27 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **O checkpoint publicado foi provado finetunável — em CPU, sem GPU.** `[MEDIDO]`
+  `bench/finetune_smoke.py` sobre `avg-124k-112k.pt` e 6 utterances reais de FLEURS: pesos
+  entram na arquitetura (`faltando=0`), CTC loss **0,8624** contra **21,9609** de um modelo
+  aleatório no mesmo lote (o modelo **já sabe português**), e 8 passos de Adam levam a loss de
+  **0,8610 a 0,1586**. Importa porque o `.pt` original chegou truncado da nuvem e o publicado é
+  uma reconstrução — um `.pt` que abre não é um `.pt` que treina. **O caso negativo também foi
+  exercitado**: contra o `.corrupt.pt` guardado ao lado, exit 1 com erro de domínio.
+- **`finetune/k2stub/`** — o `k2` desta máquina tem ABI incompatível (compilado para PyTorch
+  1.13.1+cu117; o ambiente roda 2.13.0+cpu), e sem ele o `scaling.py` do icefall não importa. O
+  icefall usa `k2` ali **só** para a ativação **Swoosh**: o stub a reimplementa em PyTorch puro,
+  com as fórmulas **extraídas do próprio `scaling.py`** (ramo JIT), não de memória — uma
+  ativação ligeiramente diferente não falha, apenas produz uma loss sobre outra rede. 12 testes,
+  incluindo comparação direta contra o icefall real e a derivada contra o autograd. Qualquer
+  outro nome de `k2` resolve (para as anotações do icefall) mas **levanta ao ser usado**.
+
+### Fixed
+- **`bench/finetune_smoke.py` deixava subir o traceback cru do PyTorch num checkpoint truncado**
+  — `internal miniz error`, de onde ninguém deduz "o download não completou". É exatamente o
+  cenário para o qual o script existe (`error-handling.md` § 2).
+
+### Added
 - **`docs/COBERTURA.md`** — o mapa: cobertura por domínio e **por script**, o que cada número
   esconde, e a lista honesta do que NÃO está coberto com o motivo de cada lacuna. `[MEDIDO]`
   60,6% → **63,7%**, 484 testes, 38/38 entrypoints respondendo a `--help`.

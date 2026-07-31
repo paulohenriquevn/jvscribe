@@ -152,6 +152,36 @@ com teste de comportamento, não de linha. É a troca certa.
 | `live_transcribe.py` | 70% | 7 | ✅ |
 | `mic_transcribe.py` | 36% | 5 | ✅ |
 
+
+## O checkpoint publicado TREINA — provado em CPU, sem GPU
+
+`[MEDIDO]` 2026-07-31, `bench/finetune_smoke.py` sobre `avg-124k-112k.pt` e 6 utterances reais
+de FLEURS pt_br:
+
+| afirmação | evidência |
+|---|---|
+| Os pesos entram na arquitetura declarada | `load_state_dict: faltando=0 sobrando=2` |
+| O modelo **já sabe português** | CTC loss **0,8624** contra **21,9609** de um modelo aleatório no MESMO lote — 25× |
+| O gradiente flui e o treino desce | 8 passos de Adam: **0,8610 → 0,1586** (−81,6%) |
+
+Isso importa porque o `.pt` original **chegou truncado da nuvem** (80 MB de 257) e o publicado é
+uma reconstrução pela média de dois checkpoints íntegros. Um `.pt` que abre não é um `.pt` que
+treina — agora a diferença está medida.
+
+**O caso negativo também foi exercitado**, e é o que dá sentido ao positivo: contra
+`avg-124k-112k.corrupt.pt` o smoke sai com **exit 1** e mensagem de domínio (antes vinha um
+`internal miniz error` cru do PyTorch, de onde ninguém deduz "o download não completou").
+
+Dois obstáculos que a execução expôs, ambos do ambiente e não do artefato:
+
+- **`k2` com ABI incompatível** (compilado para PyTorch 1.13.1+cu117; aqui roda 2.13.0+cpu). O
+  `scaling.py` do icefall usa `k2` **só** para a ativação Swoosh, então
+  `finetune/k2stub/` a reimplementa em PyTorch puro — com as fórmulas extraídas do próprio
+  `scaling.py`, não de memória, e conferidas contra o ramo JIT do icefall real.
+- **`pyOpenSSL 25.1.0` × `cryptography 49.0.0`** quebra a cadeia
+  `torch.utils.tensorboard → tensorboard → botocore → pyOpenSSL`. O smoke passa sem tensorboard
+  (não registra métricas) em vez de mutar o ambiente global do usuário.
+
 ## O que NÃO está coberto — e o motivo, sem eufemismo
 
 | lacuna | por que a linha não é exercitada | risco residual |
@@ -165,7 +195,8 @@ com teste de comportamento, não de linha. É a troca certa.
 
 ## Duas coisas que este documento não prova
 
-1. **Que o treino funciona.** Os patchers aplicam `PATCH_OK` e o resultado **compila** contra
-   `f84270c`; que a cabeça de fonema aprenda algo é outra medição, e ela precisa de GPU.
+1. **Que a receita COMPLETA de treino funciona.** O checkpoint carrega, sabe português e aprende (acima), e os patchers aplicam `PATCH_OK` e compilam contra `f84270c`. O que falta é
+   a receita ponta a ponta — datamodule, augmentação, scheduler — e que a **cabeça de fonema**
+   aprenda algo. Isso precisa de GPU.
 2. **Que os números de desempenho valem.** Toda corrida desta sessão foi feita com a máquina em
    load 1,1–6,3. O que está provado é que os scripts **rodam e produzem saída correta**.

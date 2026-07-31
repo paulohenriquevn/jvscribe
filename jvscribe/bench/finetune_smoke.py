@@ -58,6 +58,43 @@ def _preparar_imports(icefall: Path, k2stub: Path) -> None:
     sys.path.insert(0, str(k2stub))
     sys.path.insert(0, str(icefall))
     sys.path.insert(0, str(icefall / "egs/commonvoice/ASR/zipformer"))
+    _neutralizar_tensorboard()
+
+
+def _neutralizar_tensorboard() -> None:
+    """`icefall.utils` importa `SummaryWriter` no topo; este smoke não registra nada.
+
+    A cadeia é `torch.utils.tensorboard` → `tensorboard` → `botocore` → `pyOpenSSL`, e basta
+    um elo quebrado no ambiente para o smoke não rodar por um motivo que não tem nada a ver
+    com o checkpoint sob teste `[MEDIDO]` 2026-07-31: `pyOpenSSL 25.1.0` com
+    `cryptography 49.0.0` levanta `AttributeError: module 'lib' has no attribute 'GEN_EMAIL'`.
+
+    Só age quando o import REAL falha — num ambiente sadio o tensorboard verdadeiro é usado, e
+    nada aqui o esconde. Consertar o ambiente global do usuário para rodar um teste seria
+    efeito colateral fora de escopo.
+    """
+    try:
+        import torch.utils.tensorboard  # noqa: F401
+        return
+    except (ImportError, AttributeError) as e:
+        # Estreito ao que a cadeia realmente produz: `ImportError` quando um elo falta, e
+        # `AttributeError` quando um elo está presente porém incompatível — o caso medido
+        # (`pyOpenSSL` × `cryptography`). Capturar `Exception` engoliria defeito de
+        # programação junto (`tests/test_erros_nao_engolidos.py`).
+        print(f"  [smoke] tensorboard indisponível ({type(e).__name__}); "
+              f"seguindo sem ele — este smoke não registra métricas.", flush=True)
+
+    import types
+
+    modulo = types.ModuleType("torch.utils.tensorboard")
+
+    class SummaryWriter:                          # noqa: D401 — dublê inerte
+        def __init__(self, *a, **kw): ...
+        def add_scalar(self, *a, **kw): ...
+        def close(self): ...
+
+    modulo.SummaryWriter = SummaryWriter
+    sys.modules["torch.utils.tensorboard"] = modulo
 
 
 def construir_modelo():
@@ -165,7 +202,21 @@ def main() -> int:
 
     # ---------- 1. os pesos entram na arquitetura ----------
     embed, enc, head = construir_modelo()
-    ck = torch.load(a.checkpoint, map_location="cpu", weights_only=False)
+    # Checkpoint truncado é o cenário que ESTE script existe para pegar — o
+    # `avg-124k-112k.pt` original chegou com 80 MB de 257 (`finetune/README.md § Incidente`).
+    # Deixar subir o traceback cru do `PyTorchFileReader` obrigaria o operador a decifrar um
+    # "internal miniz error" para descobrir que o download não completou (`error-handling.md`
+    # § 2: falhe claro, na fronteira).
+    try:
+        ck = torch.load(a.checkpoint, map_location="cpu", weights_only=False)
+    except (RuntimeError, EOFError, OSError) as e:
+        tam = a.checkpoint.stat().st_size / 1e6 if a.checkpoint.exists() else 0
+        raise SystemExit(
+            f"checkpoint ilegível: {a.checkpoint} ({tam:.0f} MB)\n"
+            f"  {type(e).__name__}: {str(e).splitlines()[0][:120]}\n"
+            "Causa mais provável: download incompleto ou disco cheio na gravação — já "
+            "aconteceu neste projeto. Confira o tamanho contra a origem e rebaixe."
+        ) from e
     sd = ck["model"] if isinstance(ck, dict) and "model" in ck else ck
     modelo = torch.nn.ModuleDict({"encoder_embed": embed, "encoder": enc, "ctc_output": head})
     faltando, sobrando = modelo.load_state_dict(sd, strict=False)
