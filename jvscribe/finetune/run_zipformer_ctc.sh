@@ -44,13 +44,27 @@ env OMP_NUM_THREADS=8 ./zipformer/train.py \
   --base-lr 0.04 --max-duration "$MAXD" $SZ
 
 # 3. decode held-out (FLEURS test): avg=1 (sem averaging) e avg=10 (o melhor vence)
+#
+# Os dois decodes são INDEPENDENTES — avg=10 pode falhar legitimamente num run curto (não há
+# 10 checkpoints) sem invalidar o avg=1. Por isso a falha de um não aborta o outro. Mas ela
+# TEM de aparecer: antes havia um `|| true` puro, e um decode quebrado produzia um script com
+# exit 0 e nenhum WER — silêncio num script de MEDIÇÃO (error-handling.md § 2).
+FALHAS=0
 for pair in "1 0" "10 1"; do
   set -- $pair
-  python3 ./zipformer/ctc_decode.py --epoch "$EPOCHS" --avg "$1" --use-averaged-model "$2" \
+  if ! python3 ./zipformer/ctc_decode.py --epoch "$EPOCHS" --avg "$1" --use-averaged-model "$2" \
     --exp-dir "$EXP" --lang-dir "$LD" --decoding-method ctc-greedy-search \
     --bpe-model "$LD/bpe.model" --cv-manifest-dir data/pt --language pt \
-    --use-ctc 1 --use-transducer 0 --max-duration 400 $SZ || true
+    --use-ctc 1 --use-transducer 0 --max-duration 400 $SZ; then
+    echo "AVISO: decode avg=$1 (use-averaged-model=$2) FALHOU" >&2
+    FALHAS=$((FALHAS + 1))
+  fi
 done
 
 echo "=== WER $SIZE (held-out FLEURS test) ==="
-grep -h '%WER' "$EXP"/ctc-greedy-search/*.txt 2>/dev/null | tail -6
+if ! grep -h '%WER' "$EXP"/ctc-greedy-search/*.txt 2>/dev/null | tail -6; then
+  echo "ERRO: nenhum %WER produzido — o treino ou os $FALHAS decode(s) falharam" >&2
+  exit 1
+fi
+[ "$FALHAS" -eq 2 ] && { echo "ERRO: os DOIS decodes falharam" >&2; exit 1; }
+exit 0

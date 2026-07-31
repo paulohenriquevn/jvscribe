@@ -7,7 +7,10 @@
 # para blank; o frontend adapta ao canal telefônico. É o equivalente barato de um adapter
 # (research asr-chief). FREEZE_ENCODER=1 dispara o patch em train.py (antes do optimizer).
 set -euo pipefail
-cd /workspace/icefall/egs/commonvoice/ASR
+# Raiz do icefall configurável (mesma convenção de `eval/measure_realcodec.py`), com o
+# caminho da instância de treino como default. `cd` com `set -e` já aborta se não existir.
+ICEFALL_ROOT="${ICEFALL_ROOT:-/workspace/icefall}"
+cd "$ICEFALL_ROOT/egs/commonvoice/ASR"
 
 FREEZE_ENCODER=1 CUDA_VISIBLE_DEVICES=0 OMP_NUM_THREADS=1 python3 zipformer/train.py \
   --world-size 1 --num-epochs 3 --start-epoch 1 --use-fp16 0 \

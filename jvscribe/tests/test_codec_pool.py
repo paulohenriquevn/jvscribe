@@ -58,3 +58,42 @@ def test_gsm_degrada_mais_que_g711():
 def test_gsm_saida_finita_e_normalizada():
     out = apply_codec(_tone(), 16000, "gsm")
     assert out.size > 0 and np.all(np.isfinite(out)) and np.max(np.abs(out)) <= 1.01
+
+
+def test_bug_real_no_torchaudio_nao_e_engolido_pelo_fallback(monkeypatch):
+    """`except Exception` trocava o codec do dado de TREINO em silêncio.
+
+    O fallback existe para "backend indisponível" (ImportError / RuntimeError / OSError).
+    Um defeito de programação — `ValueError` de shape, `TypeError` de dtype — tem de SUBIR:
+    se for engolido, a augmentação aplica outro codec do que o declarado e o efeito só
+    aparece como WER pior semanas depois, sem nenhum erro no log.
+    """
+    import codec_pool as cp
+
+    def _explode(*a, **k):
+        raise ValueError("shape errado — defeito de programação, não backend ausente")
+
+    monkeypatch.setattr(cp, "_apply_torchaudio", _explode)
+    with pytest.raises(ValueError, match="defeito de programação"):
+        cp.apply_codec(_tone(), 16000, "opus_low")
+
+
+@pytest.mark.parametrize("erro", [ImportError, RuntimeError, OSError])
+def test_backend_ausente_cai_para_ffmpeg_avisando(monkeypatch, erro):
+    """A família "backend indisponível" continua caindo para ffmpeg — mas AVISANDO.
+
+    O fallback silencioso escondia que a máquina roda o caminho lento; o aviso torna a
+    degradação de performance visível sem quebrar a execução.
+    """
+    import codec_pool as cp
+
+    if not _ffmpeg_available():
+        pytest.skip("ffmpeg ausente — o fallback não tem para onde cair")
+
+    def _sem_backend(*a, **k):
+        raise erro("backend não compilado")
+
+    monkeypatch.setattr(cp, "_apply_torchaudio", _sem_backend)
+    with pytest.warns(RuntimeWarning, match="torchaudio indisponível"):
+        out = cp.apply_codec(_tone(), 16000, "opus_low")
+    assert out.size > 0 and np.all(np.isfinite(out))

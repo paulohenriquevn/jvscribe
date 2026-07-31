@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import warnings
 
 import numpy as np
 
@@ -112,10 +113,24 @@ def apply_codec(samples: np.ndarray, sr: int, codec: str) -> np.ndarray:
     if codec == "g711u":
         return _apply_g711(x, "u")
     if codec == "opus_low":
-        # rápido in-process (torchaudio); fallback ffmpeg (ex.: local sem torchaudio)
+        # Rápido in-process (torchaudio); cai para ffmpeg quando o BACKEND não existe.
+        # Só a família "backend indisponível" é capturada: `except Exception` engolia também
+        # bug real (dtype errado, shape errado) e trocava o codec aplicado ao dado de TREINO
+        # em silêncio — o pior modo de falha possível aqui, porque o efeito aparece como WER
+        # pior semanas depois, sem nenhum erro no log (error-handling.md § 2).
+        #   ImportError  torch/torchaudio ausente
+        #   RuntimeError torchaudio sem StreamWriter/libopus compilado
+        #   OSError      biblioteca compartilhada faltando
         try:
             return _apply_torchaudio(x, sr, "ogg", "libopus", bit_rate=6000)
-        except Exception:
+        except (ImportError, RuntimeError, OSError) as e:
+            # `warnings` deduplica por (mensagem, módulo, linha) — sem estado global meu, e
+            # sem poluir o caminho quente da augmentação a cada utterance.
+            warnings.warn(
+                f"torchaudio indisponível para opus_low ({type(e).__name__}: {e}); "
+                f"usando ffmpeg. O resultado é equivalente, mas mais lento.",
+                RuntimeWarning, stacklevel=2,
+            )
             return _apply_ffmpeg(x, sr, "opus_low")
     if codec in _FFMPEG_CODECS:      # gsm etc. — offline (builder), não no pool on-the-fly
         return _apply_ffmpeg(x, sr, codec)

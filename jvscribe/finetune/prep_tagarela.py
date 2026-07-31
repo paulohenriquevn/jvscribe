@@ -72,6 +72,9 @@ import prep_icefall as PI  # reusa normalize_ptbr — sem duplicar (audit D2)
 TARGET_SR = 16000  # mesma taxa do treino de M4/CORAA; fbank misturando SR é bug
 ACCENT_KEEP = "pt-br"  # projeto é PT-BR; TAGARELA mistura ~9% pt-PT (doc do dataset)
 CUT_ID_PREFIX = "tagarela_train"  # disjunto por construção dos prefixos "coraa_*"
+# Acima disto, perda por decode deixa de ser "alguns FLACs ruins" e vira shard truncado.
+# `[ESTIMATIVA]` — limiar de sanidade, não medição; existe para falhar alto, não para ser exato.
+MAX_FRACAO_DECODE_ERROR = 0.05
 
 # --- Filtro determinístico de alucinação de pseudo-label (F3 da revisão de corpus) ---
 # Defaults CONSERVADORES: alvo é cortar a assinatura de loop do Whisper e razões
@@ -205,7 +208,11 @@ def build_split(parquet_dir: Path, wav_dir: Path, limit: int | None):
                 # decode → mono → wav → from_file (bounda RAM; garante mono)
                 try:
                     arr, sr = sf.read(io.BytesIO(audio["bytes"]), dtype="float32")
-                except Exception:  # FLAC corrompido no shard — conta e segue (fail-soft por item)
+                except sf.LibsndfileError:
+                    # FLAC corrompido no shard — conta e segue (fail-soft POR ITEM).
+                    # Era `except Exception`: um defeito de programação (TypeError, ValueError)
+                    # seria contado como "áudio corrompido" e o dado descartado em silêncio —
+                    # num corpus de TREINO, o pior lugar possível para perder dado sem saber.
                     stats["decode_error"] += 1
                     continue
                 if arr.ndim > 1:  # downmix estéreo→mono (mesma convenção de prep_icefall)
@@ -257,6 +264,17 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
         raise RuntimeError(
             f"[tagarela] 0 utterances mantidas sob {parquet_dir} — shards vazios ou "
             f"todos filtrados (accent/texto/alucinação/ratio)?")
+    # Perda em MASSA por decode não pode passar como linha de log. Alguns FLACs corrompidos
+    # num shard são normais; um shard truncado no download derruba tudo, e o pipeline seguiria
+    # montando o corpus de treino com o que sobrou — sem erro, e o efeito só apareceria como
+    # WER pior no fim do run de GPU. O limiar é heurístico e está aqui para ser visto.
+    if stats["total"] and stats["decode_error"] / stats["total"] > MAX_FRACAO_DECODE_ERROR:
+        raise RuntimeError(
+            f"[tagarela] {stats['decode_error']}/{stats['total']} utterances falharam ao "
+            f"decodificar ({100 * stats['decode_error'] / stats['total']:.1f}% > "
+            f"{100 * MAX_FRACAO_DECODE_ERROR:.0f}%) — shard truncado no download? "
+            f"Corrija a origem; não construa corpus de treino com dado faltando em silêncio."
+        )
     _write_coverage_report(out, stats["show_counts"], stats["kept"])
     cuts = CutSet.from_manifests(
         recordings=RecordingSet.from_recordings(recs),

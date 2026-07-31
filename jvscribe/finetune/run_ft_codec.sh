@@ -13,7 +13,10 @@
 # DEFERIDO (para não patchar o modelo com risco agora): --use-mux (inexistente neste recipe;
 #   o p=0.5 cumpre o papel) e bandwidth-embedding (muda dim de entrada do artefato — follow-up).
 set -euo pipefail
-cd /workspace/icefall/egs/commonvoice/ASR
+# Raiz do icefall configurável (mesma convenção de `eval/measure_realcodec.py`), com o
+# caminho da instância de treino como default. `cd` com `set -e` já aborta se não existir.
+ICEFALL_ROOT="${ICEFALL_ROOT:-/workspace/icefall}"
+cd "$ICEFALL_ROOT/egs/commonvoice/ASR"
 
 CUDA_VISIBLE_DEVICES=0 OMP_NUM_THREADS=1 python3 zipformer/train.py \
   --world-size 1 --num-epochs 3 --start-epoch 1 --use-fp16 0 \

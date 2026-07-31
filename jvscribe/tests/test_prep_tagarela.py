@@ -250,3 +250,41 @@ def test_prepare_falha_alto_quando_tudo_filtrado(tmp_path):
     out = tmp_path / "out"; out.mkdir()
     with pytest.raises(RuntimeError):
         prep_tagarela.prepare(tmp_path, out, Fbank(FbankConfig(num_mel_bins=80)), 1, None)
+
+
+# ── Perda de dado no corpus de TREINO não pode ser silenciosa ────────────────────────────
+
+def test_decode_error_em_massa_falha_alto(monkeypatch, tmp_path):
+    """Um shard truncado no download derrubaria a maioria das utterances.
+
+    Antes, o pipeline imprimia a contagem numa linha de log e seguia montando o corpus com o
+    que sobrou — o efeito só apareceria como WER pior no fim de um run de GPU pago.
+    """
+    import prep_tagarela as PT
+
+    stats = {"total": 1000, "kept": 400, "empty": 0, "wrong_accent": 0,
+             "hallucination": 0, "bad_ratio": 0, "decode_error": 600, "show_counts": {}}
+    monkeypatch.setattr(PT, "build_split", lambda *a, **k: ([], [], stats))
+    with pytest.raises(RuntimeError, match="falharam ao decodificar"):
+        PT.prepare(tmp_path, tmp_path, extractor=None, num_jobs=1, limit=None)
+
+
+def test_alguns_flacs_corrompidos_nao_derrubam_o_run(monkeypatch, tmp_path):
+    """O caso legítimo: perda pontual segue sendo fail-soft por item.
+
+    O limiar existe para separar "shard quebrado" de "alguns arquivos ruins" — se ele
+    disparasse com 1%, o pipeline ficaria inutilizável no caso normal.
+    """
+    import prep_tagarela as PT
+
+    stats = {"total": 1000, "kept": 990, "empty": 0, "wrong_accent": 0,
+             "hallucination": 0, "bad_ratio": 0, "decode_error": 10, "show_counts": {}}
+    monkeypatch.setattr(PT, "build_split", lambda *a, **k: ([], [], stats))
+    monkeypatch.setattr(PT, "_write_coverage_report", lambda *a, **k: None)
+    # Roda até o fim: 1% de perda é o caso normal e não pode abortar o pipeline.
+    PT.prepare(tmp_path, tmp_path, extractor=None, num_jobs=1, limit=None)
+
+
+
+# A guarda de `except` largo virou `test_erros_nao_engolidos.py`, do PACOTE inteiro —
+# a mesma classe apareceu em `corpus/codec_pool.py`. Escopar por arquivo era DRY ao contrário.

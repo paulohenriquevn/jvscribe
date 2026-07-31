@@ -40,7 +40,9 @@ trap 'rm -rf "$TMPDIR"' EXIT
 ALAW="$TMPDIR/alaw.wav"
 
 # 1+2. reamostra p/ 8 kHz e aplica a banda telefônica 300-3400 Hz num passo.
-#      `sinc 300-3400` é o passa-banda; `rate 8000` reamostra.
+#      `sinc 300-3400` é o passa-banda; o `-r 8000` da SAÍDA reamostra (o sox insere o
+#      `rate` implicitamente). Não existe efeito `rate` explícito aqui — o comentário
+#      anterior descrevia um comando que não é este.
 # 3.   codifica em G.711 a-law (8 kHz mono) — o formato do canal.
 sox "$INPUT" -r 8000 -c 1 -e a-law "$ALAW" sinc 300-3400
 
