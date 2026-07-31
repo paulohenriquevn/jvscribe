@@ -11,12 +11,14 @@ Fecha os DoDs que ficaram parciais no primeiro baseline:
 Robustez: parquet direto do HF (evita `datasets`/`torchcodec`); ctranslate2
 single-thread (`cpu_threads=1`, evita deadlock de futex).
 
-Uso: python3 scripts/baseline_fleurs_ptbr.py [n_utterances] [modelos-csv]
-Emite wiki/medicoes/m1-baseline-report.md (multi-modelo).
+Uso: python3 jvscribe/eval/baseline_fleurs_ptbr.py --n 12 --models small medium large-v3
+Emite `wiki/medicoes/m1-baseline.md` — e RECUSA sobrescrevê-lo (é evidência publicada).
+`JVSCRIBE_REPORT` redireciona; `JVSCRIBE_REPORT_FORCE=1` autoriza a substituição.
 """
 
 from __future__ import annotations
 
+import argparse
 import io
 import os
 import subprocess
@@ -56,8 +58,16 @@ def _augment(src: str, out: str) -> None:
 
 
 def main() -> int:
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 12
-    models = (sys.argv[2].split(",") if len(sys.argv) > 2 else ["small", "medium", "large-v3"])
+    # Era posicional (`sys.argv[1]`, `sys.argv[2]`) e sem `--help`: pedir ajuda dava
+    # `ValueError: invalid literal for int() with base 10: '--help'`, de onde ninguém deduz a
+    # interface. Terceira ocorrência do mesmo defeito no repositório — guardado por
+    # `tests/test_entrypoints_argparse.py`.
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--n", type=int, default=12, help="utterances do FLEURS pt_br test")
+    ap.add_argument("--models", nargs="+", default=["small", "medium", "large-v3"],
+                    help="tamanhos do faster-whisper a medir")
+    args = ap.parse_args()
+    n, models = args.n, args.models
 
     from faster_whisper import WhisperModel
 
@@ -119,7 +129,7 @@ def main() -> int:
             f"(LGPD, fora de escopo)."
         ),
         provenance=(
-            f"comando `python3 scripts/baseline_fleurs_ptbr.py {n} {','.join(models)}`; "
+            f"comando `python3 jvscribe/eval/baseline_fleurs_ptbr.py --n {n} --models {' '.join(models)}`; "
             f"faster-whisper int8 CPU cpu_threads=1 beam_size=1 language=pt; "
             f"dataset google/fleurs pt_br test (parquet); augmentação telephone_augment.sh; "
             f"bootstrap seed={seed}, n_boot={n_boot}; hardware = máquina de referência do "

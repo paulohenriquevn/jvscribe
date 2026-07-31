@@ -13,13 +13,15 @@ que exige `torchcodec`) e roda faster-whisper single-thread (`cpu_threads=1`,
 evita um deadlock de futex do threading default). Aplica a cadeia de augmentação
 telefônica (a-law round-trip) sobre o áudio já-8 kHz, exercitando a régua inteira.
 
-Uso: python3 scripts/baseline_minds14.py [n_utterances] [modelo]
+Uso: python3 jvscribe/eval/baseline_minds14.py --n 15 --model base
 
-Emite wiki/medicoes/m1-baseline-report.md.
+Emite `wiki/medicoes/m1-baseline-minds14.md` — e RECUSA sobrescrevê-lo (é evidência
+publicada). `JVSCRIBE_REPORT` redireciona; `JVSCRIBE_REPORT_FORCE=1` autoriza.
 """
 
 from __future__ import annotations
 
+import argparse
 import io
 import os
 import sys
@@ -42,8 +44,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def main() -> int:
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 15
-    model_size = sys.argv[2] if len(sys.argv) > 2 else "base"
+    # Mesmo defeito do irmão: interface posicional sem `--help` — pedir ajuda dava
+    # `ValueError: invalid literal for int()`. Ver `tests/test_entrypoints_argparse.py`.
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--n", type=int, default=15, help="utterances do minds14 pt-PT")
+    ap.add_argument("--model", default="base", help="tamanho do faster-whisper")
+    args = ap.parse_args()
+    n, model_size = args.n, args.model
 
     from faster_whisper import WhisperModel
 

@@ -29,6 +29,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Fixed
+- **`common/artifact.py` reescrevia o `model_card.json` quando alguém só queria olhar — e isso
+  desarmava a própria detecção de peso trocado.** O card guarda `model_sha256` e
+  `vocab_fingerprint` justamente para denunciar um peso que não é o medido. O CLI recomputava os
+  dois **a partir do que estivesse em disco** e sobrescrevia o card, sem `--force` e sem
+  confirmação. Com um peso trocado, o card divergente é o alarme; rodar o gerador — a coisa
+  natural a fazer — regravava o card para abençoar o peso novo. A ferramenta que existe para
+  detectar adulteração a **lavava** quando invocada por reflexo. Agora **verifica por padrão**
+  (exit 1 e diff campo a campo na divergência, sem tocar no arquivo) e só escreve com `--write`.
+  Encontrado ao revalidar: rodei para inspecionar e ele reescreveu.
+- **Três entrypoints liam `sys.argv` na mão e não tinham `--help`.** `eval/baseline_fleurs_ptbr`
+  e `eval/baseline_minds14` respondiam `ValueError: invalid literal for int() with base 10:
+  '--help'` — erro de onde ninguém deduz que a interface era `[n_utterances] [modelo]`,
+  posicional e documentada só num docstring que ainda apontava para `scripts/` e para um arquivo
+  de saída inexistentes. Terceira ocorrência do defeito (a primeira foi
+  `audit/tagarela_noise_audit`), agora guardada por `tests/test_entrypoints_argparse.py`.
+  `eval/cer_from_recogs` também convertido. **37/37 entrypoints respondem a `--help`.**
 - **A sonda de composição do erro imprimia percentual sem denominador e sem intervalo.**
   `eval/analyze_error_composition.py` usava `max(subs, 1)` em cinco lugares: com zero
   substituições o relatório saía `0,0% ATACÁVEL` sob rótulo `[MEDIDO]` — conclusão a partir de

@@ -275,14 +275,24 @@ def write_card(artifact_dir: Path, card: dict) -> Path:
     return out
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """VERIFICA por padrão; escreve só com `--write`.
+
+    O card guarda `model_sha256` e `vocab_fingerprint` para **detectar** peso trocado. Enquanto
+    o CLI regravava por padrão, rodá-lo — a coisa natural a fazer, "deixa eu regenerar o card"
+    — recomputava os dois a partir do que estivesse em disco e abençoava o peso novo: a
+    ferramenta que existe para detectar adulteração a lavava quando invocada por reflexo.
+    Escrever passa a exigir intenção; olhar deixa de ter efeito colateral.
+    """
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("artifact_dir", type=Path)
+    ap.add_argument("--write", action="store_true",
+                    help="regenera o model_card.json (padrão: apenas verifica)")
     ap.add_argument("--model-file", default=DEFAULT_MODEL_FILE)
     ap.add_argument("--tokens-file", default=DEFAULT_TOKENS_FILE)
     ap.add_argument("--wer", type=float, default=None)
     ap.add_argument("--wer-source", default=None)
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
 
     card = build_card(
         a.artifact_dir,
@@ -291,11 +301,36 @@ def main() -> int:
         wer=a.wer,
         wer_source=a.wer_source,
     )
-    out = write_card(a.artifact_dir, card)
-    print(f"escrito: {out}")
-    print(f"  vocab_real_len   : {card['vocab_real_len']}")
-    print(f"  vocab_fingerprint: {card['vocab_fingerprint']}")
-    print(f"  model_sha256     : {card['model_sha256'][:16]}…")
+    resumo = (
+        f"  vocab_real_len   : {card['vocab_real_len']}\n"
+        f"  vocab_fingerprint: {card['vocab_fingerprint']}\n"
+        f"  model_sha256     : {card['model_sha256'][:16]}…"
+    )
+
+    if a.write:
+        print(f"escrito: {write_card(a.artifact_dir, card)}\n{resumo}")
+        return 0
+
+    atual_path = a.artifact_dir / MODEL_CARD_NAME
+    if not atual_path.exists():
+        print(f"card ausente: {atual_path}\n{resumo}\n"
+              f"→ `--write` para criá-lo.")
+        return 1
+    atual = json.loads(atual_path.read_text(encoding="utf-8"))
+    # `generated_at` muda a cada corrida por construção — compará-lo acusaria divergência
+    # em todo card íntegro, e uma guarda que sempre acusa ensina a ignorá-la.
+    divergentes = [
+        k for k in ("model_sha256", "vocab_fingerprint", "vocab_real_len", "model_file")
+        if atual.get(k) != card.get(k)
+    ]
+    if divergentes:
+        print(f"DIVERGÊNCIA entre o artefato em disco e {MODEL_CARD_NAME}: {divergentes}")
+        for k in divergentes:
+            print(f"  {k}:\n    card={atual.get(k)}\n    disco={card.get(k)}")
+        print("\nO card NÃO foi alterado. Se o peso mudou de propósito, regenere com `--write`;\n"
+              "se não mudou, o artefato em disco não é o que a medição publicada usou.")
+        return 1
+    print(f"OK: {atual_path} confere com o artefato em disco\n{resumo}")
     return 0
 
 

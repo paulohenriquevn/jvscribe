@@ -9,6 +9,7 @@ impressão. A separação existe porque a métrica tem 7 consumidores e o CLI, n
 """
 from __future__ import annotations
 
+import argparse
 import pathlib
 import sys
 
@@ -19,9 +20,9 @@ from pathlib import Path  # noqa: E402
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit("uso: cer_from_recogs.py <recogs.txt>")
-    path = Path(sys.argv[1])
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("recogs", type=Path, help="arquivo recogs-*.txt produzido pelo icefall")
+    path = ap.parse_args().recogs
     if not path.exists():
         raise SystemExit(f"recogs ausente: {path}")
     try:

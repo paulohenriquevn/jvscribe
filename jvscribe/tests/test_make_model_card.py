@@ -109,3 +109,75 @@ def test_leitor_de_card_aceita_o_schema_antigo():
     assert hasattr(m, "SCHEMAS_ACEITOS"), "falta o conjunto de schemas aceitos na leitura"
     assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS
     assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# O CLI não pode ESCREVER quando alguém só quis OLHAR.
+#
+# `model_card.json` existe para DETECTAR peso trocado: guarda `model_sha256` e
+# `vocab_fingerprint`. Mas `python3 common/artifact.py <dir>` recomputava os dois a partir do
+# que estivesse em disco e **sobrescrevia o card** — sem `--force`, sem confirmação, imprimindo
+# "escrito:" como se fosse inspeção.
+#
+# A consequência não é estética: com um peso trocado, o card divergente é o alarme. Rodar o
+# gerador — a coisa natural a fazer, "deixa eu regenerar o card" — reescreve o card para
+# abençoar o peso novo. A ferramenta que existe para detectar adulteração a LAVA quando
+# invocada por reflexo.
+#
+# Aconteceu comigo nesta revalidação: rodei para inspecionar e reescreveu. O conteúdo saiu
+# idêntico por sorte (o peso não tinha mudado), e `docs/LIVE-TEST.md` já registrava
+# "regenerou model_card.json" como ✅ sem ninguém notar o que "regenerou" significa.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _artefato_fake(tmp_path):
+    (tmp_path / "model.int8.onnx").write_bytes(b"peso original")
+    (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\nb 2\n", encoding="utf-8")
+    return tmp_path
+
+
+def test_o_modo_padrao_verifica_e_nao_escreve(tmp_path, capsys):
+    """Invocação sem `--write` deixa o card intocado — inclusive o mtime."""
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    antes = card.read_bytes(), card.stat().st_mtime_ns
+
+    assert main([str(d)]) == 0
+    assert (card.read_bytes(), card.stat().st_mtime_ns) == antes, (
+        "o modo padrão escreveu — quem invoca para olhar não pode mutar a autoridade"
+    )
+
+
+def test_peso_trocado_e_denunciado_e_nao_abencoado(tmp_path):
+    """O caso que dá razão a esta guarda existir.
+
+    Antes: o gerador recomputava o sha do peso NOVO e regravava o card, apagando a única
+    evidência de que peso e card divergiam.
+    """
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    original = card.read_text(encoding="utf-8")
+
+    (d / "model.int8.onnx").write_bytes(b"PESO TROCADO")   # o cenário que o card detecta
+
+    assert main([str(d)]) != 0, "divergência entre peso e card tem de falhar"
+    assert card.read_text(encoding="utf-8") == original, (
+        "o card foi reescrito para casar com o peso trocado — a detecção foi lavada"
+    )
+
+
+def test_write_continua_regenerando_de_proposito(tmp_path):
+    """Regenerar é legítimo — só deixa de ser efeito colateral de olhar."""
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    (d / "model.int8.onnx").write_bytes(b"peso novo, deliberado")
+
+    assert main([str(d), "--write"]) == 0
+    assert "peso" in card.read_text(encoding="utf-8") or card.stat().st_size > 0
+    assert main([str(d)]) == 0, "após regenerar deliberadamente, a verificação passa"
