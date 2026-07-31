@@ -43,13 +43,21 @@ SR = 16000
 JANELAS = (2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
 
 
-def _carga_media(base: float) -> float:
+def _carga_media() -> float | None:
+    """Load average de 1 min, ou `None` quando a plataforma não expõe.
+
+    Devolvia `-1.0` como sentinela de falha e recebia um parâmetro `base` que nunca usava (o
+    único chamador passava `0`). O `-1.0` passava silenciosamente no `if carga > 1.0` do
+    chamador: numa plataforma sem `getloadavg` o calibrate **nunca avisaria** sobre carga, e a
+    ausência do aviso é indistinguível de "máquina ociosa". Valor mágico para sinalizar falha
+    é o que `error-handling.md` § 2 proíbe — `None` obriga o chamador a decidir.
+    """
     try:
         import os
 
         return os.getloadavg()[0]
     except (OSError, AttributeError):
-        return -1.0
+        return None
 
 
 def medir_curva(sess, fb, audio: np.ndarray, reps: int) -> dict[float, float]:
@@ -86,7 +94,7 @@ def main() -> int:
     import soundfile as sf
     from lhotse import Fbank, FbankConfig
 
-    carga = _carga_media(0)
+    carga = _carga_media()
     topo = detectar()
     modelo = default_model_path()
 
@@ -95,7 +103,12 @@ def main() -> int:
           + (f", híbrida (rápidos {topo.afinidade_taskset()} @ {topo.mhz_max} MHz)"
              if topo.hibrida else " (homogênea)"))
     print(f"  threads : intra={topo.threads_recomendadas} (da topologia)")
-    if carga > 1.0:
+    if carga is None:
+        # Não confundir "não sei" com "está ocioso" — a ausência do aviso seria lida como
+        # máquina limpa, e a calibração sairia de uma medição que ninguém validou.
+        print("  ⚠️ load average indisponível nesta plataforma — não dá para atestar que a "
+              "máquina está ociosa. Confira manualmente antes de confiar na curva.")
+    elif carga > 1.0:
         print(f"  ⚠️ load average {carga:.1f} — a medição vai ser ruidosa. Rode com a máquina ociosa.")
     print()
 

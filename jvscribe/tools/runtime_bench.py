@@ -7,8 +7,15 @@ Runtime). Uma diferença de 35 ms entre configurações iguais é ruído maior q
 efeitos medidos — concluir dali seria escolher por acaso.
 
 Cada configuração roda `--reps` vezes intercaladas (round-robin), para que uma flutuação de
-carga não caia toda sobre um candidato. Reporta mediana e IQR; o veredito de "melhor" só sai
-quando o IQR não se sobrepõe ao do baseline.
+carga não caia toda sobre um candidato. Reporta a **mediana** e o **delta pareado com IC95%**
+(bootstrap, `common/stats.py::comparar_pareado`); o veredito de "melhor" só sai quando o
+**IC95% do delta não cruza zero**.
+
+⚠️ Este parágrafo dizia "reporta mediana e IQR; o veredito sai quando o IQR não se sobrepõe".
+Não era o que o código fazia — `_iqr` existia e nunca foi chamada. O método real é mais forte
+(o pareamento remove a variância comum entre configurações, que a sobreposição de IQR ignora),
+mas numa ferramenta cujo propósito É rigor de método, descrever o método errado é o defeito
+mais caro possível: quem lesse o docstring citaria a técnica errada num artefato de decisão.
 
 Uso:
     python3 jvscribe/tools/runtime_bench.py --audio <wav> [--janela 6] [--reps 15]
@@ -66,12 +73,6 @@ def medir(sessoes, entradas, reps: int) -> dict[str, list[float]]:
             sess.run(["log_probs", "log_probs_len"], {"x": x, "x_lens": xl})
             amostras[nome].append((time.perf_counter() - t0) * 1000 / batch)
     return amostras
-
-
-def _iqr(v: list[float]) -> tuple[float, float]:
-    o = sorted(v)
-    n = len(o)
-    return o[max(0, n // 4)], o[min(n - 1, (3 * n) // 4)]
 
 
 def relatar(amostras: dict[str, list[float]], baseline: str) -> int:
