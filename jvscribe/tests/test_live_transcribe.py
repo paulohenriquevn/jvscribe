@@ -144,3 +144,35 @@ def test_veredito_declara_o_medido_e_o_alvo_para_cada_criterio():
     m.registrar(audio_s=1.0, wall_s=0.2, latencia_s=0.1, backlog=0)
     for chave, res in m.veredito().items():
         assert res.medido and res.alvo, f"{chave} sem medido/alvo"
+
+
+# --- backpressure ---------------------------------------------------------
+# Achado do soak de 2026-07-31: ao ficar para trás, o laço nunca recuperava — o atraso
+# medido subiu de 392 ms para 18.798 ms e ficou lá. Num sistema de tempo real, áudio antigo
+# vale menos que áudio novo: quando não dá para processar tudo, descarta-se o velho.
+
+def test_sem_atraso_nada_e_descartado():
+    from live_transcribe import aplicar_backpressure
+
+    audio = list(range(16000))
+    mantido, descartado = aplicar_backpressure(audio, atraso_s=0.0, teto_s=2.0)
+    assert descartado == 0 and mantido == audio
+
+
+def test_atraso_acima_do_teto_descarta_o_audio_MAIS_ANTIGO():
+    """Mantém a cauda: numa ligação, o que o cliente acabou de dizer importa mais."""
+    from live_transcribe import aplicar_backpressure
+
+    audio = list(range(48000))          # 3 s
+    mantido, descartado = aplicar_backpressure(audio, atraso_s=5.0, teto_s=2.0)
+    assert descartado > 0
+    assert mantido == audio[descartado:], "o descarte tem de ser do INÍCIO, não do fim"
+    assert len(mantido) <= 2.0 * 16000
+
+
+def test_backpressure_nunca_esvazia_tudo():
+    """Negativo: descartar o lote inteiro mataria o áudio novo junto com o velho."""
+    from live_transcribe import aplicar_backpressure
+
+    mantido, _ = aplicar_backpressure(list(range(8000)), atraso_s=999.0, teto_s=2.0)
+    assert len(mantido) > 0

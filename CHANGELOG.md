@@ -14,6 +14,52 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Profile por operador do runtime** (`jvscribe/results/m6-runtime-profile-2026-07-31.md`),
+  usando o profiler embutido do ONNX Runtime — que estava disponível desde sempre e não vinha
+  sendo usado. Ele mostra o que cronometrar blocos não mostra: `encoder` 75,6%,
+  `encoder_embed` 22,0%, **`ctc_output` 0,3%**; e que o matmul quantizado é só 24,4% do custo,
+  com mais de 40% em elementwise — `Log`/`Exp` com 84 nós cada em `/encoder_embed/conv/*`,
+  que é a ativação Swoosh expandida pelo export em vez de fundida.
+- `jvscribe/tools/runtime_bench.py` — varredura de configuração com **bootstrap pareado**.
+  Sem pareamento, tudo dava inconclusivo; e uma varredura de corrida única chegou a reportar
+  158,8 ms e 169,1 ms para configurações **idênticas** (ruído de 35 ms, maior que os efeitos).
+- `jvscribe/tools/stress_test.py` — soak com o modelo real, medindo RTFx, p99, RSS e estado
+  do motor minuto a minuto.
+- `jvscribe/realtime/streaming.py::FeatureCache` — fbank incremental. A extração por pedaço
+  só equivale à completa com offset **múltiplo do frame shift** e retendo 2 frames da borda
+  direita; sem isso divergia em 6,57 (desalinhado) e 6,27 (último frame de cada pedaço),
+  silenciosamente. 6 testes cobrem a equivalência.
+- 8 testes de invariante de ligação longa (`test_stress_invariants.py`) e 3 de backpressure.
+
+### Changed
+- **Sessão ONNX seguindo o `sherpa-onnx`** (`csrc/session.cc:149,156`): arena de memória
+  LIGADA e `inter_op` configurado. Medido com bootstrap pareado (25 reps, round-robin):
+  **−17,1%** de tempo de inferência, IC95% [−36,9; −17,8] ms. A arena estava desligada sem
+  justificativa e sozinha custava −6,7%. `graph_optimization_level=BASIC` **piora** (+6,6%).
+- Ganho combinado (config + cache de fbank) em `StreamingCTC.update()`: **379,3 → 315,1 ms**,
+  delta pareado −55,1 ms IC95% [−81,1; −30,2] → **−14,5%**.
+
+### Fixed
+- **O model card publicado afirmava que o modelo é causal. É falso.** Três fontes provam o
+  contrário: o metadado do artefato diz `comment: "non-streaming zipformer2 CTC"`, o grafo
+  ONNX não tem tensor de estado, e os scripts de treino nunca passam `--causal`. Corrigido e
+  republicado em `paulohenriquevn/jvscribe`.
+- **`committed` no `StreamingCTC` crescia sem teto** — 2.128 entradas em 3 min de soak
+  (~28 mil numa ligação de 40 min) quando o motor só consulta a última. Limitado a 64.
+- **O laço de tempo real não tinha backpressure**: ao ficar atrasado nunca recuperava — o
+  atraso medido subiu de 392 ms para 18.798 ms e ficou lá. Agora descarta áudio antigo acima
+  de um teto, preservando a cauda, e o descarte aparece no relatório.
+
+### Notes
+- **Duas otimizações do DoD do M6 não se aplicam a este pipeline**, com fonte:
+  FLToP CTC (`arXiv:2510.09085`) mede 10,5% contra **beam search beam=1000** e o próprio paper
+  diz que não vale para greedy argmax — nosso decode é greedy e custa 0,3%; blank
+  layer-skipping (`arXiv:2305.11558`) acelera o **joiner do transducer**, e somos CTC puro.
+  A alavanca de ordem de grandeza é treinar com `--causal 1`: medido, reprocessar 6 s custa
+  121 ms contra 11 ms de processar só os 0,5 s novos — **10,6× de retrabalho por hop**.
+
+
+### Added
 - **`jvscribe/realtime/live_transcribe.py` — app de transcrição ao vivo dos dois canais.**
   Captura mic (ATENDENTE) e loopback (CLIENTE) em paralelo, transcreve com um motor
   `StreamingCTC` por canal e imprime o diálogo rotulado, medindo os critérios do `PRD.md § 6`

@@ -69,3 +69,6 @@ training/results/**/_eval_wavs/
 # anulava as exceções lá de cima e deixava as fixtures determinísticas fora do git.
 *.f32
 !crates/macaw-audio/tests/fixtures/*.f32
+
+# profiles do ONNX Runtime (enable_profiling) — artefato de medição, não fonte
+onnxruntime_profile__*.json

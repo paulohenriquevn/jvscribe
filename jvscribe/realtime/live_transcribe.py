@@ -21,6 +21,7 @@ explicitamente quando essas condições não foram satisfeitas — ver `veredito
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import sys
 import time
@@ -55,6 +56,30 @@ def rotular(label: str) -> str:
             "Atribuir um falante por default trocaria quem disse o quê."
         )
     return FALANTES[label]
+
+
+def aplicar_backpressure(audio, atraso_s: float, teto_s: float = 2.0):
+    """Descarta áudio ANTIGO quando o consumidor ficou para trás. Devolve `(mantido, n)`.
+
+    Achado do soak de 2026-07-31: sem isto, o laço que fica atrasado **nunca recupera** — o
+    atraso medido subiu de 392 ms para 18.798 ms e ficou lá, porque cada ciclo chegava tarde
+    e o seguinte herdava o débito.
+
+    Num sistema de tempo real áudio velho vale menos que áudio novo: numa ligação, o que o
+    cliente acabou de dizer importa mais do que o que ele disse há 15 s. Então o descarte é
+    do INÍCIO, preservando a cauda — e nunca esvazia tudo, senão jogaria fora o áudio novo
+    junto com o velho.
+
+    A perda é real e deve aparecer no relatório: preferir texto recente a texto completo é
+    uma troca, não um conserto grátis.
+    """
+    if atraso_s <= teto_s or len(audio) == 0:
+        return audio, 0
+    manter = max(1, int(teto_s * SR))
+    if len(audio) <= manter:
+        return audio, 0
+    descartar = len(audio) - manter
+    return audio[descartar:], descartar
 
 
 @dataclass
@@ -107,6 +132,7 @@ class MetricasRNF:
     wall_total_s: float = 0.0
     latencias_s: list[float] = field(default_factory=list)
     com_backlog: int = 0
+    audio_descartado_s: float = 0.0    # backpressure: a perda tem de ser VISÍVEL
     inicio: float = field(default_factory=time.perf_counter)
 
     def registrar(self, audio_s: float, wall_s: float, latencia_s: float, backlog: int) -> None:
@@ -183,7 +209,11 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     L = ["# Transcrição ao vivo — evidência de RNF", "",
          f"- modelo: `{modelo}`",
          f"- duração: {r['duracao_s'] / 60:.1f} min · amostras de decode: {r['amostras']}",
-         f"- áudio processado: {m.audio_total_s:.1f} s em {m.wall_total_s:.1f} s de CPU", "",
+         f"- áudio processado: {m.audio_total_s:.1f} s em {m.wall_total_s:.1f} s de CPU",
+         (f"- ⚠️ **{m.audio_descartado_s:.1f} s de áudio DESCARTADO** por backpressure "
+          f"({100 * m.audio_descartado_s / max(m.audio_total_s, 1e-9):.1f}%) — o laço ficou "
+          "para trás e preferiu texto recente a texto completo"
+          if m.audio_descartado_s > 0 else "- nenhum áudio descartado por backpressure"), "",
          "## Critérios medidos", "", "| critério | medido | alvo | veredito |", "|---|---|---|---|"]
     for chave, c in {**m.veredito(), **m.veredito_condicoes(carga)}.items():
         L.append(f"| {chave} | {c.medido} | {c.alvo} | {'✅' if c.aprovado else '❌'} |")
@@ -205,7 +235,10 @@ def main() -> int:
     # cresce sem limite. Ver `jvscribe/results/m6-live-dual-channel.md`.
     ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode por canal (s)")
     ap.add_argument("--window", type=float, default=6.0, help="janela redecodificada (s) — ver o envelope medido")
-    ap.add_argument("--threads", type=int, default=4)
+    # Metade dos cores, teto 8. Medido nesta máquina (12 cores): intra=8 + inter=4 + arena
+    # ligada dá -17,1% de tempo de inferência, IC95% pareado [-36,9; -17,8] ms. NÃO extrapole
+    # o número para a frota: num BYOD de 4 cores, 8 threads intra disputariam a mesma CPU.
+    ap.add_argument("--threads", type=int, default=min(8, max(2, (os.cpu_count() or 4) // 2)))
     ap.add_argument("--relatorio", type=pathlib.Path, default=None)
     ap.add_argument("--com-carga", action="store_true",
                     help="declara que há carga concorrente real rodando (RNF-05)")
@@ -221,7 +254,11 @@ def main() -> int:
 
     so = ort.SessionOptions()
     so.intra_op_num_threads = a.threads
-    so.enable_cpu_mem_arena = False
+    # `inter_op` e a arena de memória seguem o sherpa-onnx (`csrc/session.cc:149,156`), o
+    # runtime CPU de referência. A arena estava DESLIGADA aqui sem justificativa e custava
+    # 6,7% [IC95% -18,3; -3,9] ms — realocação a cada `run()`.
+    so.inter_op_num_threads = max(2, a.threads // 2)
+    so.enable_cpu_mem_arena = True
     sess = ort.InferenceSession(modelo, so, providers=["CPUExecutionProvider"])
     id2tok = load_tokens(tokens)
 
@@ -253,6 +290,10 @@ def main() -> int:
                 for label, buf in pendente.items():
                     if len(buf) < hop_amostras:
                         continue
+                    atraso = time.perf_counter() - chegada[label]
+                    buf, descartadas = aplicar_backpressure(buf, atraso)
+                    if descartadas:
+                        met.audio_descartado_s += descartadas / SR
                     t0 = time.perf_counter()
                     finais, _ = motores[label].update(buf)
                     wall = time.perf_counter() - t0
