@@ -33,7 +33,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
-from cpu_topology import detectar  # noqa: E402
+from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
 

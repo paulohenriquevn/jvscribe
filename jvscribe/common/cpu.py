@@ -1,37 +1,20 @@
-"""Detecta a topologia da CPU e recomenda afinidade e contagem de threads.
+"""Capacidade da máquina — o que esta CPU **tem** e o que **cabe** nela.
 
-Existe por uma medição `[MEDIDO]` 2026-07-31 num i7 híbrido (2 P-cores a 5,0 GHz com
-hyperthreading + 8 E-cores a 3,7 GHz):
+Duas perguntas de um domínio só, e sempre respondidas juntas (`bench/calibrate.py` usa as
+duas na mesma tela):
 
-| configuração     | mediana | IPC  | instruções |
-|------------------|---------|------|------------|
-| P-cores, intra=2 | 70,2 ms | 1,87 |     30,9 G |
-| todos, intra=6   | 94,0 ms | 1,22 |     90,9 G |
+| função | responde |
+|---|---|
+| `detectar` | quantos núcleos, quais são rápidos, quantas threads recomendar |
+| `ocupacao` / `janela_maxima` | com N canais a cada hop, qual janela de decode ainda cabe |
 
-**25% mais rápido usando 3× menos threads.** O cache miss é idêntico nos dois (~26%), então
-não é limite de memória: seis threads executam **3× mais instruções para o mesmo trabalho**.
-É spin-wait em barreira — e numa CPU híbrida cada barreira do matmul espera o E-core, 26%
-mais lento em clock e de microarquitetura mais estreita.
+Estavam em `cpu_topology.py` + `calibracao.py`. `calibracao.py` tinha 53 linhas e duas
+funções de aritmética que só fazem sentido sobre o resultado de `detectar` — um fragmento,
+não uma unidade. Unificados em 2026-07-31.
 
-A dispersão também cai: 67,8–72,5 ms fixado contra 74,4–99,1 ms espalhado. Isso importa mais
-que a mediana, porque o RNF-02 é **p99**, não média.
-
-Efeito colateral que é requisito: ocupar 2 dos 12 lógicos em vez de 6 deixa CPU para o
-softphone, que o RNF-05 exige que esteja rodando durante a medição.
-
-⚠️ **Este módulo só OBSERVA.** Fixar o processo nos P-cores foi tentado e revertido: isolado
-dava 25% de ganho, mas no sistema real com dois canais o RTFx caiu de 4,60× para 2,33×.
-`sched_setaffinity` **é herdado pelos filhos**, então os `parec` da captura passavam a
-disputar os mesmos 2 P-cores com a inferência. No soak sem subprocessos a afinidade era
-neutra (6,49× fixado vs 6,88× livre) — ganho zero e um modo de falha real.
-
-O ganho está na CONTAGEM de threads, não na afinidade: `intra=2` dá RTFx 6,88× contra 4,95×
-de `intra=6` e 3,94× de `intra=12`. Deixar o escalonador colocar 2 threads (ele já prefere
-P-core quando há) e manter os demais núcleos livres para captura e segundo canal.
-
-⚠️ Isto é uma **heurística de uma máquina**. O piso da frota BYOD é `[DESCONHECIDO]` (Q-01);
-num CPU de 4 núcleos homogêneos a conta é outra. Por isso a detecção é dinâmica e a
-recomendação sempre pode ser sobrescrita por flag.
+⚠️ **NÃO existe função de afinidade aqui, de propósito.** `sched_setaffinity` deu 25% isolado
+e derrubou o RTFx ao vivo de 4,60× para 2,33× `[MEDIDO]`, porque é **herdada pelos processos
+filhos** e os `parec` da captura passavam a disputar os mesmos P-cores. Há teste de regressão.
 """
 from __future__ import annotations
 
@@ -121,3 +104,43 @@ def detectar(base: Path | str = SYSFS_CPU) -> Topologia:
         hibrida=len(rapidas) < len(freqs),
         mhz_max=pico // 1000,
     )
+
+
+# ── o que CABE nesta máquina ─────────────────────────────────────────────────────────
+
+# Fração da CPU que o decode pode ocupar. Acima disto não sobra para captura, extração de
+# features e a carga concorrente que o RNF-05 exige (softphone). Medido: a 87,3% o backlog
+# já cresce; a 104,9% satura por construção.
+TETO_OCUPACAO = 0.80
+
+
+def ocupacao(custo_ms: float, canais: int, hop_s: float) -> float:
+    """Fração da CPU consumida só decodificando: `canais × custo ÷ hop`.
+
+    Note que hop MENOR aumenta a ocupação — redecodifica a janela inteira mais vezes. É
+    contra-intuitivo e foi medido: hop de 0,3 s deu RTFx 2,14× contra 3,66× de 0,6 s.
+    """
+    if hop_s <= 0:
+        raise ValueError(f"hop tem de ser positivo, veio {hop_s}")
+    return canais * (custo_ms / 1000.0) / hop_s
+
+
+def janela_maxima(
+    curva: dict[float, float],
+    canais: int,
+    hop_s: float,
+    teto: float = TETO_OCUPACAO,
+) -> float | None:
+    """Maior janela cujo custo cabe no `teto`. `None` quando nenhuma cabe.
+
+    Devolver `None` é deliberado: se a máquina não aguenta nem a menor janela, entregar a
+    menor mesmo assim esconderia que ela não serve para o caso de uso, e o operador seguiria
+    achando que está tudo bem.
+    """
+    if not curva:
+        raise ValueError("curva vazia — sem medição na máquina-alvo não há calibração")
+    if not 0 < teto <= 1:
+        raise ValueError(f"teto tem de ficar em (0, 1], veio {teto}")
+
+    cabem = [j for j, custo in curva.items() if ocupacao(custo, canais, hop_s) <= teto]
+    return max(cabem) if cabem else None

@@ -35,8 +35,8 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path  # noqa: E402
-from calibracao import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
-from cpu_topology import detectar  # noqa: E402
+from cpu import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
+from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 
 SR = 16000

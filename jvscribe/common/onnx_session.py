@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cpu_topology import detectar  # noqa: E402
+from cpu import detectar  # noqa: E402
 
 
 def opcoes_de_sessao(threads: int | None = None, *, memoria_restrita: bool = False):

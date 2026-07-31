@@ -19,7 +19,7 @@ RUST_FINGERPRINT_RUNTIME = "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2
 
 
 def test_fingerprint_python_reproduz_o_do_rust():
-    from make_model_card import vocab_fingerprint
+    from artifact import vocab_fingerprint
 
     tokens = REPO / "jvscribe/tests/fixtures/tokens-m4.txt"
     if not tokens.exists():
@@ -30,7 +30,7 @@ def test_fingerprint_python_reproduz_o_do_rust():
 
 
 def test_real_len_exclui_desambiguacao(tmp_path):
-    from make_model_card import vocab_real_len
+    from artifact import vocab_real_len
 
     p = tmp_path / "tokens.txt"
     p.write_text("<blk> 0\na 1\nb 2\n#0 3\n#1 4\n", encoding="utf-8")
@@ -38,7 +38,7 @@ def test_real_len_exclui_desambiguacao(tmp_path):
 
 
 def test_model_card_contem_campos_obrigatorios(tmp_path):
-    from make_model_card import build_card
+    from artifact import build_card
 
     (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\n#0 2\n", encoding="utf-8")
     (tmp_path / "model.int8.onnx").write_bytes(b"fake-onnx-bytes")
@@ -50,7 +50,7 @@ def test_model_card_contem_campos_obrigatorios(tmp_path):
 
 def test_gerar_card_nunca_remove_nem_move_arquivo(tmp_path):
     """O invariante do dono: modelo nunca é excluído."""
-    from make_model_card import build_card, write_card
+    from artifact import build_card, write_card
 
     (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\n", encoding="utf-8")
     (tmp_path / "model.int8.onnx").write_bytes(b"pesos")
@@ -91,7 +91,7 @@ def test_o_schema_declara_o_nome_do_produto():
     "jvscribe" era o nome antigo do produto. Um card publicado com o nome errado confunde quem
     consome o artefato — e ele É consumido: está no HuggingFace.
     """
-    import make_model_card as m
+    import artifact as m
 
     # O que importa é o que é ESCRITO. O nome antigo pode (e deve) continuar na lista de
     # aceitos na leitura — ver o teste seguinte.
@@ -104,7 +104,7 @@ def test_leitor_de_card_aceita_o_schema_antigo():
     Recusá-los quebraria a leitura de um artefato válido — o schema mudou de nome, não de
     formato.
     """
-    import make_model_card as m
+    import artifact as m
 
     assert hasattr(m, "SCHEMAS_ACEITOS"), "falta o conjunto de schemas aceitos na leitura"
     assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS

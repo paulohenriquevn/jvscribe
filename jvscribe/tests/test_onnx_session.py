@@ -41,7 +41,7 @@ def test_threads_explicitas_sao_honradas():
 
 def test_sem_threads_usa_a_topologia_da_maquina():
     """A contagem certa depende da CPU — numa híbrida, threads a mais esperam o E-core."""
-    from cpu_topology import detectar
+    from cpu import detectar
 
     assert opcoes_de_sessao().intra_op_num_threads == detectar().threads_recomendadas
 

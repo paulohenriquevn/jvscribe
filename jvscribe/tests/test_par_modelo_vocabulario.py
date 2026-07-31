@@ -28,7 +28,7 @@ sys.path.insert(0, str(PKG / "common"))
 
 def _artefato(tmp: Path, tokens: list[str], *, fingerprint: str | None = None) -> Path:
     """Monta um diretório de artefato mínimo: modelo fake, tokens.txt e model_card.json."""
-    from make_model_card import vocab_fingerprint
+    from artifact import vocab_fingerprint
 
     d = tmp / "artefato"
     d.mkdir(parents=True, exist_ok=True)
@@ -93,7 +93,9 @@ def test_card_sem_fingerprint_falha_claro(tmp_path):
     card = json.loads((d / "model_card.json").read_text())
     del card["vocab_fingerprint"]
     (d / "model_card.json").write_text(json.dumps(card), encoding="utf-8")
-    with pytest.raises(ParVocabularioInvalido, match="make_model_card"):
+    # A mensagem tem de dizer O QUE RODAR para consertar. O módulo que gera o card foi
+    # absorvido por `artifact.py` — a guarda verifica a INSTRUÇÃO, não o nome antigo.
+    with pytest.raises(ParVocabularioInvalido, match=r"regenere com.*artifact\.py"):
         validar_par_modelo_vocabulario(d)
 
 

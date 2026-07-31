@@ -17,7 +17,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
-from calibracao import janela_maxima, ocupacao  # noqa: E402
+from cpu import janela_maxima, ocupacao  # noqa: E402
 
 # Curva medida neste i7 em 2026-07-31 — {segundos de janela: ms de decode}
 CURVA_I7 = {2.0: 86.0, 4.0: 142.0, 6.0: 172.0, 8.0: 218.0, 10.0: 262.0, 12.0: 264.0}

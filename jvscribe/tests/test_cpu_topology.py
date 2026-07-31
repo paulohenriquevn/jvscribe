@@ -22,8 +22,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
-import cpu_topology  # noqa: E402
-from cpu_topology import Topologia, detectar  # noqa: E402
+# alias: `cpu` colide com a variável de laço de `_sysfs`, e o rename cego
+# `cpu_topology`→`cpu` criou o sombreamento. O módulo entra com nome próprio.
+import cpu as cpu_mod  # noqa: E402
+from cpu import Topologia, detectar  # noqa: E402
 
 
 def _sysfs(tmp_path: Path, freqs: dict[int, int]) -> Path:
@@ -159,9 +161,9 @@ def test_o_modulo_nao_expoe_nada_que_mude_a_afinidade_do_processo():
     O ganho verdadeiro estava na CONTAGEM de threads, não na afinidade: intra=2 dá RTFx 6,88×
     contra 4,95× de intra=6 e 3,94× de intra=12.
     """
-    proibidos = [n for n in dir(cpu_topology)
+    proibidos = [n for n in dir(cpu_mod)
                  if any(x in n.lower() for x in ("afinidade", "affinity", "pin", "setaffinity"))
-                 and callable(getattr(cpu_topology, n, None))]
+                 and callable(getattr(cpu_mod, n, None))]
     assert not proibidos, (
         f"{proibidos} mutam afinidade de processo — medido como prejudicial (vaza para os "
         "subprocessos de captura). O módulo deve só OBSERVAR a topologia."
