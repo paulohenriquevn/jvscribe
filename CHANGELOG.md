@@ -52,10 +52,16 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   de contexto MENOR (8,8–21,4% contra 42,6–56,1%) e mesmo assim ganha — lista ampla vale mais que
   lista curada. [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) **não se aplica** (exige
   decoder autoregressivo).
-  **O padrão entre os quatro é o achado mais forte**: três grupos independentes mediram que o
+  [`arXiv:2501.06713`](https://arxiv.org/abs/2501.06713) (MiniRAG) **não se aplica** — outra
+  tarefa, e ainda exige modelo de 1,5–4B —, mas mede o princípio: trocar indexação por **grafo**
+  por indexação **semântica** derruba a acurácia de ~53% para ~26%. E traz o aviso mais acionável
+  dos cinco: pipeline desenhado para LLM **não degrada com elegância** ao trocar por modelo menor,
+  ele quebra (o GraphRAG falha por completo com os quatro modelos pequenos testados).
+  **O padrão entre os cinco é o achado mais forte**: quatro grupos independentes mediram que o
   conhecimento externo faz o trabalho e o LLM é embalagem cara — sem o conhecimento, a ablação de
-  cada um move o número em nada (6,98→6,90; 15,5→15,6). A parte que carrega o ganho é justamente a
-  que cabe em CPU.
+  cada um move o número em nada (6,98→6,90; 15,5→15,6). E a forma geral: **estrutura explícita
+  compensa capacidade semântica, e a vantagem cresce conforme o modelo encolhe** — somos o extremo
+  dessa reta. A parte que carrega o ganho é justamente a que cabe em CPU.
   Registra também um **erro de método próprio**: a primeira medição plantou termos raros numa
   amostra sintética e reportou "77,8% do erro é `rare_ref`" — isso mede o desenho da amostra, não
   o modelo. Em áudio não viciado são 31,9%.

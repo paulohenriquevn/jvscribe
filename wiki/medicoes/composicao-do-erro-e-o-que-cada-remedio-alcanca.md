@@ -109,7 +109,7 @@ por um caminho independente.
 - A sonda de termos de domínio usa **fala sintética**, que pronuncia limpo demais, com 6 termos e
   3 vozes.
 
-## Prior art — quatro artigos, mapeados nas três classes
+## Prior art — cinco artigos, mapeados nas três classes
 
 | artigo | mecanismo | classe que ataca | aplica-se? |
 |---|---|---|---|
@@ -118,6 +118,7 @@ por um caminho independente.
 | [`arXiv:2509.19567`](https://arxiv.org/abs/2509.19567) | **descoberta automática** de contexto por embedding + biasing | `rare_ref` | **retrieval sim, biasing não** |
 | beam + LM (`CLAUDE.md`) | fusão com modelo de linguagem no decode | `real_word_hyp` | sim, não explorado |
 | [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) | RAG no decoder do LLM | — | **não** |
+| [`arXiv:2501.06713`](https://arxiv.org/abs/2501.06713) | RAG por grafo para modelos pequenos | — | **não** — outra tarefa |
 
 
 ### O padrão que os quatro desenham — e é o achado mais forte
@@ -131,8 +132,15 @@ Três grupos independentes, arquiteturas e idiomas diferentes, mediram a **mesma
 | Hitachi `2505.17410` | N-best sem/com dados sintéticos | 15,5 → **15,6** (nada) | recall 44,5 → **81,1** |
 | Samsung+CERTH `2509.19567` | embedding barato vs LLM | — | **WER melhor a 1/5 do custo** |
 
-Em nenhum dos três o LLM, sozinho, entregou algo. Isso importa para nós mais que para eles:
+| HKU `2501.06713` | indexação por **grafo** vs por **descrição semântica** | 26% de acurácia | **53%** — o dobro |
+
+Em nenhum deles o LLM, sozinho, entregou algo. Isso importa para nós mais que para eles:
 **a parte que carrega o ganho é justamente a que cabe em CPU.**
+
+E o quinto dá a forma geral do princípio: **estrutura explícita compensa capacidade semântica, e
+a vantagem CRESCE conforme o modelo encolhe.** Somos o extremo dessa reta — 64M, e sequer um
+modelo de linguagem. A leitura direta: **não peça compreensão a modelo nenhum; dê estrutura.**
+Distância ortográfica, lista de domínio, grafo de contexto — não embedding semântico.
 
 Corolário desconfortável, e honesto: se o ganho é o retrieval, a pergunta deixa de ser *"qual
 LLM?"* e vira *"de onde vem a lista, e o que a consome?"* — e a segunda metade é o que não temos.
@@ -240,6 +248,32 @@ correção por distância de edição sobre saída não enviesada.
 custa `[MEDIDO]` **120 ms para 6,8 s de áudio** (RTFx 56,8×, máquina quase ociosa) — um
 denominador muito menor, então o mesmo custo absoluto de embedding pesaria uma fração bem maior.
 Qualquer adoção precisa medir aqui, não herdar a razão.
+
+### `arXiv:2501.06713` — não se aplica, mas o aviso dele é o mais útil
+
+> Fan, Wang, Ren, Huang (Universidade de Hong Kong). *MiniRAG: Towards Extremely Simple
+> Retrieval-Augmented Generation*, 2025-01-12. <https://github.com/HKUDS/MiniRAG>.
+
+**Tarefa diferente:** perguntas e respostas sobre documentos pessoais, não transcrição. E mesmo
+"extremamente simples", ainda exige um modelo de linguagem de **1,5B a 4B** gerando resposta.
+Nosso orçamento é um modelo acústico de 64M a RTFx ≥ 6× em CPU — não é a mesma ordem de
+grandeza, e "on-device" ali significa um celular respondendo uma consulta ocasional, não um
+fluxo contínuo de 8 kHz.
+
+**Mas ele mede o que os outros só sugerem.** A ablação principal troca a indexação por grafo
+(estrutural) por indexação baseada em descrição (semântica): a acurácia cai de ~53% para ~26%,
+**metade**. Estrutura não é uma alternativa à semântica — para modelo pequeno, ela é o que
+sustenta o sistema.
+
+⚠️ **E o aviso é o mais acionável de todos os cinco:** pipelines desenhados para LLM **não
+degradam com elegância** ao trocar por um modelo menor — eles quebram. Na tabela deles, o
+GraphRAG **falha completamente** com todos os quatro SLMs testados (marcado `/`: não produz
+resposta utilizável), e o LightRAG desaba de 56,9% para 35,4%.
+
+Consequência direta para o nosso plano: adotar o desenho de `arXiv:2409.06062` **trocando o
+OpenLLaMA de 7B por algo pequeno** não é uma economia — é um sistema diferente, que precisa ser
+medido do zero. O que transfere daquele artigo é o **retrieval**, não o pipeline com o LLM
+dentro.
 
 ### `arXiv:2502.15264` — não se aplica
 
