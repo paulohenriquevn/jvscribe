@@ -1,0 +1,25 @@
+# M1 — Baseline Report (test set 8 kHz)
+
+**Corpus:** {{ corpus_note }}
+
+> Transcrição humana (NUNCA pseudo-label — `PRD.md` § 7.3). Números `[MEDIDO]`; WER sempre com
+> IC 95% via bootstrap por-utterance (blueprint ADR D3), nunca ponto isolado.
+
+{% if provenance %}
+**Proveniência `[MEDIDO]`:** {{ provenance }}
+
+{% endif %}
+{# A coluna de proveniência é declarada no CABEÇALHO. Antes o `[MEDIDO]` era uma quinta célula
+   numa tabela de quatro colunas, e a spec do GFM manda IGNORAR célula excedente: o rótulo
+   sumia do render. Quem lia o .md cru via; quem lia a wiki via WER sem proveniência. #}
+| Modelo | WER | IC 95% | n (utterances) | proveniência |
+|---|---|---|---|---|
+{% for r in resultados %}
+| {{ r.model_name }} | {{ "%.1f"|format(100 * r.wer) }}% | [{{ "%.1f"|format(100 * r.ci_low) }}%–{{ "%.1f"|format(100 * r.ci_high) }}%] | {{ r.n }} | `[MEDIDO]` |
+{% endfor %}
+{% if ic_largo_com_amostra_pequena %}
+
+> **IC largo por poder estatístico, não defeito da régua.** Com n < {{ n_minimo }} o IC não
+> decide entre candidatos — é o **risco 1 do ROADMAP** (`ROADMAP.md` § M1). Um test set maior é
+> pré-requisito para M4 comparar finalistas.
+{% endif %}

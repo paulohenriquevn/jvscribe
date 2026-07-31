@@ -28,6 +28,21 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
   novo, e `FORCE=1` sobrescreve.
 
+### Fixed
+- **O rótulo `[MEDIDO]` sumia da tabela renderizada do baseline.** `run_baseline.render_report`
+  declarava **4** colunas no cabeçalho e emitia **5** células por linha — a quinta era justamente
+  o `` `[MEDIDO]` ``. Pela spec do GFM, célula excedente é **ignorada**: `[MEDIDO]` verificado
+  com o renderizador `markdown`, o rótulo **não aparece** no `<table>`. Quem lê o `.md` cru vê;
+  quem lê na wiki ou no GitHub vê uma tabela de WER **sem proveniência nenhuma** — contra a § 1
+  do contrato de evidência ("sem rótulo, o número não existe"). O defeito é invisível na fonte;
+  só a renderização o revela. Agora a proveniência é uma coluna declarada.
+
+### Changed
+- **`eval/run_baseline.py` migra para template** (`eval/templates/baseline.md.j2`), fechando os
+  três escritores de relatório do repositório. Os limiares do caveat de poder estatístico
+  viraram constantes nomeadas (`IC_LARGO`, `N_MINIMO_PARA_DECIDIR`) — enterrados como literais
+  num `if`, ninguém sabia que 20 p.p. e 50 utterances eram a fronteira.
+
 ### Added
 - **O checkpoint publicado foi provado finetunável — em CPU, sem GPU.** `[MEDIDO]`
   `bench/finetune_smoke.py` sobre `avg-124k-112k.pt` e 6 utterances reais de FLEURS: pesos

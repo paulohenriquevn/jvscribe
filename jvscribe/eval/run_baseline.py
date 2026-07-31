@@ -18,9 +18,18 @@ Uso como lib:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from eval_wer import WerError, wer_with_ci
+from report import ambiente as ambiente_de_relatorio
+
+_AMBIENTE = ambiente_de_relatorio(Path(__file__).resolve().parent / "templates")
+
+# Limiares do caveat de poder estatístico. Nomeados porque a condição é uma REGRA — enterrada
+# como literal num `if`, ninguém sabia que 20 p.p. e 50 utterances eram a fronteira.
+IC_LARGO = 0.20                 # largura do IC95 acima da qual ele não separa candidatos
+N_MINIMO_PARA_DECIDIR = 50      # abaixo disto o IC é largo por poder, não por defeito da régua
 
 # transcribe_fn: recebe o caminho do WAV (já augmentado), devolve a hipótese.
 TranscribeFn = Callable[[str], str]
@@ -135,39 +144,18 @@ def render_report(
     if not results:
         raise BaselineError("nenhum resultado para renderizar")
 
-    lines = [
-        "# M1 — Baseline Report (test set 8 kHz)",
-        "",
-        f"**Corpus:** {corpus_note}",
-        "",
-        "> Transcrição humana (NUNCA pseudo-label — `PRD.md` § 7.3). Números "
-        "`[MEDIDO]`; WER sempre com IC 95% via bootstrap por-utterance (blueprint "
-        "ADR D3), nunca ponto isolado.",
-        "",
-    ]
-    if provenance:
-        lines += [f"**Proveniência `[MEDIDO]`:** {provenance}", ""]
-    lines += [
-        "| Modelo | WER | IC 95% | n (utterances) |",
-        "|---|---|---|---|",
-    ]
-    for r in results:
-        lines.append(
-            f"| {r.model_name} | WER = {r.wer*100:.1f}% "
-            f"| [IC95: {r.ci_low*100:.1f}%–{r.ci_high*100:.1f}%] "
-            f"| {r.n} | `[MEDIDO]`"
-        )
-    # Enquadramento do IC largo como o risco 1 do ROADMAP, não defeito da régua
-    # (review EVID-05).
-    wide = any((r.ci_high - r.ci_low) > 0.20 for r in results)
-    small_n = any(r.n < 50 for r in results)
-    if wide and small_n:
-        lines += [
-            "",
-            "> **IC largo por poder estatístico, não defeito da régua.** Com n < 50 "
-            "o IC de ~50 p.p. não decide entre candidatos — é o **risco 1 do "
-            "ROADMAP** (`ROADMAP.md` § M1). Um test set maior é pré-requisito para "
-            "M4 comparar finalistas.",
-        ]
-    lines.append("")
-    return "\n".join(lines)
+    # O corpo saiu para `templates/baseline.md.j2`. Além da prosa ficar editável sem tocar
+    # Python, a migração corrigiu um defeito que só a RENDERIZAÇÃO expunha: a tabela tinha 4
+    # cabeçalhos e 5 células, e a spec do GFM ignora a excedente — o `[MEDIDO]` sumia.
+    return _AMBIENTE.get_template("baseline.md.j2").render({
+        "corpus_note": corpus_note,
+        "provenance": provenance,
+        "resultados": results,
+        "n_minimo": N_MINIMO_PARA_DECIDIR,
+        # Prosa condicional: exige as DUAS condições. IC largo com n grande é outra conversa
+        # (variância real do corpus), e n pequeno com IC estreito não precisa de ressalva.
+        "ic_largo_com_amostra_pequena": (
+            any((r.ci_high - r.ci_low) > IC_LARGO for r in results)
+            and any(r.n < N_MINIMO_PARA_DECIDIR for r in results)
+        ),
+    })

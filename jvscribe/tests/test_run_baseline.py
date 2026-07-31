@@ -34,9 +34,16 @@ def test_baseline_report_has_ci_and_provenance():
         manifest, transcribe_fn=asr, model_name="mock-asr", seed=1, n_boot=200
     )
     report = render_report([result], corpus_note="mock (teste)")
-    assert "IC95" in report, "relatório deve conter IC 95%"
+    # Asserções sobre INTENÇÃO, não sobre o literal do formato. As anteriores exigiam
+    # "IC95" e "WER =" — artefatos de quando cada célula repetia o nome da grandeza. Ao
+    # nomear as colunas no cabeçalho, o texto mudou e a informação não; a guarda reprovava
+    # a melhoria. Quem confere o RENDER (onde o defeito real morava) é
+    # `test_relatorio_baseline.py`.
+    assert "IC 95%" in report, "relatório deve declarar a coluna de incerteza"
+    assert f"{result.ci_low * 100:.1f}%" in report, "limite inferior do IC ausente"
+    assert f"{result.ci_high * 100:.1f}%" in report, "limite superior do IC ausente"
     assert "[MEDIDO]" in report, "relatório deve conter rótulo de proveniência"
-    assert "WER =" in report
+    assert f"{result.wer * 100:.1f}%" in report, "o WER medido não aparece"
 
 
 def test_testset_rejects_pseudolabel():
