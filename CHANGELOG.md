@@ -13,6 +13,25 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **`CLAUDE.md` reescrito com foco em arquitetura, otimização, treino e disciplina de
+  medição.** Ele é carregado em toda sessão, então cada linha precisa se pagar. O anterior
+  ainda anunciava M4 como estado corrente e o WER de 27,49% (uma geração atrás), e não
+  registrava nada do que foi aprendido depois. Agora traz:
+  - o entregável real (**15,99% WER**, publicado e reproduzido a partir do HF);
+  - os três fatos que a intuição erra — **o modelo não é streaming** (10,6× de retrabalho por
+    hop), o matmul é só 24,4% do custo, e o par (modelo, vocabulário) não é intercambiável;
+  - a tabela de otimizações com o que **não se aplica** e por quê (FLToP mede contra beam
+    search; blank-skip acelera joiner de transducer) — com as fontes;
+  - o que é **portável** entre CPUs e o que precisa ser recalibrado;
+  - as armadilhas de treino que já custaram run inteiro (LR de cabeça fresca, fp16, codec-aug)
+    e as três alavancas contra o overfitting, com o checkpoint averaging promovido de
+    `[ESTIMATIVA]` a `[MEDIDO]`;
+  - **as regras de medição que este projeto pagou para aprender** — nunca concluir de corrida
+    única (3 erros documentados), benchmark de componente não transfere, máquina sob carga não
+    mede, harness ao vivo valida mas não compara.
+
+
 ### Added
 - **`docs/CALIBRATION.md` — runbook de calibração ao trocar de CPU.** Separa o que é portável
   (cache de fbank, dreno da captura, backpressure, teto de estado — são correções algorítmicas)
