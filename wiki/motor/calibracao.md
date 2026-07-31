@@ -25,7 +25,7 @@ timestamp: 2026-07-31T00:00:00Z
 
 1. **Máquina ociosa.** Não é formalidade: a mesma configuração deu RTFx 3,51× / 2,90× / 2,82× /
    2,50× com a máquina em load 3–4.
-2. Conferir a topologia detectada (`cpu_topology.detectar()`).
+2. Conferir a topologia detectada (`cpu.detectar()`).
 3. `calibrate.py` — mede a curva `janela → custo`, calcula a ocupação com N canais, emite a
    maior janela que cabe. **Maior é melhor**: mais contexto para o LocalAgreement-2 confirmar.
 4. `runtime_bench.py` — confirma os parâmetros de sessão com bootstrap pareado.

@@ -13,6 +13,46 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **Reorganização por domínio — o sistema tinha 7 pipelines para 15 domínios.** A divisão por
+  pastas não era a divisão por domínio, e a medição mostrou o custo: **5 violações** da regra
+  "cross-pipeline apenas a partir de `common/`", **3 símbolos** alcançáveis por dois caminhos
+  de import, e duas pastas-lixeira (`tools/` com 7 domínios, `common/` com 5).
+
+  | | antes | depois |
+  |---|---|---|
+  | Violações de fronteira | 5 | **0** |
+  | Pastas com ≥ 4 domínios | 2 | **0** |
+  | Símbolo por 2 caminhos de import | 3 | **0** |
+  | Arquivos-fragmento (< 55 LoC sem razão) | 4 | **0** |
+  | Pipelines | 7 | 9 — mais, e cada uma com **um** domínio |
+
+  - `tools/` **dissolvida** em `bench/` (custo de rodar), `probes/` (hipótese de pesquisa) e
+    `audit/` (integridade do dado); os 4 harness de medição foram para `eval/`.
+  - Canal telefônico `corpus/` → **`common/audio/`** — é sinal, não corpus, e três pipelines
+    o consumiam furando a fronteira.
+  - `realtime/streaming.py` → `common/` (o soak precisa do motor para medir);
+    `batch/bench_rtfx.py` → `bench/`.
+  - Fusões de domínio partido: `text` + `text_normalize_ptbr` → **`text`**;
+    `wer_core` + `bootstrap_wer_ci` + `cer_from_recogs` → **`metrics`**;
+    `cpu_topology` + `calibracao` → **`cpu`**; `make_model_card` → **`artifact`**.
+
+  ⚠️ **Uma fusão foi CANCELADA pela medição.** O mapa que eu mesmo escrevi afirmava que
+  `bootstrap_wer_ci` e `stats` "fazem a mesma coisa". Medido no mesmo par de utterances:
+  razão de somas dá **4,76 p.p.**, média de diferenças pareadas dá **26,25 p.p.** Não se faz
+  média de WERs por utterance. Fundir teria mudado em silêncio todo delta publicado. Os dois
+  módulos ficam vizinhos e separados, com o motivo escrito no topo de `metrics.py`.
+
+  Nenhum número mudou: equivalência provada antes de cada fusão (3.000 strings para a régua de
+  texto; 4.000 pares para `word_edit_distance` × `jiwer`). Suíte 391 → 391.
+
+- **A guarda de fronteira só vigiava 4 das 7 pipelines** — `corpus` e `tools` ficavam de fora
+  sem motivo documentado, e foi por isso que as 5 violações passaram. Agora enumera as nove.
+
+### Added
+- `docs/FRAGMENTACAO.md` — o mapa domínio × arquivo com o método, o resultado e as duas
+  armadilhas de método que ele registrou.
+
 ### Fixed
 - **`runtime_bench.py` documentava um método de decisão que não era o implementado.** O
   docstring dizia "reporta mediana e IQR; o veredito sai quando o IQR não se sobrepõe ao do

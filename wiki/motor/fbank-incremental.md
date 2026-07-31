@@ -2,7 +2,7 @@
 type: Componente
 title: FeatureCache — as três regras que o tornam correto
 description: Cada amostra é featurizada uma vez. Errar qualquer das três regras diverge em silêncio, trocando CPU por WER.
-resource: jvscribe/realtime/streaming.py
+resource: jvscribe/common/streaming.py
 tags: [fbank, cache, features, kaldi, otimizacao]
 timestamp: 2026-07-31T00:00:00Z
 ---

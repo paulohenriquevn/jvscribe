@@ -41,7 +41,7 @@ O `calibrate.py` avisa quando o load average passa de 1,0 — o aviso não é de
 ```bash
 python3 -c "
 import sys; sys.path.insert(0,'jvscribe/common')
-from cpu_topology import detectar; import json; print(json.dumps(detectar().como_dict(), indent=2))"
+from cpu import detectar; import json; print(json.dumps(detectar().como_dict(), indent=2))"
 ```
 
 Confira se `hibrida` bate com o hardware. Falso positivo de hibridez fatiaria a máquina à toa;

@@ -2,7 +2,7 @@
 type: Achado de hardware
 title: CPU híbrida — spin-wait em barreira, não limite de memória
 description: Seis threads executam 3× mais instruções para o mesmo trabalho. O cache miss é idêntico.
-resource: jvscribe/common/cpu_topology.py
+resource: jvscribe/common/cpu.py
 tags: [cpu, hibrida, threads, perf, ipc]
 timestamp: 2026-07-31T00:00:00Z
 ---
@@ -27,7 +27,7 @@ barreira. Numa CPU híbrida cada barreira do matmul espera o E-core.
 
 ## O que ficou e o que não
 
-`intra_op_num_threads` passa a vir da topologia (`cpu_topology.detectar()`), que lê o sysfs em
+`intra_op_num_threads` passa a vir da topologia (`cpu.detectar()`), que lê o sysfs em
 tempo de execução — então **se adapta sozinho** ao trocar de máquina.
 
 Mas o ganho é `[MEDIDO]` **em inferência isolada**. No nível de sistema é `[DESCONHECIDO]`: com

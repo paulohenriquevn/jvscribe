@@ -9,15 +9,33 @@ estágio nítido do ciclo de vida do modelo.
 | **Batch** | [`batch/`](batch/) | transcrever pastas de áudio e medir WER em benchmark público | `batch/batch_transcribe.py --input-dir <in> --out-dir <out>` |
 | **Realtime** | [`realtime/`](realtime/) | transcrever os **dois lados** de uma ligação ao vivo, com rótulo de falante | `realtime/live_transcribe.py --duracao 60` |
 | **Finetune** | [`finetune/`](finetune/) | preparar corpus (CORAA/TAGARELA) e treinar/fine-tunar | `finetune/run_zipformer_ctc.sh` · `finetune/prep_coraa.py` |
-| **Corpus** | [`corpus/`](corpus/) | pseudo-labeling, filtro por concordância, augmentação telefônica | `corpus/run_pipeline.py` |
-| **Eval** | [`eval/`](eval/) | WER telefônico 8 kHz honesto (real-codec + call center real) | `eval/measure_realcodec.py`, `eval/measure_callcenter.py` |
+| **Corpus** | [`corpus/`](corpus/) | pseudo-labeling, filtro por concordância, manifests Lhotse | `corpus/run_pipeline.py` |
+| **Eval** | [`eval/`](eval/) | WER honesto — telefônico 8 kHz, call center real, benchmark público | `eval/measure_realcodec.py`, `eval/measure_callcenter.py` |
+| **Bench** | [`bench/`](bench/) | quanto custa rodar isto **nesta** máquina, e se aguenta | `bench/calibrate.py`, `bench/stress_test.py` |
+| **Probes** | [`probes/`](probes/) | hipóteses de pesquisa — resultado NULO vale tanto quanto o positivo | `probes/blank_penalty_probe.py` |
+| **Audit** | [`audit/`](audit/) | integridade do dado: vazamento de locutor, ruído de pseudo-rótulo | `audit/coraa_speaker_overlap.py` |
 
 | Transversal | Pasta | Papel |
 |---|---|---|
-| **Shared kernel** | [`common/`](common/) | o que **não** pode divergir entre pipelines: resolução de artefato, colapso CTC, normalização, topologia de CPU, estatística |
-| **Ferramentas** | [`tools/`](tools/) | medição e diagnóstico — calibração, benchmark, soak, comparação de modelos |
+| **Shared kernel** | [`common/`](common/) | o que **não** pode divergir entre pipelines — e o **único** destino legal de import cross-pipeline |
 | **Testes** | [`tests/`](tests/) | `python3 -m pytest jvscribe/tests` de qualquer diretório, graças ao [`conftest.py`](conftest.py) |
-| **Resultados** | [`results/`](results/) | medições com hipótese, evidência e limitações separadas |
+
+### Dentro do kernel
+
+| módulo | domínio |
+|---|---|
+| `artifact` | resolve o artefato canônico **e** gera/valida o `model_card.json` |
+| `ctc` | colapso greedy |
+| `text` | as duas réguas de normalização PT-BR, nomeadas pelo contrato |
+| `metrics` | edit distance, parse de recogs, bootstrap **pareado de WER** |
+| `stats` | comparação pareada de medições **escalares** (latência) — vizinho, não gêmeo de `metrics` |
+| `cpu` | o que a máquina tem e o que cabe nela |
+| `onnx_session` | a configuração de sessão medida |
+| `streaming` | motor de decode incremental (janela + LocalAgreement-2) |
+| `audio/` | canal telefônico — é **sinal**, não corpus |
+
+A regra: **cross-pipeline só a partir de `common/`.** `tests/test_pipeline_layout.py` enumera
+as nove pipelines e reprova qualquer outro atalho — hoje há **zero** violações.
 
 ## Ferramentas de medição
 

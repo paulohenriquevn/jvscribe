@@ -67,6 +67,31 @@ Dois caminhos, mesmo núcleo, sem GPU. Detalhe em `docs/ARCHITECTURE.md`.
   ONNX em batch → CTC greedy.
 - **Tempo real** (`jvscribe/realtime/`): `DualCapture` (dois `parec`) → `FeatureCache` →
   `StreamingCTC` por canal → LocalAgreement-2 → turnos + `MetricasRNF`.
+  O motor (`common/streaming.py`) fica no kernel, não em `realtime/`: `bench/stress_test.py`
+  precisa dele para medir, e o soak não é um detalhe da app ao vivo.
+
+### As nove pipelines, e a regra que as separa
+
+| pasta | domínio |
+|---|---|
+| `common/` | **shared kernel** — artefato, ctc, texto, métrica, estatística, cpu, sessão ONNX, streaming, `audio/` |
+| `corpus/` | manifests, pseudo-label, filtro de concordância |
+| `finetune/` | patches do icefall + preparo do que vai para a GPU |
+| `batch/` · `realtime/` | os dois caminhos de inferência |
+| `eval/` | harness de medição de WER |
+| `bench/` | quanto custa rodar isto **nesta** máquina |
+| `probes/` | hipóteses de pesquisa que podem dar nulo |
+| `audit/` | integridade do dado de treino |
+
+**Import cross-pipeline só a partir de `common/`.** Hoje há **zero** violações
+(`tests/test_pipeline_layout.py`). Em 2026-07-31 eram cinco, e todas apontavam para o mesmo
+fato: um domínio na pasta errada. O canal telefônico estava em `corpus/` sendo consumido por
+três pipelines; virou `common/audio/` e as violações sumiram por construção.
+
+⚠️ **`common/metrics.py` e `common/stats.py` NÃO são intercambiáveis.** O primeiro usa razão
+de somas (correto para WER); o segundo, média de diferenças pareadas (correto para latência).
+`[MEDIDO]` no mesmo par: **4,76 p.p. contra 26,25 p.p.** Trocar um pelo outro muda todo delta
+de WER publicado.
 
 **O `model_card.json` é a AUTORIDADE sobre qual peso roda** — `jvscribe/common/artifact.py` é o
 único resolvedor, e todos os entrypoints o consomem. Escolher por nome de arquivo já entregou

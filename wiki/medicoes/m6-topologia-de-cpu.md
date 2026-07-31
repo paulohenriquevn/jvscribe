@@ -118,7 +118,7 @@ nunca produzem vencedor".
 ```bash
 python3 - <<'EOF'
 import sys; sys.path.insert(0,'jvscribe/common')
-from cpu_topology import detectar; print(detectar().como_dict())
+from cpu import detectar; print(detectar().como_dict())
 EOF
 
 perf stat -e cycles,instructions,cache-references,cache-misses \
