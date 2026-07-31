@@ -20,6 +20,13 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `common/metrics.escrever_relatorio` agora recusa sobrescrever; `JVSCRIBE_REPORT` redireciona e
   `JVSCRIBE_REPORT_FORCE=1` autoriza deliberadamente. Mesmo tratamento em `baseline_minds14.py`
   (que ainda apontava para `jvscribe/results/`, removida) e `corpus/run_pipeline.py`.
+- **`corpus/run_pipeline.py` tinha o mesmo defeito destrutivo e ficou de fora da correção
+  acima.** O commit anterior afirmou que ele recebera o mesmo tratamento; recebeu só o
+  redirecionamento por `JVSCRIBE_REPORT`, não a recusa — a gravação continuava `write_text`
+  direto. Consequência: `--n 5` sobrescrevia em silêncio uma corrida publicada de `--n 200`.
+  Agora recusa, e ao recusar **imprime o relatório** em vez de descartar N transcrições com dois
+  whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
+  novo, e `FORCE=1` sobrescreve.
 - **Quatro scripts falhavam com traceback cru da biblioteca** em vez de erro que diz o que
   buscar (`error-handling.md` § 2): `measure_callcenter`, `make_callcenter_cuts`,
   `coraa_speaker_overlap`, `tagarela_coraa_leak_check`.

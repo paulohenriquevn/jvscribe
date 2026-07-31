@@ -26,12 +26,14 @@ import soundfile as sf
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # scripts/
 
+from common.metrics import escrever_relatorio  # noqa: E402
 from corpus.agreement_filter import agree, calibrate_tau, pairwise_cer  # noqa: E402
 from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_audio  # noqa: E402
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
 
-# Destino sobrescrevível por env: uma corrida de teste não pode apagar evidência
-# publicada (ver common/metrics.escrever_relatorio).
+# Destino sobrescrevível por env, e a gravação RECUSA sobrescrever: uma corrida de
+# teste (`--n 5`) não pode apagar uma corrida publicada (`--n 200`). Mesmo defeito que
+# `baseline_fleurs_ptbr.py` cometeu de verdade contra `m1-baseline.md`.
 REPORT = os.environ.get("JVSCRIBE_REPORT", "wiki/medicoes/m3-cer-distribution.md")
 _BOOTSTRAP_SEED = 20260725  # fixo → IC reprodutível
 
@@ -137,7 +139,15 @@ def write_report(cers: dict[str, float], tau: float, kept: set[str],
         "- **Caveat ADR-3 (correlação):** os 2 whisper são da mesma família → correlacionam erros; a concordância superestima confiança. Um 2º transcritor de arquitetura distinta (parakeet) melhora o sinal (backlog).",
         "- **Escopo estatístico:** n=20 é piloto; o IC de τ (percentil de 20 pontos) é largo (ver acima). Re-calibrar em corpus maior em M4 — este τ não é verdade final, é o operacional do piloto.",
     ]
-    Path(REPORT).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    texto = "\n".join(lines)
+    try:
+        escrever_relatorio(REPORT, texto,
+                           force=os.environ.get("JVSCRIBE_REPORT_FORCE") == "1")
+    except FileExistsError as e:
+        # A corrida custou N transcrições com dois whisper: perder o resultado por
+        # causa da recusa seria trocar um dano por outro. Imprime e sai com 1.
+        print("\n" + texto)
+        raise SystemExit(f"\n⚠️  relatório NÃO gravado: {e}") from e
 
 
 def main() -> None:
