@@ -12,7 +12,7 @@ Robustez: parquet direto do HF (evita `datasets`/`torchcodec`); ctranslate2
 single-thread (`cpu_threads=1`, evita deadlock de futex).
 
 Uso: python3 scripts/baseline_fleurs_ptbr.py [n_utterances] [modelos-csv]
-Emite knowledge-base/measurements/m1-baseline-report.md (multi-modelo).
+Emite jvscribe/results/m1-baseline-report.md (multi-modelo).
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ def main() -> int:
             f"dev (NÃO o piso da frota BYOD, Q-01)."
         ),
     )
-    out_path = os.path.join(REPO, "knowledge-base", "measurements", "m1-baseline-report.md")
+    out_path = os.path.join(REPO, "jvscribe", "results", "m1-baseline-report.md")
     with open(out_path, "w") as f:
         f.write(report + "\n")
     print("\n" + report)

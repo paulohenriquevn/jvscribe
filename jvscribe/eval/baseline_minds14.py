@@ -15,7 +15,7 @@ telefônica (a-law round-trip) sobre o áudio já-8 kHz, exercitando a régua in
 
 Uso: python3 scripts/baseline_minds14.py [n_utterances] [modelo]
 
-Emite knowledge-base/measurements/m1-baseline-report.md.
+Emite jvscribe/results/m1-baseline-report.md.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ def main() -> int:
             f"do dev (NÃO o piso da frota BYOD, Q-01)."
         ),
     )
-    out_path = os.path.join(REPO, "knowledge-base", "measurements", "m1-baseline-report.md")
+    out_path = os.path.join(REPO, "jvscribe", "results", "m1-baseline-report.md")
     with open(out_path, "w") as f:
         f.write(report + "\n")
     print("\n" + report)

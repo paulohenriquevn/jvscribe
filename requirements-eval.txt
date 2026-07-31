@@ -1,4 +1,4 @@
-# Deps de avaliação de M1 (auditadas: knowledge-base/audits/m1-measurement-harness-deps-audit-2026-07-24.md)
+# Deps de avaliação de M1 (auditadas: wiki/medicoes/m1-harness.md)
 # WER + normalização (Fase 3)
 jiwer>=3.0,<4.0
 soundfile>=0.12,<1.0

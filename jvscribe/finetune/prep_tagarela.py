@@ -1,6 +1,6 @@
 """Prepara um subset do TAGARELA (freds0/TAGARELA, podcasts pt, pseudo-rotulado Whisper)
 no formato do datamodule REAL do icefall, para o **mux** de M5 (D4 —
-`knowledge-base/plans/m5-scale-model-wer-plan.md` Task 0.3).
+`wiki/treino/corpus.md` Task 0.3).
 
 TAGARELA agrega ~8.972h totais (1764 shards parquet, ~1,21TB) — muito além do necessário
 (D4: mux pesa ~500h de TAGARELA contra ~273h de CORAA humano). Este script NÃO baixa o

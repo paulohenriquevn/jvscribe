@@ -1,6 +1,6 @@
 """Prova que a estrutura por pipeline resolve imports por nome (via conftest.py) e as
 invariantes estruturais da reorganização (EC-3 sem imports cross-pipeline, EC-5 sem
-basename duplicado). Ver knowledge-base/plans/repo-faang-reorg-plan.md."""
+basename duplicado). Ver wiki/index.md."""
 import ast
 import pathlib
 
