@@ -28,6 +28,21 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
   novo, e `FORCE=1` sobrescreve.
 
+### Added
+- **`wiki/medicoes/termos-de-dominio-recall.md`** — por que **BACEN** sai errado, medido em vez de
+  suposto. `[MEDIDO]` 6 termos × 3 vozes neurais PT-BR (`edge_tts`) pela cadeia telefônica do
+  projeto: recall do termo **61%** em 8 kHz. O achado é *como* erra — `bacen` → `bacem`,
+  `pix` → `pixa`, **distância 1**. O modelo acústico acertou e escreveu errado no último
+  caractere, então o gargalo é **decoding/correção, não vocabulário** (18/18 termos são
+  emitíveis pelo BPE). A sonda de composição classifica **77,8%** [IC95 50; 100] como `rare_ref`
+  — alvo de **biasing**, porque o dicionário do sistema não contém termo de domínio.
+  Prior art avaliada: [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) (RASR) **não se
+  aplica** — exige decoder autoregressivo e somos CTC puro;
+  [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) transfere **em parte**, e o que
+  transfere é a **geração sintética** (~90% do ganho nos números do próprio artigo), não o LLM
+  corretor. Registrado também o resultado **negativo** dele: IPA no contexto quase dobrou o CER
+  (14,2% → 27,3%) — relevante porque temos uma cabeça de fonema IPA fora do grafo de inferência.
+
 ### Fixed
 - **O rótulo `[MEDIDO]` sumia da tabela renderizada do baseline.** `run_baseline.render_report`
   declarava **4** colunas no cabeçalho e emitia **5** células por linha — a quinta era justamente
