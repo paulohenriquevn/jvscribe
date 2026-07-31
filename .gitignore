@@ -82,3 +82,4 @@ code-review-output/
 # Trilha de auditoria de codigo morto — mesma natureza: artefato local,
 # rotacionavel (audit-trail-rotation.md), nao faz parte do produto.
 deadcode-output/
+.coverage

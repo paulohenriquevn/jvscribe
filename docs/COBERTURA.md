@@ -1,6 +1,6 @@
 # Cobertura — o que está testado, o que não está, e por quê
 
-`[MEDIDO]` 2026-07-31. **484 testes**, `ruff F,E9,B` limpo, **38/38 entrypoints** respondem a
+`[MEDIDO]` 2026-07-31. **501 testes**, `ruff F,E9,B` limpo, **38/38 entrypoints** respondem a
 `--help` sem traceback.
 
 > **Cobertura de linha não é a meta.** `.claude/rules/testing.md` § 1: *"testes protegem
@@ -21,9 +21,9 @@
 | `finetune` | 58,7% | **63,8%** | +5,1 |
 | `eval` | 56,0% | **57,2%** | +1,2 |
 | `probes` | 43,4% | **43,4%** | — |
-| `bench` | 28,8% | **35,3%** | +6,5 |
+| `bench` | 28,8% | **34,1%** | +5,3 |
 | `audit` | 26,9% | **40,4%** | +13,5 |
-| **TOTAL** | 60,6% | **63,7%** | **+3,1** |
+| **TOTAL** | 60,6% | **63,4%** | **+2,8** |
 
 O `common` caiu 0,9 p.p. porque ganhou `report.py` e o bloco de carga em `cpu.py` — código novo
 com teste de comportamento, não de linha. É a troca certa.
