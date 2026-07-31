@@ -93,3 +93,58 @@ class TestBootstrap:
         prec, _ = precisao_recall([a for u in dados for a in u], tau=1.0)
         lo, hi = ic95_bootstrap(dados, tau=1.0, metrica="precisao", n_boot=800, seed=3)
         assert lo <= prec <= hi
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════
+# E2 — o corretor. `knowledge-base/plans/portao-de-confianca-plan.md` § Phase E2.
+#
+# O corretor só age onde a classe o admite. A precondição do caminho do dicionário é exatamente
+# `non_word_hyp`: a hipótese NÃO é palavra e a referência é. Mexer numa palavra que já existe é
+# a over-correction que `arXiv:2505.17410` nomeia — e a medição de E1 diz que 44,1% do que o
+# portão sinaliza está CORRETO, então um corretor que toque em tudo quebra quase metade.
+# ═══════════════════════════════════════════════════════════════════════════════════════════
+
+from probes.portao_correcao_probe import Corretor, orcamento_de_distancia  # noqa: E402
+
+LEXICO = {"incidente", "gato", "gata", "gate", "pinto", "segunda", "tragico"}
+
+
+class TestOrcamentoDeDistancia:
+    """Uma edição numa palavra de 3 letras é outra coisa que numa de 12."""
+
+    @pytest.mark.parametrize("palavra, esperado", [
+        ("pix", 1), ("casa", 1), ("gatos", 1), ("incidente", 2), ("determinismo", 3),
+    ])
+    def test_cresce_com_o_tamanho(self, palavra, esperado):
+        assert orcamento_de_distancia(palavra) == esperado
+
+    def test_nunca_e_zero(self):
+        """Orçamento zero tornaria o corretor inerte em palavras curtas, em silêncio."""
+        assert orcamento_de_distancia("a") >= 1
+
+
+class TestCorretor:
+    def test_corrige_nao_palavra_para_o_vizinho_mais_proximo(self):
+        assert Corretor(LEXICO).corrigir("inncidente") == "incidente"
+
+    def test_nao_toca_palavra_que_ja_e_do_lexico(self):
+        """`real_word_hyp` não é escopo deste corretor. `segunda` existe — mexer é over-correction."""
+        assert Corretor(LEXICO).corrigir("segunda") is None
+
+    def test_abstem_em_empate(self):
+        """`gata` está a 1 de `gato` e a 1 de `gate`. Não escolher é a resposta honesta."""
+        assert Corretor({"gato", "gate"}).corrigir("gata") is None
+
+    def test_abstem_quando_nada_cabe_no_orcamento(self):
+        assert Corretor(LEXICO).corrigir("xyzabcqwerty") is None
+
+    def test_respeita_o_orcamento_em_palavra_curta(self):
+        """`pix` → `pinto` é distância 4; orçamento de 3 letras é 1."""
+        assert Corretor({"pinto"}).corrigir("pix") is None
+
+    def test_lexico_vazio_nao_explode(self):
+        assert Corretor(set()).corrigir("qualquer") is None
+
+    def test_e_deterministico(self):
+        c = Corretor(LEXICO)
+        assert c.corrigir("inncidente") == c.corrigir("inncidente")

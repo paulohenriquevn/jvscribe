@@ -29,6 +29,20 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E2 do protocolo: a correção pós-decode funciona — e menos do que a predição dizia.**
+  `[MEDIDO]` a τ=1,0 (o ponto pré-registrado): WER **16,07% → 15,79%**, redução **0,27 p.p.**
+  [IC95 **0,04; 0,54**], `consertou/quebrou = 6,0`. A predição era 0,3 a 1,3 p.p. — **errada por
+  0,03, e a trave não foi movida**. O efeito é real (IC exclui zero) e nenhum critério de morte
+  disparou, então E2 sobrevive. **O critério de morte funcionou a τ=0,5**, onde o IC [−0,04; 0,38]
+  cruza zero. A varredura mostra a redução crescendo até 0,39 p.p. a τ=3,0 — que estaria *dentro*
+  da faixa predita — mas escolher o limiar depois de ver o resultado, no mesmo conjunto, é seleção
+  sobre o test set; fica como followup com split separado. A única quebra é exemplar:
+  `tmz→tez`, um veículo de imprensa que o dicionário desconhece virando palavra real — a
+  over-correction que `arXiv:2505.17410` nomeia, flagrada em ato.
+  **E3 não acontece:** o gatilho dela era E2 falhar. Evidência:
+  `wiki/medicoes/e2-correcao-com-portao.md`.
+
+### Added
 - **E1 do protocolo: o portão de confiança separa, e o IC prova.** `[MEDIDO]` FLEURS n=100, 2623
   palavras: a τ=1,0 a precisão é **55,9%** [IC95 49,4; 62,0] contra taxa base **14,3%** — o limite
   inferior está **3,5×** acima da base, e os **seis** limiares medidos separam. Predição

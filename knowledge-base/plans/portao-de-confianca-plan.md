@@ -365,12 +365,32 @@ def test_orcamento_cresce_com_o_tamanho_da_palavra():
 **Critério de morte:** IC95% do ΔWER **cruza zero**, ou `quebrou ≥ consertou` → o caminho morre
 aqui e E3 não acontece. Registrar como nulo (D5).
 
+> ⚠️ **E2 CONCLUÍDA — predição PARCIALMENTE ERRADA, e a trave não foi movida.** `[MEDIDO]` a
+> τ=1,0: redução **0,27 p.p.** [IC95 **0,04; 0,54**], WER 16,07% → 15,79%. A predição era 0,3 a
+> 1,3 — **errei por 0,03**. `consertou/quebrou = 6,0` (previsto ≥ 3, confirmado). Nenhum critério
+> de morte disparou: **E2 sobrevive**.
+>
+> **O critério de morte funcionou a τ=0,5**, onde o IC [−0,04; 0,38] **cruza zero** — portão
+> apertado demais deixa o efeito indistinguível de ruído.
+>
+> **A varredura de τ é exploratória, não resultado.** A redução cresce monotonicamente até 0,39
+> p.p. a τ=3,0, que estaria *dentro* da faixa predita — mas escolher o limiar depois de ver o
+> resultado, no mesmo conjunto, é seleção sobre o test set. Escolher τ exige split separado, e
+> isso **não foi feito** (novo followup).
+>
+> **Escopo:** só o caminho do dicionário rodou. `rare_ref` precisa de lista de domínio, que FLEURS
+> não tem. Evidência: [`wiki/medicoes/e2-correcao-com-portao.md`](../../wiki/medicoes/e2-correcao-com-portao.md).
+
 ---
 
 ## Phase E3 — A acústica descartada era a causa? (condicional)
 
 **Objective:** só existe se E2 falhar **e** a análise apontar que corrigir sobre a string joga
 fora informação acústica que um beam local recuperaria.
+
+> ⏭️ **E3 NÃO ACONTECE.** O gatilho dela era E2 **falhar**, e E2 sobreviveu (redução real, IC
+> excluindo zero, razão 6:1). Pela regra do próprio protocolo, o beam local não é justificado —
+> a complexidade não foi comprada por um número. Registrado, não executado.
 
 ### T3.1 — Re-decode local com beam nas palavras sinalizadas
 
@@ -510,6 +530,9 @@ Nenhuma.
 
 ## Followups
 
+- **Escolher τ num split separado.** A varredura de E2 mostra a redução crescendo até 0,39 p.p.
+  a τ=3,0, mas escolher o limiar no mesmo conjunto em que se mede é seleção sobre o test set.
+- **Varrer o orçamento de distância** — o plano pedia τ × orçamento; E2 varreu só τ.
 - Merges e splits (37% do erro) — fora de escopo, sem caminho conhecido em CPU
 - Descoberta automática de contexto a partir da própria ligação (`arXiv:2509.19567`)
 - Valor de produto do portão **sozinho**: marcar palavra incerta ao atendente, sem corrigir
