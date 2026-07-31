@@ -24,7 +24,6 @@ import argparse
 import difflib
 import io
 import pathlib
-import re
 import subprocess
 import sys
 from collections import Counter

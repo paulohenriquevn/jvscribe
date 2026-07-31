@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "realtime"))
 
-from dual_capture import CaptureError, DualCapture, Stream, default_sources, list_sources
+from dual_capture import DualCapture, Stream, default_sources, list_sources
 
 
 def _tem_pulse() -> bool:

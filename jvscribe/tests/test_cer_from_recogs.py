@@ -3,8 +3,6 @@
 Protege o cálculo que fecha a tabela comparativa de M4 (Zipformer vs Conformer):
 um bug aqui produziria um número errado num artefato de decisão.
 """
-import sys
-from pathlib import Path
 
 import pytest
 

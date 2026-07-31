@@ -3,8 +3,6 @@
 É a única lógica algorítmica do probe (o resto é medição). Protege o decode que
 sustenta os 3 WERs do probe.
 """
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest

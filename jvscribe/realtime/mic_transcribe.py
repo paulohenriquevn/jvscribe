@@ -24,7 +24,6 @@ from __future__ import annotations
 import argparse, queue, sys, time
 import numpy as np
 import sounddevice as sd
-from lhotse import Fbank, FbankConfig
 
 import pathlib
 

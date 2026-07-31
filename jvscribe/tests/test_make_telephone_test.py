@@ -4,8 +4,6 @@ A cadeia telefônica em si é testada em jvscribe/corpus/tests; aqui cobrimos o
 
 from __future__ import annotations
 
-import os
-import sys
 
 import numpy as np
 import pytest

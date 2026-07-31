@@ -21,7 +21,6 @@ Uso (na instância, HF_TOKEN no ambiente):
 import argparse
 import io
 import os
-import re
 import subprocess
 from pathlib import Path
 

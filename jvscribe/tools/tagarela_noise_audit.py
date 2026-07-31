@@ -9,7 +9,6 @@ import sys
 from collections import Counter
 from lhotse import CutSet
 
-import os
 MANIFEST = sys.argv[2] if len(sys.argv) > 2 else "/workspace/icefall/egs/commonvoice/ASR/data/mux/cv-pt_cuts_train.jsonl.gz"
 SAMPLE = int(sys.argv[1]) if len(sys.argv) > 1 else 120000  # amostra p/ velocidade
 

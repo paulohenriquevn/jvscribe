@@ -3,8 +3,6 @@
 Protege o cálculo que sustenta a conclusão da ablação: um bug no pareamento ou na
 reamostragem produziria um IC errado num artefato de decisão.
 """
-import sys
-from pathlib import Path
 
 import pytest
 

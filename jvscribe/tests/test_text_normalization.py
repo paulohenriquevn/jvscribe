@@ -12,7 +12,6 @@ Enquanto as duas compartilhavam um nome, todo WER do projeto carregava uma ambig
 silenciosa sobre qual régua foi usada — e comparar "35,53% telefônico" com "16,14% FLEURS"
 pressupõe a mesma normalização.
 """
-import sys
 from pathlib import Path
 
 import pytest

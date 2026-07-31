@@ -3,8 +3,6 @@
 β=0 deve reproduzir o greedy padrão; β>0 deve suprimir blanks que venceriam por
 pouca margem (a alavanca de decoder-space que o probe testa).
 """
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest

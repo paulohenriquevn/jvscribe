@@ -152,7 +152,8 @@ def test_ordem_composta_telephone_e_o_ultimo_transform(tmp_path):
 
 
 def test_composicao_e_deterministica(tmp_path):
-    src = _sine_cut(tmp_path, "src1")
+    # `src` era criado aqui e nunca usado — o `run()` abaixo cria o seu próprio `src1`
+    # (determinístico: mesmo seno, mesmo arquivo). Os demais entram no closure de `run()`.
     noise = _sine_cut(tmp_path, "noise1", freq=120.0, text="")
     rir = _rir_recording(tmp_path)
     rirs = RecordingSet.from_recordings([rir])

@@ -18,10 +18,8 @@ Uso (histórico):
 from __future__ import annotations
 
 import argparse
-import glob
 import io
 import pathlib
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -77,7 +75,6 @@ def main() -> None:
     modelo = pathlib.Path(default_model_path())
     if not modelo.exists():
         raise SystemExit(f"modelo ausente: {modelo} (defina JVSCRIBE_MODEL_DIR)")
-    MODEL_DIR = modelo.parent
 
     pf = pq.ParquetFile(find_test_parquet())
     # Era `jvscribe/results/onnx/_eval_wavs` — pasta removida junto com `results/`.
