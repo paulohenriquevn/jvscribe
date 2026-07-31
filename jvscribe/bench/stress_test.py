@@ -30,7 +30,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
-from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
+from audio import SR  # taxa do domínio de áudio
+from streaming import StreamingCTC, load_tokens  # noqa: E402
 
 # Mesmo limiar do `calibrate.py` — acima disto a medição vira ruído de contenção, e o
 # veredito de RNF-04 deixa de valer (`asr-evidence-discipline.md` § 5).

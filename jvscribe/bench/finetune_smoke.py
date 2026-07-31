@@ -46,7 +46,11 @@ ARCH = dict(
     cnn_module_kernel=(31, 31, 15, 15, 15, 31),
 )
 VOCAB = 500
-BLANK = 0
+# Standalone: o `conftest.py` só roda sob pytest, e este script é executado na linha
+# de comando. Sem o insert, o import do kernel quebra em ModuleNotFoundError.
+import pathlib as _p
+sys.path.insert(0, str(_p.Path(__file__).resolve().parents[1] / "common"))
+from ctc import BLANK  # noqa: E402 — id do blank: declaração única no kernel
 
 
 def _preparar_imports(icefall: Path, k2stub: Path) -> None:

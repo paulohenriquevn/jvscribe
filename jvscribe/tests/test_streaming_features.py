@@ -19,7 +19,8 @@ sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
 pytest.importorskip("lhotse")
 
-from streaming import SHIFT, SR, FeatureCache  # noqa: E402
+from audio import SR  # taxa do domínio de áudio
+from streaming import SHIFT, FeatureCache  # noqa: E402
 
 
 def _ruido(segundos: float, seed: int = 0) -> np.ndarray:

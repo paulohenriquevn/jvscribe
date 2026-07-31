@@ -23,7 +23,10 @@ REPO = Path(__file__).resolve().parent.parent.parent
 # Standalone: o `jvscribe/conftest.py` só roda sob pytest. Apontava para `jvscribe/scripts`,
 # pasta que deixou de existir — o probe quebrava em ModuleNotFoundError ao ser executado.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "probes"))
-from tta_feature_align_probe import BLANK, build_dataset, load_id2tok, wer  # noqa: E402
+from tta_feature_align_probe import build_dataset, load_id2tok, wer  # noqa: E402
+# `BLANK` vem do KERNEL, não re-exportado pelo probe vizinho — era o terceiro caminho
+# de import do mesmo símbolo, exatamente o que `test_dominios` proíbe.
+from ctc import BLANK  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 
 

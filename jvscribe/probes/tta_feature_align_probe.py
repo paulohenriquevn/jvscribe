@@ -43,7 +43,6 @@ from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 from audio.channel import apply_telephone_channel  # noqa: E402
 import ctc  # noqa: E402  — shared kernel
 
-BLANK = 0
 _FBANK = Fbank(FbankConfig(num_mel_bins=80))  # MESMO extrator do treino (prep_mls/prep_icefall)
 
 

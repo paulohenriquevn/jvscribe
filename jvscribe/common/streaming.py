@@ -13,9 +13,11 @@ from __future__ import annotations
 import numpy as np
 from lhotse import Fbank, FbankConfig
 
-from audio import SR  # noqa: E402 — declaração única do domínio de áudio
+# A taxa vem do domínio de áudio. Este módulo a USA; não a re-exporta — um símbolo
+# alcançável por dois caminhos foi o que deixou o defeito de régua sobreviver.
+from audio import SR
 CHUNK = 512          # ~32ms @ 16kHz
-BLANK = 0
+from ctc import BLANK  # noqa: E402 — id do blank: declaração única no kernel
 WORD_START = "▁"  # ▁ (marca início de palavra no BPE)
 SHIFT = 160          # frame shift do fbank: 10 ms @ 16 kHz
 CTX_FRAMES = 4       # contexto à esquerda ao estender o cache (ver FeatureCache)

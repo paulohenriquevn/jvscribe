@@ -58,6 +58,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Added
 - `docs/FRAGMENTACAO.md` — o mapa domínio × arquivo com o método, o resultado e as duas
   armadilhas de método que ele registrou.
+- **`tests/test_dominios.py` — as quatro invariantes de desenho viram teste.** Reorganizar é
+  barato; manter reorganizado não é. Cada guarda corresponde a um defeito que existiu:
+  cross-pipeline só a partir do kernel · um símbolo, um caminho de import · toda pipeline
+  declara o domínio que a une · nenhuma constante de domínio duplicada.
+  Ao ser escrita, a guarda **imediatamente achou dois defeitos novos**: `BLANK = 0` declarado
+  em 5 arquivos, e quatro pipelines sem `__init__.py` que dissesse o que as une.
 
 ### Fixed
 - **`runtime_bench.py` documentava um método de decisão que não era o implementado.** O

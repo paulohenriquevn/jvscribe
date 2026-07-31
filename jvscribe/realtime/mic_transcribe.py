@@ -36,10 +36,14 @@ from onnx_session import criar_sessao  # noqa: E402
 
 # Motor de streaming: `streaming.py` (um por canal em live_transcribe.py). Re-exportado
 # aqui porque este script e seus testes já o consomem por este nome.
+from audio import SR  # noqa: E402,F401 — taxa do domínio de áudio
 from streaming import (  # noqa: E402,F401
-    SR, CHUNK, BLANK, WORD_START,
-    load_tokens, longest_common_prefix, ctc_words, commit_localagreement, StreamingCTC,
+    CHUNK, StreamingCTC, commit_localagreement, ctc_words, load_tokens,
+    longest_common_prefix,
 )
+# `BLANK` e `WORD_START` vêm do KERNEL, não re-exportados pelo motor: um símbolo alcançável
+# por dois caminhos de import foi o que deixou o defeito de régua de WER sobreviver.
+from ctc import BLANK, WORD_START  # noqa: E402,F401
 
 DIM, RESET, CLR = "\033[2m", "\033[0m", "\033[K"
 

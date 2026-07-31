@@ -35,7 +35,8 @@ from artifact import default_model_path, default_sibling  # noqa: E402
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
-from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
+from audio import SR  # taxa do domínio de áudio
+from streaming import StreamingCTC, load_tokens  # noqa: E402
 
 # mic e loopback são papéis fixos por construção da captura — ver o docstring.
 FALANTES = {"mic": "ATENDENTE", "loopback": "CLIENTE"}

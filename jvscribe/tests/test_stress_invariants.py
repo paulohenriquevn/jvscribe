@@ -19,7 +19,8 @@ sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
 pytest.importorskip("lhotse")
 
-from streaming import SHIFT, SR, FeatureCache, StreamingCTC  # noqa: E402
+from audio import SR  # taxa do domínio de áudio
+from streaming import SHIFT, FeatureCache, StreamingCTC  # noqa: E402
 
 
 def _fala_sintetica(segundos: float, seed: int = 0) -> np.ndarray:

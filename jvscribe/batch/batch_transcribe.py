@@ -38,7 +38,6 @@ from onnx_session import criar_sessao  # noqa: E402
 
 
 from audio import SR  # noqa: E402 — declaração única do domínio de áudio
-BLANK = 0
 WORD_START = "▁"
 AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".mp4", ".webm"}
 

@@ -18,6 +18,9 @@ from __future__ import annotations
 
 from typing import Iterable, Sequence
 
+# O id do símbolo blank no vocabulário do modelo. Declaração ÚNICA: estava replicado em
+# cinco arquivos, e é conhecimento do artefato — um vocabulário com outro blank id
+# tornaria todas as cópias erradas de uma vez, em silêncio.
 BLANK = 0
 WORD_START = "▁"
 
