@@ -29,6 +29,20 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **`docs/paper/post-decode-budget.md`** — paper de resultados, incluindo os negativos: *"What Is
+  Actually Recoverable? A Measured Budget for Post-Decode Correction in a 64M CPU-Only CTC ASR for
+  Brazilian Portuguese"*. Quatro contribuições medidas: a taxonomia do erro em **três terços quase
+  iguais** com remédios disjuntos; um **portão de confiança de custo zero** (+0,31%) com precisão
+  55,9% [IC95 49,4; 62,0]; a **anticorrelação** entre portão e LM, que refuta condicionar o beam à
+  confiança — desenho que nós mesmos propusemos antes de medir; e um **teto de ~8%** com
+  **1,7% relativo** entregue, contra uma predição pré-registrada que **falhou e é reportada como
+  falha**. Mede também que a objeção de custo ao beam não sobrevive: 15 ms contra 134 ms de
+  encoder. Seção 9 lista nove limitações com o mesmo destaque dos resultados. Cinco referências,
+  todas com identificador verificado (título, autores e frase do abstract).
+- **`wiki/decisoes/0005-orcamento-da-correcao-pos-decode.md`** — a decisão que os números
+  produziram: investir no LM, não na correção. *O caro é barato e o barato rende pouco.*
+
+### Added
 - **E4 do protocolo (metade do custo): o argumento de custo contra o beam search está morto — no
   lote.** `[MEDIDO]` beam 8 custa **15,2 ms** contra **134 ms** de encoder → RTFx **45,77×**, a
   7,6× do limiar de 6×; beam 2 e 4 idem. Consistente com o profile publicado (`ctc_output` é 0,3%
