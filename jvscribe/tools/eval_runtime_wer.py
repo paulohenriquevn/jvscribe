@@ -129,7 +129,7 @@ def main() -> None:
     cer = 100.0 * tot_cerr / max(tot_chars, 1)
     print(f"\n[MEDIDO] Runtime Rust WER = {wer:.2f}%  ({tot_err}/{tot_words} palavras)")
     print(f"[MEDIDO] Runtime Rust CER = {cer:.2f}%  ({tot_cerr}/{tot_chars} caracteres), n={done} utterances")
-    print(f"[REF]    Decode Python (icefall) WER = 29,97% (FLEURS test completo, 21.471 palavras)")
+    print("[REF]    Decode Python (icefall) WER = 29,97% (FLEURS test completo, 21.471 palavras)")
     print(f"[NOTA]   n={done} é subconjunto → IC mais largo que o número Python. "
           f"O que importa: o runtime Rust NÃO deve degradar vs o decode de treino.")
 

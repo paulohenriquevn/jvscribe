@@ -3,7 +3,7 @@
 Cinco funções chamadas `normalize_ptbr` conviviam no repo. Medido em 2026-07-30: são
 **2 semânticas distintas**, com 3 cópias byte-idênticas de uma delas.
 
-  REMOVE acento  → jvscribe/common/text_normalize_ptbr.py:52        (comparação de WER)
+  REMOVE acento  → jvscribe/common/text.py:52        (comparação de WER)
   PRESERVA acento→ jvscribe/finetune/prep_icefall.py:49      (alvo de treino)
                    jvscribe/tools/eval_runtime_wer.py:37   (cópia idêntica, documentada)
                    jvscribe/tools/analyze_error_composition.py:37 (cópia idêntica)
@@ -27,7 +27,7 @@ ACENTUADO = "coração, ATENÇÃO! não é ótimo?"
 
 def test_as_duas_semanticas_divergem_de_fato():
     """Oráculo da ambiguidade: mesmo nome, resultados diferentes."""
-    from text_normalize_ptbr import normalize_for_wer_compare as remove_acento
+    from text import normalize_for_wer_compare as remove_acento
     from prep_icefall import normalize_ptbr as preserva_acento
 
     a, b = remove_acento(ACENTUADO), preserva_acento(ACENTUADO)
@@ -45,7 +45,7 @@ def test_common_text_expoe_as_duas_com_nome_que_revela_o_contrato():
 
 def test_common_reproduz_exatamente_as_implementacoes_originais():
     """Migração sem mudança de comportamento — o que protege os números publicados."""
-    from text_normalize_ptbr import normalize_for_wer_compare as remove_acento
+    from text import normalize_for_wer_compare as remove_acento
     from prep_icefall import normalize_ptbr as preserva_acento
     from text import normalize_for_wer_compare, normalize_train_target
 

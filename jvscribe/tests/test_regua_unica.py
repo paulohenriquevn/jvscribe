@@ -25,9 +25,10 @@ sys.path.insert(0, str(PKG / "common"))
 # Estes reimplementam de propósito e a razão está registrada:
 #   blank_penalty_probe — aplica penalidade β no logit de blank ANTES do argmax; é o ponto da sonda
 #   streaming.ctc_words — produz (palavras, TIMESTAMPS); o kernel não dá tempo
-#   ctc.py / text_normalize_ptbr.py — são o kernel
+#   ctc.py / text.py — são o kernel
 ISENTOS_CTC = {"blank_penalty_probe.py", "streaming.py", "ctc.py"}
-ISENTOS_NORM = {"text_normalize_ptbr.py", "text.py"}
+# `text.py` É o kernel da normalização — os dois módulos viraram um em 2026-07-31.
+ISENTOS_NORM = {"text.py"}
 
 
 def _fontes_de_producao():
@@ -63,7 +64,7 @@ def test_nenhum_modulo_define_a_propria_regua_de_normalizacao():
             reincidentes.append(f"{f.parent.name}/{f.name}: {achados}")
     assert not reincidentes, (
         "régua de normalização própria em: " + "; ".join(reincidentes)
-        + " — use common/text_normalize_ptbr.normalize_for_wer_compare"
+        + " — use common/text.normalize_for_wer_compare"
     )
 
 
@@ -106,7 +107,7 @@ def test_a_regua_canonica_faz_mais_que_baixar_caixa():
     A canônica remove acento **e** normaliza semanticamente — `R$` vira "reais", `Nº` vira
     "no". Sem isso, o mesmo enunciado conta como erro só por estar escrito diferente.
     """
-    from text_normalize_ptbr import normalize_for_wer_compare as canon
+    from text import normalize_for_wer_compare as canon
 
     assert canon("José") == "jose"
     assert "reais" in canon("R$ 10")

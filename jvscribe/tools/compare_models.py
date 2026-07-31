@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
+from text import normalize_for_wer_compare  # noqa: E402
 from wer_core import word_edit_distance  # noqa: E402
 
 

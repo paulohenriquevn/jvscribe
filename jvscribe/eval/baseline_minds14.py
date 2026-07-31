@@ -33,7 +33,7 @@ import soundfile as sf  # noqa: E402
 from huggingface_hub import hf_hub_download  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(__file__))
-# `text_normalize_ptbr` vive em `jvscribe/common`. Sob pytest o `conftest.py` cobre; standalone — o modo de
+# `text` vive em `jvscribe/common`. Sob pytest o `conftest.py` cobre; standalone — o modo de
 # uso deste script — quebrava em ModuleNotFoundError sem que nada na suíte falhasse.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "common"))
 from run_baseline import measure_baseline, render_report  # noqa: E402

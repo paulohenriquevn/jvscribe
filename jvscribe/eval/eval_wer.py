@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import jiwer
 
-from text_normalize_ptbr import normalize_for_wer_compare as normalize_ptbr
+from text import normalize_for_wer_compare as normalize_ptbr
 
 
 class WerError(Exception):

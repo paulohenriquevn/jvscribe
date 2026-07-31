@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from eval_wer import WerError, wer_with_ci  # noqa: E402
-from text_normalize_ptbr import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
+from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 
 
 # ---------------------------------------------------------------------

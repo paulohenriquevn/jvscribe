@@ -35,7 +35,7 @@ def test_usa_a_regua_canonica_e_nao_uma_propria():
     """A régua local preservava acento; a canônica remove. WER medido com réguas diferentes
     não é comparável — e os dois números foram publicados como se fossem."""
     import eval_public_hf
-    from text_normalize_ptbr import normalize_for_wer_compare
+    from text import normalize_for_wer_compare
 
     assert not hasattr(eval_public_hf, "norm"), (
         "a régua local voltou — use normalize_for_wer_compare"

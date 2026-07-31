@@ -30,7 +30,7 @@ import ctc  # noqa: E402  — shared kernel: colapso CTC e detokenização
 from artifact import default_model_path, default_sibling  # noqa: E402
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
-from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
+from text import normalize_for_wer_compare  # noqa: E402
 
 
 def carregar_tokens(path: str) -> dict[int, str]:

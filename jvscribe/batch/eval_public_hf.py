@@ -28,7 +28,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path, default_sibling  # noqa: E402
 from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from batch_transcribe import transcribe_folder  # noqa: E402
-from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
+from text import normalize_for_wer_compare  # noqa: E402
 
 
 def baixar_amostras(destino: pathlib.Path, n: int) -> dict[str, str]:

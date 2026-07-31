@@ -130,9 +130,9 @@ def test_um_stream_cheio_nao_mata_de_fome_o_outro():
     cap.streams = [Stream(label="mic", source="s1"), Stream(label="loopback", source="s2")]
     for st in cap.streams:
         st.queue = Queue()
-    for i in range(300):
+    for _ in range(300):
         cap.streams[0].queue.put(b"m")
-    for i in range(300):
+    for _ in range(300):
         cap.streams[1].queue.put(b"l")
 
     lidos = cap.read(timeout=0.01, max_chunks=64)

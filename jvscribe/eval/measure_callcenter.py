@@ -16,7 +16,7 @@ import jiwer
 
 # Régua única de WER (`common/text_normalize_ptbr`) — ver o docstring de `normalize()`.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
-from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
+from text import normalize_for_wer_compare  # noqa: E402
 
 SR = 16000
 TS_RE = re.compile(r'^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$')

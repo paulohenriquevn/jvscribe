@@ -162,7 +162,7 @@ def main() -> None:
           f"{100*c['real_word_hyp']/max(subs,1):.1f}%")
     print(f"  → BIASING (rare_ref, nome próprio/OOV): "
           f"{100*c['rare_ref']/max(subs,1):.1f}%")
-    print(f"\n=== RISCO de CORROMPER palavra correta (false-flag) ===")
+    print("\n=== RISCO de CORROMPER palavra correta (false-flag) ===")
     print(f"  palavras corretas fora do dict: {correct_oov}/{correct_total} "
           f"({100*correct_oov/max(correct_total,1):.2f}%) — o método 'corrigiria' estas SEM precisar")
     print(f"\nExemplos non_word_hyp (atacável): {examples['non_word_hyp']}")

@@ -31,7 +31,7 @@ import soundfile as sf  # noqa: E402
 from huggingface_hub import hf_hub_download  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(__file__))
-# `common/` também: `run_baseline` → `eval_wer` → `text_normalize_ptbr`. Sob pytest o
+# `common/` também: `run_baseline` → `eval_wer` → `text`. Sob pytest o
 # `jvscribe/conftest.py` cobria e a suíte ficava verde; standalone — o modo de uso deste
 # script — quebrava em ModuleNotFoundError.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "common"))
@@ -91,13 +91,15 @@ def main() -> int:
         print(f"carregando faster-whisper '{model_size}' (CPU int8, 1 thread)…", flush=True)
         model = WhisperModel(model_size, device="cpu", compute_type="int8", cpu_threads=1)
         hyp_by_path = {}
-        for i, entry in enumerate(manifest):
+        for entry in manifest:
             segs, _ = model.transcribe(entry["audio_path"], language="pt", beam_size=1)
             hyp_by_path[entry["audio_path"]] = " ".join(s.text for s in segs).strip()
         del model
         r = measure_baseline(
             manifest,
-            transcribe_fn=lambda p: hyp_by_path[p],
+            # `hyp_by_path` ligado como default: sem isso o lambda fecha sobre a
+            # variável do laço externo e passa a depender de o uso ser síncrono.
+            transcribe_fn=lambda p, _m=hyp_by_path: _m[p],
             model_name=f"faster-whisper-{model_size} (int8, CPU)",
             seed=seed, n_boot=n_boot,
         )
@@ -123,7 +125,10 @@ def main() -> int:
             f"dev (NÃO o piso da frota BYOD, Q-01)."
         ),
     )
-    out_path = os.path.join(REPO, "jvscribe", "results", "m1-baseline-report.md")
+    # `REPO` não existe (a constante virou `PKG` ao corrigir o caminho da augmentação) e
+    # `jvscribe/results/` foi removida — este `os.path.join` era NameError garantido, depois
+    # de transcrever N utterances com três modelos. O destino agora é onde as medições vivem.
+    out_path = os.path.join(os.path.dirname(PKG), "wiki", "medicoes", "m1-baseline.md")
     with open(out_path, "w") as f:
         f.write(report + "\n")
     print("\n" + report)
