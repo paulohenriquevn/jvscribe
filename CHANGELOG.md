@@ -14,6 +14,26 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **`docs/CALIBRATION.md` — runbook de calibração ao trocar de CPU.** Separa o que é portável
+  (cache de fbank, dreno da captura, backpressure, teto de estado — são correções algorítmicas)
+  do que **precisa ser remedido** (contagem de threads e janela de decode, que saem da
+  topologia e da ocupação de CPU). Traz o procedimento em 5 passos, como interpretar cada
+  sintoma, e o que a calibração **não** resolve.
+- **`jvscribe/tools/calibrate.py`** — mede a curva `janela → custo` na máquina-alvo, calcula a
+  ocupação com N canais e emite a maior janela que cabe no orçamento, mais o comando pronto.
+  Avisa quando o load average passa de 1,0, porque sob carga a medição não separa.
+- **`jvscribe/common/calibracao.py`** — o núcleo determinístico (`ocupacao`, `janela_maxima`),
+  com 12 testes: máquina mais rápida permite janela maior, mais lenta devolve `None` em vez de
+  chutar, curva não-monotônica não quebra a escolha, hop zero falha alto.
+
+### Changed
+- **A janela de 6 s deixa de ser constante e passa a ser calibrada.** Com `intra=2` + arena
+  ligada, o custo caiu de 172 ms para **112 ms** na janela de 6 s; a de 10 s, que antes pedia
+  **104,9%** da CPU, agora cabe em **63,5%**. Janela maior é acurácia de graça (mais contexto
+  para o LocalAgreement-2 confirmar), então o runbook manda recalibrar em vez de herdar o 6.
+
+
+### Added
 - **`jvscribe/common/cpu_topology.py`** — detecta CPU híbrida (P-cores vs E-cores) pelo sysfs
   e recomenda contagem de threads. Nesta máquina: 12 lógicos, rápidos `0-3` a 5000 MHz,
   recomenda `intra=2`. 14 testes, incluindo CPU homogênea, boost por núcleo (que **não** é

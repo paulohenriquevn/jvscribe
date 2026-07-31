@@ -106,6 +106,7 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 | [`jvscribe/tools/stress_test.py`](jvscribe/tools/stress_test.py) | soak com o modelo real — degradação minuto a minuto |
 | [`jvscribe/tools/finetune_smoke.py`](jvscribe/tools/finetune_smoke.py) | prova que um checkpoint carrega, codifica PT-BR e treina |
 | [`jvscribe/tools/compare_models.py`](jvscribe/tools/compare_models.py) | compara dois modelos na mesma régua, com IC |
+| [`jvscribe/tools/calibrate.py`](jvscribe/tools/calibrate.py) | **calibra o runtime para a máquina-alvo** — rode ao trocar de CPU |
 
 ---
 
@@ -113,6 +114,7 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 
 | Documento | Papel |
 |---|---|
+| [`docs/CALIBRATION.md`](docs/CALIBRATION.md) | **Runbook de calibração** — o que é portável entre CPUs e o que precisa ser remedido |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Como o modelo e o motor funcionam** — grafo, stacks, custo por operador, pipelines de lote e tempo real |
 | [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
 | [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |

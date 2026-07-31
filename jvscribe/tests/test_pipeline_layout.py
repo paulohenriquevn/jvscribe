@@ -159,6 +159,7 @@ def test_entrypoints_de_pipeline_rodam_standalone():
         "tools/stress_test.py",
         "tools/compare_models.py",
         "tools/finetune_smoke.py",
+        "tools/calibrate.py",
     ):
         script = TRAIN / rel
         if not script.exists():
