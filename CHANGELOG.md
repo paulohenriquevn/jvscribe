@@ -29,6 +29,16 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E1 do protocolo: o portão de confiança separa, e o IC prova.** `[MEDIDO]` FLEURS n=100, 2623
+  palavras: a τ=1,0 a precisão é **55,9%** [IC95 49,4; 62,0] contra taxa base **14,3%** — o limite
+  inferior está **3,5×** acima da base, e os **seis** limiares medidos separam. Predição
+  pré-registrada era ≥ 35%: **confirmada**. IC por bootstrap reamostrando **utterances** (não
+  palavras — palavras da mesma locução são correlacionadas, e tratá-las como independentes
+  estreitaria o intervalo artificialmente; há teste que falha se a unidade voltar a ser a palavra).
+  Registra também uma correção de contagem: a base subiu de 10,3% para 14,3% porque E1 conta
+  **inserções** como erro. Evidência: `wiki/medicoes/e1-portao-de-confianca.md`.
+
+### Added
 - **E0 do protocolo do portão: `common/ctc.greedy_palavras`** — confiança por palavra (margem
   top-1 sobre top-2, em nats) extraída do **mesmo** colapso que já produz o texto. `[MEDIDO]`
   custo **+0,368 ms absolutos = +0,31%** do decode, contra uma predição pré-registrada de < 2%.

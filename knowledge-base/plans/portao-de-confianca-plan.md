@@ -47,8 +47,8 @@ Estado em `git 9a30c66`, `develop`, 501 testes verdes, ruff `F,E9,B` limpo.
 |---|---|---|---|
 | `jvscribe/common/ctc.py` | 57 | colapso greedy: `collapse`, `greedy_ids`, `detok_pieces`, `greedy_text` | ✅ **E0** — `+ greedy_palavras`, `+ Palavra`, `+ detok_pieces_bruto`. `greedy_text` **NÃO** tocada (ver revisão abaixo) |
 | `jvscribe/tests/test_ctc_equivalence.py` | — | guarda a equivalência do colapso | **+** RED de que texto novo == texto antigo em toda fixture |
-| `jvscribe/probes/portao_correcao_probe.py` | — | **novo** | o experimento das fases E2/E3 |
-| `jvscribe/tests/test_portao_confianca.py` | — | **novo** | RED do portão e do corretor (lógica pura) |
+| `jvscribe/probes/portao_correcao_probe.py` | — | **novo** | ✅ **E1** — modo `--curva`; `--corrigir` chega em E2 |
+| `jvscribe/tests/test_portao_confianca.py` | — | **novo** | ✅ **E1** — 11 testes da lógica pura |
 
 Nada em `common/` é promovido antes da fase que o autoriza (D2).
 
@@ -301,6 +301,15 @@ def test_precisao_recusa_amostra_sem_erro():
 taxa base (~10%).
 **Critério de morte:** limite inferior do IC95% da precisão **encosta na taxa base** → o portão é
 ruído; o protocolo inteiro para e o aprendizado é registrado.
+
+> ✅ **E1 CONCLUÍDA — predição CONFIRMADA.** `[MEDIDO]` a τ=1,0: precisão **55,9%**
+> [IC95 49,4; 62,0] contra taxa base **14,3%** — o limite inferior está **3,5×** acima da base.
+> Os **seis** limiares separam. τ=1,0 é o joelho da curva (11,3% sinalizado, 44,4% de recall) e
+> vira o padrão de E2. Evidência: [`wiki/medicoes/e1-portao-de-confianca.md`](../../wiki/medicoes/e1-portao-de-confianca.md).
+>
+> **Correção de contagem:** a base subiu de 10,3% para 14,3% porque E1 conta **inserções** como
+> erro — palavra inserida pela hipótese é erro e o portão deveria pegá-la. A exploratória que
+> excluía inserções subestimava base e precisão.
 
 ---
 

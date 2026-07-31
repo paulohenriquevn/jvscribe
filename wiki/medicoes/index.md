@@ -25,6 +25,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m6-soak-30min-rnf04.md](m6-soak-30min-rnf04.md) | O primeiro soak de 30 min — sem vazamento, estado limitado, RNF-04 indeterminado por carga |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
+| [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |
 | [reprodutibilidade.md](reprodutibilidade.md) | O artefato publicado transcreve **e** treina |
 | [benchmarks-publicos.md](benchmarks-publicos.md) | FLEURS, CORAA, telefônico — com comando de reprodução |
 
