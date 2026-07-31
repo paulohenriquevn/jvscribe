@@ -1,7 +1,7 @@
 # ASR Evidence Discipline
 
 Source of Truth da disciplina de evidência para **todos** os agents técnicos do
-Macaw Voice (`.claude/agents/`). Contrato, não sugestão: um agent que viola esta
+jvscribe (`.claude/agents/`). Contrato, não sugestão: um agent que viola esta
 regra produz um artefato inválido, independente de quão bem escrito ele esteja.
 
 Existe porque o próprio PRD registra uma falha de método já cometida neste projeto

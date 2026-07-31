@@ -75,8 +75,8 @@ def test_rust_detector_handles_malformed_json(tmp_path: Path) -> None:
 
 
 # --- D2 symbol-fabrication false-positive regressions (rust.py) ---------------
-# The Rust D2 detector flagged 98 false positives on the macaw workspace:
-# 57 stdlib (`std`), 40 workspace-internal crates (`macaw_*`), 1 `use x as y`
+# The Rust D2 detector flagged 98 false positives on the jvscribe workspace:
+# 57 stdlib (`std`), 40 workspace-internal crates (`jvscribe_*`), 1 `use x as y`
 # alias whose ` as pulse` suffix polluted the crate name. All three are detector
 # bugs, not fabricated symbols. These tests pin the fix.
 
@@ -105,7 +105,7 @@ def test_symbol_fab_skips_workspace_member_crate(tmp_path: Path) -> None:
     src = crate_dir / "src" / "lib.rs"
     src.parent.mkdir()
     # a sibling crate importing the workspace member (underscore form)
-    src.write_text("use macaw_asr::AsrEngine;\n")
+    src.write_text("use jvscribe_asr::AsrEngine;\n")
     det = RustDetector()
     with patch("scripts.detectors.rust._registry.crate_exists_on_crates_io") as m:
         findings = det.detect_symbol_fabrication([src])

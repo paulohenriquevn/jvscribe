@@ -31,11 +31,11 @@ def test_o_default_resolvido_aponta_para_um_modelo_que_existe():
     assert caminho.suffix == ".onnx"
 
 
-def test_resolvedor_honra_MACAW_MODEL_DIR(monkeypatch, tmp_path):
+def test_resolvedor_honra_JVSCRIBE_MODEL_DIR(monkeypatch, tmp_path):
     from batch_transcribe import _default_model_path
 
     (tmp_path / "model.int8.onnx").write_bytes(b"x")
-    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+    monkeypatch.setenv("JVSCRIBE_MODEL_DIR", str(tmp_path))
     assert Path(_default_model_path()).parent == tmp_path
 
 
@@ -57,7 +57,7 @@ def test_o_resolvedor_obedece_ao_model_card_e_nao_ao_nome_do_arquivo(monkeypatch
     (tmp_path / "model_card.json").write_text(
         json.dumps({"model_file": "m5_avg.int8.onnx"}), encoding="utf-8"
     )
-    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+    monkeypatch.setenv("JVSCRIBE_MODEL_DIR", str(tmp_path))
 
     assert Path(_default_model_path()).name == "m5_avg.int8.onnx"
 
@@ -72,7 +72,7 @@ def test_o_resolvedor_ignora_card_que_aponta_para_peso_inexistente(monkeypatch, 
     (tmp_path / "model_card.json").write_text(
         json.dumps({"model_file": "sumiu.onnx"}), encoding="utf-8"
     )
-    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+    monkeypatch.setenv("JVSCRIBE_MODEL_DIR", str(tmp_path))
 
     assert Path(_default_model_path()).name == "model.int8.onnx"
 
@@ -105,4 +105,67 @@ def test_todos_os_entrypoints_resolvem_o_MESMO_modelo_canonico():
     mic = importlib.import_module("mic_transcribe")
     assert Path(mic._default_model_path()).resolve() == canonico.resolve(), (
         "mic_transcribe e batch_transcribe discordam sobre o modelo canônico"
+    )
+
+
+# --- renomeação MACAW_MODEL_DIR → JVSCRIBE_MODEL_DIR ------------------------
+# O produto se chama jvscribe; "macaw" era resquício. Mas renomear variável de ambiente sem
+# rede faz quem a tem exportada cair em SILÊNCIO para `models/current` — o mesmo modo de falha
+# que já entregou o modelo errado neste projeto.
+#
+# ⚠️ Este bloco cita o nome ANTIGO de propósito. Uma varredura de renomeação já passou por
+# aqui e trocou as duas variáveis pela mesma, fazendo a segunda sobrescrever a primeira — o
+# teste de precedência passou a comparar a variável consigo mesma.
+
+
+def test_a_variavel_nova_e_honrada(monkeypatch, tmp_path):
+    from batch_transcribe import _default_model_path
+
+    (tmp_path / "model.int8.onnx").write_bytes(b"x")
+    monkeypatch.delenv("MACAW_MODEL_DIR", raising=False)
+    monkeypatch.setenv("JVSCRIBE_MODEL_DIR", str(tmp_path))
+    assert Path(_default_model_path()).parent == tmp_path
+
+
+def test_a_variavel_antiga_continua_funcionando(monkeypatch, tmp_path):
+    """Compatibilidade: quem já tem a variável antiga exportada não pode quebrar."""
+    from batch_transcribe import _default_model_path
+
+    (tmp_path / "model.int8.onnx").write_bytes(b"x")
+    monkeypatch.delenv("JVSCRIBE_MODEL_DIR", raising=False)
+    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+    assert Path(_default_model_path()).parent == tmp_path
+
+
+def test_a_variavel_nova_tem_precedencia_sobre_a_antiga(monkeypatch, tmp_path):
+    """Com as duas setadas, a nova ganha — senão a migração nunca termina."""
+    from batch_transcribe import _default_model_path
+
+    nova = tmp_path / "nova"; nova.mkdir(); (nova / "model.int8.onnx").write_bytes(b"n")
+    velha = tmp_path / "velha"; velha.mkdir(); (velha / "model.int8.onnx").write_bytes(b"v")
+    monkeypatch.setenv("JVSCRIBE_MODEL_DIR", str(nova))
+    monkeypatch.setenv("MACAW_MODEL_DIR", str(velha))
+    assert Path(_default_model_path()).parent == nova
+
+
+def test_a_variavel_antiga_avisa_que_esta_obsoleta(monkeypatch, tmp_path):
+    """Compatibilidade silenciosa vira permanente. O aviso é o que faz a migração acabar.
+
+    Usa `DeprecationWarning` da stdlib, não um flag de módulo: a primeira versão guardava
+    "já avisei" num global e criou dependência de ordem entre testes — passava isolado e
+    falhava na suíte.
+    """
+    import warnings as w
+
+    from artifact import default_model_path
+
+    (tmp_path / "model.int8.onnx").write_bytes(b"x")
+    monkeypatch.delenv("JVSCRIBE_MODEL_DIR", raising=False)
+    monkeypatch.setenv("MACAW_MODEL_DIR", str(tmp_path))
+
+    with w.catch_warnings(record=True) as avisos:
+        w.simplefilter("always")
+        default_model_path()
+    assert any("MACAW_MODEL_DIR" in str(a.message) for a in avisos), (
+        "a variável obsoleta tem de emitir DeprecationWarning"
     )

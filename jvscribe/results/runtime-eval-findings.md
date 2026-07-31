@@ -9,7 +9,7 @@ utterance. Faltava eval de **acurácia (WER)** através do runtime Rust sobre um
 ## Acurácia — WER do runtime Rust `[MEDIDO]`
 
 Extrai N utterances do FLEURS pt_br test (cache HF), roda cada uma pelo runtime de
-produção (`macaw-cli transcribe` = wav → `macaw_audio::kaldi_fbank` → `AsrEngine::transcribe`
+produção (`macaw-cli transcribe` = wav → `jvscribe_audio::kaldi_fbank` → `AsrEngine::transcribe`
 → `ctc_greedy`) e computa WER real (Levenshtein de palavras) vs a referência normalizada
 com a **mesma `normalize_ptbr` do treino**.
 

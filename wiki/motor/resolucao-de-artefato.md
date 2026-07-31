@@ -10,7 +10,7 @@ timestamp: 2026-07-31T00:00:00Z
 # Resolução do artefato
 
 ```
-MACAW_MODEL_DIR  >  models/current  >  diretório de trabalho
+JVSCRIBE_MODEL_DIR  >  models/current  >  diretório de trabalho
         ▼  em cada candidato, nesta ordem:
    model_card.json → campo "model_file"        ← AUTORIDADE
    senão, nomes conhecidos (model.int8.onnx, …)  ← degradação

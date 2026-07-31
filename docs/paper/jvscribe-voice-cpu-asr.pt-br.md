@@ -1,8 +1,8 @@
 # Construindo um ASR especializado, em tempo real e só-CPU para Português Brasileiro: seleção de arquitetura por medição e um estudo de caso sobre um bug de configuração silencioso disfarçado de limite fundamental
 
-**Macaw Voice — Relatório Técnico / Paper de Experiência (v1, PT-BR, 2026-07-30)**
+**jvscribe — Relatório Técnico / Paper de Experiência (v1, PT-BR, 2026-07-30)**
 
-> **Versão.** Este é o equivalente em português do paper `macaw-voice-cpu-asr.md`, com uma
+> **Versão.** Este é o equivalente em português do paper `jvscribe-voice-cpu-asr.md`, com uma
 > diferença deliberada: **cada componente é apresentado como "Problema → Como resolve"**, para que
 > quem for construir o próprio modelo entenda não só *o quê*, mas *por que cada peça existe*.
 >
@@ -558,5 +558,5 @@ telefônico real, não de uma loss mais esperta.
 *Proveniência: todo número quantitativo neste paper é rotulado `[MEDIDO] / [LITERATURA] / [FONTE-REPO]
 / [ESTIMATIVA] / [DESCONHECIDO]`. Os números medidos foram produzidos num notebook Intel i7 de 12
 núcleos com ONNX Runtime int8, greedy CTC, via os harnesses do §10, e são rastreáveis aos registros de
-resultado citados no §10. Esta versão PT-BR é fiel ao `macaw-voice-cpu-asr.md`; divergências de número
+resultado citados no §10. Esta versão PT-BR é fiel ao `jvscribe-voice-cpu-asr.md`; divergências de número
 entre as duas versões são bug e devem ser reportadas.*

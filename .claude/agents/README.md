@@ -1,4 +1,4 @@
-# Agents — Macaw Voice ASR PT-BR
+# Agents — jvscribe ASR PT-BR
 
 Doze agents especialistas cobrindo as cinco capacidades centrais do projeto:
 pesquisa em ASR, dados e linguística PT-BR, inferência em CPU, sistemas/áudio/Rust,

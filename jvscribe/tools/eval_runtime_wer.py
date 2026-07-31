@@ -3,7 +3,7 @@
 
 Responde "qual a qualidade do runtime?": extrai N utterances do FLEURS pt_br
 test (cache local HF), roda CADA UMA pelo **runtime Rust** (`macaw-cli transcribe`,
-i.e. wav -> macaw_audio::kaldi_fbank -> AsrEngine::transcribe), e computa o WER
+i.e. wav -> jvscribe_audio::kaldi_fbank -> AsrEngine::transcribe), e computa o WER
 real (edit-distance de palavras) contra a referência normalizada com a MESMA
 `normalize_ptbr` do treino. Compara com o WER do decode Python do icefall
 (29,97% no FLEURS test completo) — a equivalência que importa: o runtime Rust

@@ -88,7 +88,7 @@ usado ao vivo por janela deslizante ([por quê](docs/ARCHITECTURE.md)).
 
 ```bash
 pip install -r requirements-eval.txt        # onnxruntime, lhotse, soundfile
-export MACAW_MODEL_DIR=/caminho/do/artefato # ou deixe models/current apontar para ele
+export JVSCRIBE_MODEL_DIR=/caminho/do/artefato # ou deixe models/current apontar para ele
 
 # lote — uma pasta de áudios em qualquer formato
 python3 jvscribe/batch/batch_transcribe.py --input-dir ./audios --out-dir ./saida

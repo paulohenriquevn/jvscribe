@@ -327,7 +327,7 @@ modelo é ambíguo.
 
 - [ ] **Artefato canônico declarado** — `models/current/` (symlink ou manifesto) apontando o export vigente, com `model_card.json` (sha256, `vocab_size`, WER medido, data, proveniência de treino). Nenhum peso removido no processo
 - [ ] **Fail-fast de vocabulário** — `AsrEngine::load` (Rust) e o lado Python validam `vocab_size` do `tokens.txt` contra a dimensão de saída do modelo; apontar para o diretório errado falha alto em vez de transcrever errado
-- [ ] **`MACAW_MODEL_DIR` nos dois lados** — eliminado o caminho absoluto de `jvscribe/batch/eval_public_hf.py:15`
+- [ ] **`JVSCRIBE_MODEL_DIR` nos dois lados** — eliminado o caminho absoluto de `jvscribe/batch/eval_public_hf.py:15`
 - [ ] **`jvscribe/common/`** com `ctc.py` e `text.py`, consolidando as 7 implementações de colapso CTC e as 5 `normalize_ptbr`; guarda de layout alterada de "nenhum import cross-pipeline" para "cross-pipeline apenas a partir de `common/`"
 - [ ] **Teste de conformidade CTC cross-language** entre `common/ctc.py` e `macaw-asr::ctc_greedy`, no mesmo padrão do golden `kaldi_fbank_golden_test.rs`
 - [ ] **`.gitignore` corrigido** — linhas 57-58 (`*.wav`, `*.f32`) removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` e `crates/macaw-audio/tests/fixtures/` deixaram de ser ignoradas

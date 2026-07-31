@@ -203,7 +203,7 @@ def main():
     ap = argparse.ArgumentParser(description="Transcrição em lote (pasta de áudios) — M5 ONNX CPU")
     ap.add_argument("--input-dir", required=True)
     ap.add_argument("--out-dir", default="./transcricoes")
-    # Default resolvido a partir do artefato CANÔNICO (`models/current`, ou `MACAW_MODEL_DIR`),
+    # Default resolvido a partir do artefato CANÔNICO (`models/current`, ou `JVSCRIBE_MODEL_DIR`),
     # não de um nome fixo. `[MEDIDO]` 2026-07-30: os dois artefatos do repo usam nomes de
     # arquivo diferentes (`model.int8.onnx` vs `m5_avg.int8.onnx`), então um default literal
     # quebra assim que o symlink canônico aponta para o outro — o operador acha que canonizou

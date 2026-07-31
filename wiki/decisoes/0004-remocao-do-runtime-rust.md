@@ -83,7 +83,7 @@ streams e verificação de que nenhum processo fica órfão.
 
 ## Nota de identidade
 
-O produto se chama **jvscribe**. As referências a "Macaw Voice" e aos crates `macaw-*` eram
+O produto se chama **jvscribe**. As referências a "jvscribe" e aos crates `jvscribe-*` eram
 resquício e foram corrigidas nos documentos vivos. Registros históricos (ADRs anteriores,
 `training/results/*.md`, medições) **não** foram reescritos: eles documentam o que era verdade
 quando foram escritos, e reescrevê-los falsificaria evidência.

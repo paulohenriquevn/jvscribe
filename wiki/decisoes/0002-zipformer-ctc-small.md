@@ -61,7 +61,7 @@ Todos os números abaixo: corpus train = MLS-PT ~161h (CC-BY humano), test = FLE
 
 ## Consequências
 
-- **Encoder/decoder/tamanho deixam de ser `PENDENTE`** para o alvo CPU real-time: Zipformer-CTC small int8. O runtime v0 (crates `macaw-*`) já roda esse modelo ponta-a-ponta com WER equivalente ao decode Python (`runtime-eval-findings.md`) — a decisão está alinhada com o que já foi construído.
+- **Encoder/decoder/tamanho deixam de ser `PENDENTE`** para o alvo CPU real-time: Zipformer-CTC small int8. O runtime v0 (crates `jvscribe-*`) já roda esse modelo ponta-a-ponta com WER equivalente ao decode Python (`runtime-eval-findings.md`) — a decisão está alinhada com o que já foi construído.
 - **`PRD.md` § 8.1** deve passar a referenciar este ADR e mover encoder/decoder/tamanho de `⏸ PENDENTE` para `✅ Decidido (M4)` — a atualização é proposta ao dono do PRD (não reescrita por este agent; `asr-evidence-discipline.md` § 5).
 - **M5 herda o alvo**: augmentação telefônica + dados sobre o Zipformer-CTC small, com meta de levar o clean a ~15% (projeção honesta: telefônico ~19% antes de augmentação, dentro do alvo 15-25%).
 - **M6 herda o modelo para o trabalho causal/streaming** (treino `--causal 1`, WER por chunk, p99 sob carga).

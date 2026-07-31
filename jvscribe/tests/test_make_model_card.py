@@ -67,7 +67,7 @@ def test_eval_public_hf_nao_tem_caminho_absoluto():
     """Critério de aceite T1.3: o script não pode estar amarrado à máquina do dono."""
     src = (REPO / "jvscribe/batch/eval_public_hf.py").read_text(encoding="utf-8")
     assert "/home/paulo" not in src, "caminho absoluto ainda presente"
-    assert "MACAW_MODEL_DIR" in src, "deve honrar a variável de ambiente canônica"
+    assert "JVSCRIBE_MODEL_DIR" in src, "deve honrar a variável de ambiente canônica"
 
 
 def test_models_current_e_symlink_nao_copia():
@@ -79,3 +79,29 @@ def test_models_current_e_symlink_nao_copia():
         pytest.skip("models/current ausente (artefatos não versionados)")
     assert current.is_symlink(), "models/current DEVE ser symlink, não diretório copiado"
     assert (current / "tokens.txt").exists(), "o symlink deve resolver para um artefato válido"
+
+
+def test_o_schema_declara_o_nome_do_produto():
+    """O schema é `jvscribe-model-card`, não `jvscribe-model-card`.
+
+    "jvscribe" era o nome antigo do produto. Um card publicado com o nome errado confunde quem
+    consome o artefato — e ele É consumido: está no HuggingFace.
+    """
+    import make_model_card as m
+
+    # O que importa é o que é ESCRITO. O nome antigo pode (e deve) continuar na lista de
+    # aceitos na leitura — ver o teste seguinte.
+    assert m.SCHEMA == "jvscribe-model-card/1"
+
+
+def test_leitor_de_card_aceita_o_schema_antigo():
+    """Compatibilidade: cards já gerados (inclusive o publicado) trazem o nome antigo.
+
+    Recusá-los quebraria a leitura de um artefato válido — o schema mudou de nome, não de
+    formato.
+    """
+    import make_model_card as m
+
+    assert hasattr(m, "SCHEMAS_ACEITOS"), "falta o conjunto de schemas aceitos na leitura"
+    assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS
+    assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS

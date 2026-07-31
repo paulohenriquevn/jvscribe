@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 from pathlib import Path
 
 # Ordem de fallback quando o model card está ausente ou ilegível. Nomes históricos incluídos
@@ -20,10 +21,42 @@ from pathlib import Path
 NOMES_CONHECIDOS = ("model.int8.onnx", "m5_avg.int8.onnx")
 
 
+VAR_MODEL_DIR = "JVSCRIBE_MODEL_DIR"
+# ⚠️ O valor abaixo é o nome ANTIGO de propósito — uma varredura de renomeação já passou por
+# aqui e o trocou pelo novo, fazendo as duas constantes apontarem para a mesma variável e a
+# compatibilidade virar no-op em silêncio.
+VAR_MODEL_DIR_OBSOLETA = "MACAW_MODEL_DIR"   # remover após 2026-12-31
+
+
+def _dir_do_ambiente() -> str | None:
+    """Lê a variável de ambiente, aceitando o nome antigo com `DeprecationWarning`.
+
+    Renomear sem rede seria pior que o nome errado: quem tem a variável antiga exportada
+    cairia em SILÊNCIO para `models/current` — o mesmo modo de falha que já entregou o modelo
+    errado neste projeto. E compatibilidade silenciosa vira permanente, então ela avisa.
+
+    Usa `warnings` em vez de um flag de módulo: a primeira versão guardava "já avisei" num
+    global, e isso criou **dependência de ordem** entre testes — o segundo a rodar não via o
+    aviso. O `warnings` deduplica sozinho, sem estado mutável nosso.
+    """
+    novo = os.environ.get(VAR_MODEL_DIR)
+    if novo:
+        return novo
+    antigo = os.environ.get(VAR_MODEL_DIR_OBSOLETA)
+    if antigo:
+        warnings.warn(
+            f"{VAR_MODEL_DIR_OBSOLETA} está obsoleta — o produto se chama jvscribe. "
+            f"Use {VAR_MODEL_DIR}.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+    return antigo
+
+
 def _dirs_candidatos() -> list[Path]:
-    """`MACAW_MODEL_DIR` > `models/current` > diretório de trabalho."""
+    """`JVSCRIBE_MODEL_DIR` > `models/current` > diretório de trabalho."""
     dirs = []
-    base = os.environ.get("MACAW_MODEL_DIR")
+    base = _dir_do_ambiente()
     if base:
         dirs.append(Path(base))
     repo = Path(__file__).resolve().parents[2]

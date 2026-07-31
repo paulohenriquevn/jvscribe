@@ -99,7 +99,7 @@ jobs:
           test -f jvscribe/results/onnx/_eval_wavs/a000.wav \
             && cp jvscribe/results/onnx/_eval_wavs/a000.wav /tmp/ci-audio/
           # Sem `cd`: o script resolve modelo e tokens pelo artefato canônico
-          # (MACAW_MODEL_DIR > models/current > cwd).
-          MACAW_MODEL_DIR="$PWD/jvscribe/results/onnx" \
+          # (JVSCRIBE_MODEL_DIR > models/current > cwd).
+          JVSCRIBE_MODEL_DIR="$PWD/jvscribe/results/onnx" \
             .venv/bin/python jvscribe/batch/batch_transcribe.py \
               --input-dir /tmp/ci-audio --out-dir /tmp/ci-out --threads 2

@@ -22,6 +22,11 @@ import json
 from pathlib import Path
 
 MODEL_CARD_NAME = "model_card.json"
+SCHEMA = "jvscribe-model-card/1"
+# O schema mudou de NOME, não de formato — "jvscribe" era o nome antigo do produto. Cards já
+# gerados (inclusive o publicado no HuggingFace) trazem o nome antigo, e recusá-los quebraria
+# a leitura de um artefato válido.
+SCHEMAS_ACEITOS = frozenset({SCHEMA, "jvscribe-model-card/1"})
 DEFAULT_MODEL_FILE = "model.int8.onnx"
 DEFAULT_TOKENS_FILE = "tokens.txt"
 
@@ -106,7 +111,7 @@ def build_card(
         raise FileNotFoundError(f"vocabulário não encontrado: {tokens_path}")
 
     card = {
-        "schema": "macaw-model-card/1",
+        "schema": SCHEMA,
         "model_file": model_file,
         "model_sha256": file_sha256(model_path),
         "tokens_file": tokens_file,

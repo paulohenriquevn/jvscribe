@@ -155,7 +155,7 @@ Dois caminhos partilham o mesmo núcleo. Nenhum deles usa GPU.
 `jvscribe/common/artifact.py` é o **único** resolvedor; todos os entrypoints o consomem.
 
 ```
-MACAW_MODEL_DIR  >  models/current  >  diretório de trabalho
+JVSCRIBE_MODEL_DIR  >  models/current  >  diretório de trabalho
         │
         ▼  em cada candidato, nesta ordem:
    model_card.json → campo "model_file"        ← AUTORIDADE

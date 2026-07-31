@@ -1,5 +1,5 @@
 {
-  "schema": "macaw-model-card/1",
+  "schema": "jvscribe-model-card/1",
   "model_file": "model.int8.onnx",
   "model_sha256": "bbafc32d605d0e835a665a6ab5f3994001eb4e3dfcc9ff302d8d74110ddfebfe",
   "tokens_file": "tokens.txt",

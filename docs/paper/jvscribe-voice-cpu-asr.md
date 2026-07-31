@@ -1,9 +1,9 @@
 # Building a Real-Time, CPU-Only Specialized ASR for Brazilian Portuguese: Measured Architecture Selection and a Cautionary Case Study on a Silent Configuration Bug Masquerading as a Fundamental Limit
 
-**Macaw Voice — Technical Report / Experience Paper (v1, 2026-07-30)**
+**jvscribe — Technical Report / Experience Paper (v1, 2026-07-30)**
 
 > **Language.** Portuguese (PT-BR) edition — with each component framed as *"problem it solves → how"* —
-> at [`docs/paper/macaw-voice-cpu-asr.pt-br.md`](./macaw-voice-cpu-asr.pt-br.md).
+> at [`docs/paper/jvscribe-voice-cpu-asr.pt-br.md`](./jvscribe-voice-cpu-asr.pt-br.md).
 >
 > **Figures.** Diagrams below use Mermaid (rendered on GitHub and Mermaid-capable viewers). A
 > **self-contained, always-rendered HTML companion** with all figures is at
