@@ -33,6 +33,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 import ctc  # noqa: E402  — shared kernel
 from artifact import default_model_path as _default_model_path  # noqa: E402
 from artifact import default_sibling as _default_sibling  # noqa: E402
+from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 
 
@@ -142,6 +143,9 @@ def transcribe_folder(input_dir: str, out_dir: str, model: str, tokens: str,
 
     # Fábrica do shared kernel: uma configuração medida para todos os entrypoints. A arena
     # estava DESLIGADA aqui sem justificativa e custava −6,7% [IC95% −18,3; −3,9] ms.
+    # Fail-fast do par (modelo, vocabulário): trocar o tokens.txt produz português
+    # PLAUSÍVEL e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3).
+    validar_par_modelo_vocabulario(pathlib.Path(model).parent, tokens_path=tokens)
     sess = criar_sessao(model, threads)
     id2tok = load_tokens(tokens)
     fb = Fbank(FbankConfig(num_mel_bins=80))

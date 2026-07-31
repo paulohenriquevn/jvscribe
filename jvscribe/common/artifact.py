@@ -91,3 +91,66 @@ def default_sibling(nome: str) -> str:
     """Arquivo irmão do modelo canônico (ex.: `tokens.txt`), ou o nome cru se não existir."""
     irmao = Path(default_model_path()).parent / nome
     return str(irmao) if irmao.exists() else nome
+
+
+class ParVocabularioInvalido(RuntimeError):
+    """O `tokens.txt` não é o do modelo — erro tipado (error-handling.md § 2).
+
+    Merece um tipo próprio porque é o ÚNICO defeito deste projeto cuja saída é plausível: o
+    ASR devolve português correto e errado ao mesmo tempo. Quem captura genericamente não
+    distingue isto de um arquivo faltando, e é justamente a distinção que importa.
+    """
+
+
+def validar_par_modelo_vocabulario(
+    diretorio: str | Path, tokens_path: str | Path | None = None
+) -> bool:
+    """Confere `tokens.txt` contra o `vocab_fingerprint` do `model_card.json`.
+
+    `tokens_path` cobre o `--tokens` dos entrypoints: sem ele, validaríamos o tokens declarado
+    no card enquanto o processo carrega OUTRO arquivo — aprovando exatamente o caso em que o
+    erro é mais provável (alguém apontou o vocabulário à mão).
+
+    Devolve `True` quando validou e conferiu, `False` quando não havia card para comparar
+    (artefato legado — não inventa aprovação). Levanta `ParVocabularioInvalido` quando há card
+    e o par NÃO confere.
+
+    ⚠️ A comparação é por FINGERPRINT, nunca por contagem. `[MEDIDO]`: os dois artefatos deste
+    projeto têm 500 tokens emitíveis cada e 492 dos 500 ids mapeiam tokens diferentes — a
+    cardinalidade não os distingue. Ver `CLAUDE.md § O modelo`, fato 3.
+    """
+    d = Path(diretorio)
+    card = d / "model_card.json"
+    if not card.exists():
+        return False   # legado: sem card não há autoridade a consultar
+    try:
+        dados = json.loads(card.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise ParVocabularioInvalido(f"model_card.json ilegível em {d}: {e}") from e
+
+    esperado = dados.get("vocab_fingerprint")
+    if not esperado:
+        raise ParVocabularioInvalido(
+            f"{card} não declara `vocab_fingerprint` — regenere com "
+            f"`python3 jvscribe/common/make_model_card.py {d}`. Sem ele não há como provar "
+            f"que o tokens.txt é o deste modelo, e a saída de um par errado é PLAUSÍVEL."
+        )
+
+    tokens = Path(tokens_path) if tokens_path else d / dados.get("tokens_file", "tokens.txt")
+    if not tokens.exists():
+        raise ParVocabularioInvalido(f"tokens declarado no card não existe: {tokens}")
+
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from make_model_card import vocab_fingerprint   # Regra 9: já existe, não reimplementar
+
+    obtido = vocab_fingerprint(tokens)
+    if obtido != esperado:
+        raise ParVocabularioInvalido(
+            f"o vocabulário NÃO é o deste modelo.\n"
+            f"  fingerprint esperado (model_card.json): {esperado}\n"
+            f"  fingerprint obtido   ({tokens.name}): {obtido}\n"
+            f"A contagem de tokens pode coincidir e ainda assim o par estar errado — foi o que "
+            f"aconteceu neste projeto. Transcrever assim produz português plausível e errado."
+        )
+    return True

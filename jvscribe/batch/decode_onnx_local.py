@@ -28,6 +28,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 import ctc  # noqa: E402  — shared kernel: colapso CTC e detokenização
 from artifact import default_model_path, default_sibling  # noqa: E402
+from artifact import validar_par_modelo_vocabulario  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
 
@@ -83,6 +84,10 @@ def main() -> int:
 
     modelo = a.model or default_model_path()
     tokens = a.tokens or default_sibling("tokens.txt")
+    # Fail-fast do par (modelo, vocabulário): trocar o tokens.txt produz português PLAUSÍVEL
+    # e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3). Validar aqui é o que separa
+    # "transcrição ruim inexplicável" de um erro que diz o que aconteceu.
+    validar_par_modelo_vocabulario(pathlib.Path(modelo).parent, tokens_path=tokens)
 
     # `memoria_restrita`: a arena do ONNX cresce sem devolver, e manifests grandes estouravam
     # a memória. É o único lugar do projeto que abre mão dos ~6,7% que a arena ligada rende.
