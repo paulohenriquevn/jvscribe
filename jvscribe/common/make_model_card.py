@@ -3,7 +3,7 @@
 
 O card é a declaração humana de proveniência do artefato: qual modelo, qual vocabulário,
 qual WER medido, quando. Ele **não** é a fonte da verdade para validação de dimensão — essa
-vem do próprio grafo ONNX (ver `crates/macaw-asr/src/lib.rs`, `AsrEngine::output_vocab_dim`).
+vem do próprio grafo ONNX, lido em tempo de carga pelo motor de inferência.
 
 ⛔ INVARIANTE: este script **nunca move, renomeia ou remove** arquivo algum. Ele só escreve
 `model_card.json` no diretório informado. Modelo treinado é o artefato mais caro e menos
@@ -38,7 +38,8 @@ def _is_disambig(token: str) -> bool:
     [MEDIDO] 2026-07-30: o export do runtime tem 2 deles (502 linhas / 500 classes); o de
     avaliação tem 3 (503 / 500). Contar linhas seria errado por construção.
 
-    Espelha `Vocab::is_disambig` em `crates/macaw-asr/src/lib.rs`.
+    A regra veio do `Vocab::is_disambig` do runtime Rust (removido do repositório em
+    2026-07-30); esta é hoje a única implementação.
     """
     return len(token) > 1 and token[0] == "#" and token[1:].isdigit()
 

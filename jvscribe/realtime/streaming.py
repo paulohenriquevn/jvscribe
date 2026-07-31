@@ -116,6 +116,11 @@ def longest_common_prefix(a, b):
 def ctc_words(path, id2tok, stride, t0):
     """Colapsa o caminho greedy do CTC em (palavras, tempos_abs_de_início).
 
+    ⚠️ Reimplementa o colapso de propósito, e não usa o shared kernel (`common/ctc.py`): o
+    kernel devolve **texto**, e aqui é preciso o **tempo de início de cada palavra** — é o que
+    o LocalAgreement-2 usa para saber o que já foi confirmado. Sem o tempo, não há como
+    distinguir palavra nova de palavra re-decodada.
+
     path: argmax por frame (iterável de ints). stride: segundos por frame de saída.
     t0: tempo absoluto (s) do frame 0. Colapso CTC padrão: remove repetições, depois
     remove blanks; ``▁`` marca início de palavra. Retorna (list[str], list[float]).

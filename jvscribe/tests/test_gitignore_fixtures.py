@@ -53,16 +53,8 @@ def test_pesos_de_modelo_continuam_ignorados():
         assert _is_ignored(p), f"{p} DEVERIA continuar ignorado"
 
 
-def _obsoleto_test_dump_de_eval_f32():
-    """Regressão pega durante a própria T2.1.
-
-    A primeira tentativa de corrigir o shadowing removeu a regra `*.f32` inteira — o que
-    tornaria `data/eval/fleurs/fleurs_one.f32` (214 K de dump de eval) rastreável num
-    `git add`. A correção certa é regra geral SEGUIDA da exceção, não ausência de regra.
-    """
-    assert _is_ignored("data/eval/fleurs/fleurs_one.f32"), (
-        "dump binário de eval não pode ser versionável"
-    )
-    assert not _is_ignored("crates/macaw-audio/tests/fixtures/kaldi_fbank80_golden.f32"), (
-        "o golden do kaldi_fbank É versionado — é a âncora do teste cross-language"
-    )
+# Havia aqui um `_obsoleto_test_dump_de_eval_f32` — desabilitado por prefixo no nome, de modo
+# que o pytest não o coletava. Um teste que não roda não protege nada e ainda parece cobertura
+# (`testing.md § 6`). Sua metade viva está em `test_dump_binario_de_eval_continua_ignorado`
+# acima; a outra metade assertava um caminho da árvore Rust (`crates/`), removida em
+# 2026-07-30, e teria falhado se alguém a reativasse.

@@ -5,13 +5,17 @@ e invalidar um número já publicado no CHANGELOG ou no paper. A ordem teste-pri
 transforma esse risco em evidência: se divergirem, sabemos QUAL e EM QUE ENTRADA antes de
 mudar qualquer coisa.
 
-Inventário medido em 2026-07-30 — 5 implementações Python + 1 Rust:
-  jvscribe/batch/batch_transcribe.py:41        greedy(log_probs_row, valid_len, id2tok) -> str
-  jvscribe/batch/decode_onnx_local.py:31       greedy_ctc(log_probs, lens)              -> ids
-  jvscribe/eval/measure_callcenter.py:58       greedy(lp, id2tok)                       -> str
-  jvscribe/eval/measure_realcodec.py:40        greedy(logp, lens, sp)                   -> str (sp.decode)
-  jvscribe/tools/tta_feature_align_probe.py  greedy(logp, id2tok)                     -> str
-  crates/macaw-asr/src/decode.rs:28            ctc_greedy(...)                          -> ids
+Inventário medido em 2026-07-30 — 5 implementações Python + 1 Rust. Todas as cópias Python
+foram desde então delegadas ao kernel (`common/ctc.py`); a Rust saiu do repositório junto com
+o runtime, em 2026-07-30. O inventário fica registrado porque é a evidência de POR QUE o
+kernel existe — 6 colapsos CTC independentes que ninguém sabia que divergiam.
+
+  jvscribe/batch/batch_transcribe.py        greedy(log_probs_row, valid_len, id2tok) -> str
+  jvscribe/batch/decode_onnx_local.py       greedy_ctc(log_probs, lens)              -> ids
+  jvscribe/eval/measure_callcenter.py       greedy(lp, id2tok)                       -> str
+  jvscribe/eval/measure_realcodec.py        greedy(logp, lens, sp)                   -> str (sp.decode)
+  jvscribe/tools/tta_feature_align_probe.py greedy(logp, id2tok)                     -> str
+  (removida) crate Rust do runtime          ctc_greedy(...)                          -> ids
 """
 import numpy as np
 import pytest
@@ -102,6 +106,13 @@ def test_divergencia_conhecida_de_detokenizacao_esta_documentada():
         / "eval"
         / "measure_realcodec.py"
     ).read_text(encoding="utf-8")
-    assert "sp.decode(toks)" in src, (
-        "a divergência documentada sumiu — reavalie T3.1 antes de consolidar"
+    # Verifica a INTENÇÃO (a detokenização continua sendo do SentencePiece), não o nome da
+    # variável: o colapso foi delegado ao kernel e `toks` deixou de existir, sem que a
+    # convenção de detokenização mudasse. Um check por literal transformaria uma refatoração
+    # correta em falha — foi o que aconteceu quatro vezes nesta revisão.
+    assert "sp.decode(" in src, (
+        "a divergência documentada sumiu — reavalie antes de consolidar a detokenização"
+    )
+    assert 'replace("▁", " ")' not in src, (
+        "adotou a convenção `join + replace` do kernel; isso muda um número publicado"
     )

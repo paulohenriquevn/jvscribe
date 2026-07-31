@@ -9,8 +9,10 @@ usam `join + replace("▁", " ")` e `measure_realcodec` usa `sp.decode()`. Por i
 convenções são funções distintas e nomeadas aqui, em vez de uma unificação cega que mudaria um
 número já publicado.
 
-Conformidade com o Rust: `crates/macaw-asr/src/decode.rs::ctc_greedy` implementa a mesma regra;
-`jvscribe/tests/test_ctc_equivalence.py` compara as duas.
+Havia uma implementação Rust equivalente (`ctc_greedy` do runtime); ela saiu do repositório
+em 2026-07-30 junto com o runtime. Não existe mais conformidade cross-language a verificar —
+`jvscribe/tests/test_ctc_equivalence.py` compara este kernel contra uma referência escrita à
+mão no próprio teste, e proíbe que as cópias voltem.
 """
 from __future__ import annotations
 
