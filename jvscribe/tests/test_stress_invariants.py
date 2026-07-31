@@ -153,3 +153,58 @@ def test_cache_de_features_com_milhares_de_appends_minusculos():
         if len(cache.features()) > 600:
             cache.descartar(len(cache.features()) - 600)
     assert len(cache.features()) <= 600
+
+
+# ── A ferramenta de soak não pode concluir sobre RNF sob carga ───────────────────────────
+
+def test_stress_test_registra_carga_e_recusa_veredito_contaminado():
+    """`stress_test.py` emitia "RNF-04: FALHA" sem sequer olhar o load average.
+
+    Medido em 2026-07-31: um soak de 30 min nesta máquina (load 5-14, do próprio ambiente do
+    usuário) produziu razão 0,67 e o veredito FALHA. O RTFx variou 1,65-4,59 **sem tendência**
+    e os dois piores minutos coincidiram com os picos de load — contenção, não decaimento
+    térmico. Concluir dali violaria `asr-evidence-discipline.md` § 5 ("máquina sob carga não
+    mede"), que é exatamente o erro que este projeto já cometeu e catalogou.
+
+    `calibrate.py` avisava acima de load 1,0 desde sempre; a ferramenta que emite o VEREDITO
+    era a única cega.
+    """
+    import ast
+    import pathlib
+
+    fonte = (pathlib.Path(__file__).resolve().parents[1] / "tools" / "stress_test.py")
+    src = fonte.read_text(encoding="utf-8")
+
+    assert "getloadavg" in src, "não registra a carga durante o soak"
+    assert "LIMIAR_LOAD" in src, "não declara o limiar acima do qual o veredito não vale"
+    assert "INDETERMINADO" in src, (
+        "sob carga o veredito tem de ser INDETERMINADO — nem PASSA nem FALHA"
+    )
+    # o limiar tem de bater com o do calibrate.py: dois limiares divergentes é o mesmo
+    # defeito de 'duas réguas' que este repositório já pagou três vezes.
+    arvore = ast.parse(src)
+    limiar = next(
+        n.value.value for n in arvore.body
+        if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)
+        and n.targets[0].id == "LIMIAR_LOAD"
+    )
+    calib = (fonte.parent / "calibrate.py").read_text(encoding="utf-8")
+    assert "load average" in calib and str(limiar) in calib.replace("1.0", "1.0"), (
+        f"limiar de carga ({limiar}) não casa com o de calibrate.py"
+    )
+
+
+def test_soak_indeterminado_nao_reprova_como_falha():
+    """Exit code 2 (indeterminado) ≠ 1 (reprovado).
+
+    Se carga virasse `exit 1`, um CI ocupado reportaria "RNF-04 falhou" — transformando ruído
+    de ambiente em regressão de produto.
+    """
+    import pathlib
+
+    src = (pathlib.Path(__file__).resolve().parents[1] / "tools" / "stress_test.py").read_text(
+        encoding="utf-8"
+    )
+    assert "return 2" in src, "indeterminado precisa de código de saída próprio"
+    i2, i1 = src.index("return 2"), src.rindex("return 0 if")
+    assert i2 < i1, "a checagem de carga tem de vir ANTES do veredito de aprovação/reprovação"

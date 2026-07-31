@@ -22,6 +22,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m6-profile-por-operador.md](m6-profile-por-operador.md) | Onde o tempo realmente está |
 | [m6-topologia-de-cpu.md](m6-topologia-de-cpu.md) | CPU híbrida, `perf`, e o limite do instrumento |
 | [m6-rnf-ao-vivo.md](m6-rnf-ao-vivo.md) | Os critérios de real-time sobre o pipeline completo |
+| [m6-soak-30min-rnf04.md](m6-soak-30min-rnf04.md) | O primeiro soak de 30 min — sem vazamento, estado limitado, RNF-04 indeterminado por carga |
 | [reprodutibilidade.md](reprodutibilidade.md) | O artefato publicado transcreve **e** treina |
 | [benchmarks-publicos.md](benchmarks-publicos.md) | FLEURS, CORAA, telefônico — com comando de reprodução |
 

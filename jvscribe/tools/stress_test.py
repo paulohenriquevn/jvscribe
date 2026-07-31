@@ -32,6 +32,10 @@ from artifact import default_model_path, default_sibling  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
 
+# Mesmo limiar do `calibrate.py` — acima disto a medição vira ruído de contenção, e o
+# veredito de RNF-04 deixa de valer (`asr-evidence-discipline.md` § 5).
+LIMIAR_LOAD = 1.0
+
 
 def _rss_mb() -> float | None:
     """RSS do processo em MB, via /proc — sem depender de psutil."""
@@ -60,6 +64,8 @@ def _carregar_audio(d: pathlib.Path, limite: int = 40) -> np.ndarray:
 
 class _Janela:
     """Acumula as amostras de um minuto para comparar minuto a minuto."""
+
+    load: float | None = None
 
     def __init__(self) -> None:
         self.audio_s = 0.0
@@ -130,6 +136,7 @@ def main() -> int:
             atual.add(a.hop, dt, time.perf_counter() - alvo)
         m0 = motores[0]
         if (i + 1) * a.hop >= (minuto + 1) * 60:
+            atual.load = os.getloadavg()[0]
             janelas.append(atual)
             print(f"  {minuto + 1:>4} {atual.rtfx():>7.2f} {atual.p99_ms():>9.0f} "
                   f"{(_rss_mb() or 0):>9.0f} {len(m0.cache.features()):>8} "
@@ -143,11 +150,21 @@ def main() -> int:
     razao = ultima.rtfx() / primeira.rtfx() if primeira.rtfx() else 0.0
     rtfx_min = min(j.rtfx() for j in janelas)
 
+    # Carga: um soak numa máquina ocupada mede contenção, não estabilidade térmica. O
+    # `calibrate.py` já avisava acima de load 1,0; esta ferramenta emitia "RNF-04: FALHA"
+    # sem sequer olhar — um veredito que a § 5 da disciplina de evidência proíbe
+    # (`asr-evidence-discipline.md`: "máquina sob carga não mede"). Medido em 2026-07-31:
+    # com load 5-14 o RTFx variou 1,65-4,59 sem tendência, e os dois piores minutos
+    # coincidiram com os picos de load — contenção, não térmico.
+    cargas = [j.load for j in janelas if j.load is not None]
+    load_mediana = statistics.median(cargas) if cargas else None
+    contaminado = load_mediana is not None and load_mediana > LIMIAR_LOAD
+
     L = ["", "## Veredito", "",
          f"- RTFx minuto 1: **{primeira.rtfx():.2f}×** · minuto {len(janelas)}: "
          f"**{ultima.rtfx():.2f}×** · mínimo: {rtfx_min:.2f}×",
          f"- **RNF-04** (último ÷ primeiro ≥ 0,80): **{razao:.2f}** → "
-         f"{'PASSA' if razao >= 0.80 else 'FALHA'}"
+         f"{'INDETERMINADO (carga)' if contaminado else 'PASSA' if razao >= 0.80 else 'FALHA'}"
          + ("" if len(janelas) >= 30 else
             f"  ⚠️ só {len(janelas)} min de soak; o critério pede 30"),
          f"- RTFx sustentado ≥ 3× em toda janela: "
@@ -156,8 +173,18 @@ def main() -> int:
          f"(mediana das janelas)",
          f"- RSS final: {(_rss_mb() or 0):.0f} MB",
          "",
-         "> Sem carga concorrente declarada — RNF-05 não foi exercitado. Rode um softphone "
-         "em paralelo para que o número valha para o cenário de produção."]
+         f"- load average mediano durante o soak: "
+         f"{'não medido' if load_mediana is None else f'{load_mediana:.1f}'}",
+         ""]
+    if contaminado:
+        L += ["> ⚠️ **VEREDITO DE RNF-04 INVÁLIDO — máquina sob carga** "
+              f"(load mediano {load_mediana:.1f} > {LIMIAR_LOAD:g}). O que se mede aqui é "
+              "contenção por CPU, não estabilidade térmica. Continuam VÁLIDOS (não dependem "
+              "de tempo): ausência de vazamento de memória (curva de RSS) e o teto de estado "
+              "do motor (coluna `commit`). Repita em máquina ociosa para concluir sobre RNF-04.",
+              ""]
+    L += ["> Sem carga concorrente declarada — RNF-05 não foi exercitado. Rode um softphone "
+          "em paralelo para que o número valha para o cenário de produção."]
     saida = "\n".join(L)
     print(saida)
     if a.relatorio:
@@ -165,6 +192,8 @@ def main() -> int:
             f"# Soak de {a.minutos:g} min — {a.canais} canais\n\n"
             f"modelo: `{modelo}`\n{saida}\n", encoding="utf-8")
         print(f"\n  relatório: {a.relatorio}")
+    if contaminado:
+        return 2   # indeterminado != reprovado — não deixe um CI ocupado 'falhar' o RNF
     return 0 if razao >= 0.80 and rtfx_min >= 3.0 else 1
 
 
