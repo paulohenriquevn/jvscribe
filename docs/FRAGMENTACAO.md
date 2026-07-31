@@ -177,8 +177,9 @@ essa discordância seja discutível, não para encerrá-la.
 | **Violações da regra de fronteira** | **5** | **0** |
 | Pipelines com ≥ 4 domínios | 2 (`tools` 7, `common` 5) | **0** |
 | Domínios atravessando pastas | 4 | **1** (preparo de corpus — deliberado) |
-| Símbolo alcançável por 2 caminhos de import | 3 | **0** |
-| Arquivos-fragmento (< 55 LoC sem razão) | 4 | **0** |
+| Símbolo (mesmo objeto) por 2 caminhos de import | 3 | **0** |
+| Arquivos-fragmento **sem razão** | 4 | **0** |
+| Constante de domínio duplicada (`SR = 16000`) | 7 | **1** |
 | Pipelines | 7 | 9 (mais, e cada uma com **um** domínio) |
 | Suíte | 391 | 391 |
 

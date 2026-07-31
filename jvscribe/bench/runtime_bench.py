@@ -36,7 +36,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path  # noqa: E402
 from stats import comparar_pareado  # noqa: E402
 
-SR = 16000
+from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 
 
 def montar_configs(ort):

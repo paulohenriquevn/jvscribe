@@ -1,4 +1,4 @@
-"""Canal telefônico — **processamento de sinal**, não preparo de corpus.
+"""Domínio de áudio — a taxa que o modelo consome e o canal telefônico.
 
 Vivia em `corpus/` por acidente histórico: nasceu na augmentação de M3. Mas os consumidores
 são três pipelines — `corpus` (augmentação de treino), `eval` (test set 8 kHz proxy) e
@@ -15,5 +15,11 @@ violações somem por construção, não por exceção na guarda.
 
 ⚠️ `channel.py` e `augment.sh` implementam a mesma degradação por caminhos diferentes.
 `[MEDIDO]` correlação **0,9978** depois de alinhar 51 amostras de atraso de grupo — a
-duplicação é deliberada e verificada por `tests/test_scripts_invocados.py`.
-"""
+duplicação é deliberada e verificada por `tests/test_scripts_invocados.py`."""
+from __future__ import annotations
+
+# A taxa de amostragem que o modelo consome, fixada pelo fbank do treino. Estava declarada
+# **7 vezes** no repositório (`SR = 16000` em batch, realtime, eval, bench…) — a mesma classe
+# de duplicação de conhecimento que já produziu duas réguas de texto e sete colapsos CTC.
+# Trocar a taxa exige retreinar, então a divergência seria silenciosa e cara.
+SR = 16000

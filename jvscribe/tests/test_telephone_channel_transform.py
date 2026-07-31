@@ -34,7 +34,7 @@ from audio import lhotse_transform as tct  # noqa: E402
 # via `corpus.telephone_channel` carregaria um 2o objeto de modulo (mesmo arquivo,
 # nome qualificado diferente) e quebraria o teste de identidade `is` abaixo.
 
-SR = 16000
+from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 
 
 def _sine_cut(tmp_path, cid: str, freq: float = 440.0, dur: float = 1.0, text: str = "ola") -> MonoCut:

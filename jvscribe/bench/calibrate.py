@@ -39,7 +39,7 @@ from cpu import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 
-SR = 16000
+from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 JANELAS = (2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
 
 

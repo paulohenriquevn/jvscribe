@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 from lhotse import Fbank, FbankConfig
 
-SR = 16000
+from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 CHUNK = 512          # ~32ms @ 16kHz
 BLANK = 0
 WORD_START = "▁"  # ▁ (marca início de palavra no BPE)

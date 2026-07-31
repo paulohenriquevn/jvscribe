@@ -15,7 +15,7 @@ import ctc  # noqa: E402  — shared kernel
 from audio import codecs as codec_pool  # noqa: E402
 from audio.channel import apply_band  # noqa: E402
 
-SR = 16000
+from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 # Único caminho genuinamente externo: a recipe zipformer do icefall (não é do repositório).
 # Era hardcoded em `/workspace/icefall/...`; agora falha alto e claro quando não resolve, em
 # vez de morrer num ImportError que não diz o que configurar.
