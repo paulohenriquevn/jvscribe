@@ -19,7 +19,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
-import onnxruntime as ort
 
 from lhotse import Fbank, FbankConfig
 
@@ -34,13 +33,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 import ctc  # noqa: E402  — shared kernel
 from artifact import default_model_path as _default_model_path  # noqa: E402
 from artifact import default_sibling as _default_sibling  # noqa: E402
+from onnx_session import criar_sessao  # noqa: E402
 
 
 SR = 16000
 BLANK = 0
 WORD_START = "▁"
 AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".mp4", ".webm"}
-
 
 
 def load_tokens(path: str) -> dict[int, str]:
@@ -141,10 +140,9 @@ def transcribe_folder(input_dir: str, out_dir: str, model: str, tokens: str,
         raise FileNotFoundError(f"nenhum áudio ({sorted(AUDIO_EXTS)}) em {input_dir}")
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    so = ort.SessionOptions()
-    so.intra_op_num_threads = threads
-    so.enable_cpu_mem_arena = False
-    sess = ort.InferenceSession(model, so, providers=["CPUExecutionProvider"])
+    # Fábrica do shared kernel: uma configuração medida para todos os entrypoints. A arena
+    # estava DESLIGADA aqui sem justificativa e custava −6,7% [IC95% −18,3; −3,9] ms.
+    sess = criar_sessao(model, threads)
     id2tok = load_tokens(tokens)
     fb = Fbank(FbankConfig(num_mel_bins=80))
 

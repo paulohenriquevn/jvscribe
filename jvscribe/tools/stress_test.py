@@ -29,6 +29,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "realtime"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
+from onnx_session import criar_sessao  # noqa: E402
 from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
 
 
@@ -91,15 +92,12 @@ def main() -> int:
     ap.add_argument("--relatorio", type=pathlib.Path, default=None)
     a = ap.parse_args()
 
-    import onnxruntime as ort
-
     audio = _carregar_audio(a.audio_dir)
     modelo = default_model_path()
-    so = ort.SessionOptions()
-    so.intra_op_num_threads = a.threads
-    so.inter_op_num_threads = max(2, a.threads // 2)
-    so.enable_cpu_mem_arena = True
-    sess = ort.InferenceSession(modelo, so, providers=["CPUExecutionProvider"])
+    # Fábrica do shared kernel: este script mede o PRODUTO, então tem de usar a
+    # mesma sessão que a produção. (`runtime_bench` e `bench_rtfx` mantêm config
+    # explícita de propósito — neles a configuração é a variável sob teste.)
+    sess = criar_sessao(modelo, a.threads)
     id2tok = load_tokens(default_sibling("tokens.txt"))
     motores = [StreamingCTC(sess, id2tok, hop_s=a.hop, window_s=a.window)
                for _ in range(a.canais)]

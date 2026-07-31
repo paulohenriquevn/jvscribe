@@ -97,3 +97,19 @@ def test_smoke_transcreve_pasta(tmp_path):
     assert s["files"] == 2
     assert s["rtfx_agregado"] is not None and s["rtfx_agregado"] > 0
     assert (out / "a0.txt").exists() and (out / "transcripts.json").exists()
+
+
+def test_a_sessao_onnx_usa_a_fabrica_com_a_config_medida():
+    """`batch/` inteiro usava `enable_cpu_mem_arena = False` enquanto `live_transcribe` usava
+    `True`. Não é estética: medido com bootstrap pareado, a arena ligada rende −6,7%
+    [IC95% −18,3; −3,9] ms, e a config completa −17,1%.
+
+    Config divergente entre entrypoints significa que uma medição feita num não vale no outro.
+    """
+    import inspect
+
+    import batch_transcribe
+
+    fonte = inspect.getsource(batch_transcribe)
+    assert "criar_sessao" in fonte, "não consome a fábrica de sessão do shared kernel"
+    assert "enable_cpu_mem_arena = False" not in fonte, "arena desligada voltou"

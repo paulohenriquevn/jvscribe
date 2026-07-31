@@ -1,7 +1,0 @@
-[MEDIDO] probe DISC-05 — TTA forward-only por alinhamento de features (n=150)
-  1. wideband limpo   WER =  28.59%  (teto)
-  2. telefone CRU     WER =  37.43%  (gap de domínio)
-  3. telefone ALINHADO WER =  62.01%  (tratamento)
-
-  cru→alinhado: Δ -24.57 p.p.  IC95% [-27.18, -21.99]  (rel -65.65%, P(melhora>0)=0.0%)
-  veredito: ALINHAMENTO PIORA

@@ -40,17 +40,40 @@ def _collapse_reference(ids) -> list[int]:
     return out
 
 
-def test_colapso_das_implementacoes_concorda_na_mesma_entrada():
-    """O núcleo compartilhado: a sequência de ids colapsada tem de ser idêntica."""
+def test_o_colapso_do_kernel_concorda_com_a_referencia():
+    """O núcleo compartilhado: a sequência de ids colapsada tem de bater com a referência.
+
+    Esta guarda comparava o kernel contra a cópia de `decode_onnx_local.greedy_ctc`. A cópia
+    foi **removida** (o kernel existe justamente porque este colapso já apareceu 7× no
+    repositório), então a comparação passou a ser contra a implementação de referência do
+    próprio teste — e o teste seguinte garante que a cópia não volte.
+    """
+    import ctc
+
     logits = _fixture_logits()
     esperado = _collapse_reference(logits.argmax(-1))
-
-    from decode_onnx_local import greedy_ctc
-
-    obtido = greedy_ctc(logits[None], [logits.shape[0]])[0]
+    obtido = ctc.greedy_ids(logits, logits.shape[0])
     assert obtido == esperado, (
-        f"decode_onnx_local.greedy_ctc divergiu do colapso de referência\n"
+        f"ctc.greedy_ids divergiu do colapso de referência\n"
         f"  esperado[:10]={esperado[:10]}\n  obtido[:10]={obtido[:10]}"
+    )
+
+
+def test_nenhum_entrypoint_reimplementa_o_colapso_ctc():
+    """A guarda que substitui a comparação: a cópia não pode voltar.
+
+    Comparar cópias prova que concordam HOJE. Proibir a cópia elimina a divergência de vez.
+    """
+    import pathlib as _p
+
+    raiz = _p.Path(__file__).resolve().parents[1]
+    reincidentes = []
+    for f in list((raiz / "batch").glob("*.py")) + list((raiz / "realtime").glob("*.py")):
+        fonte = f.read_text(encoding="utf-8")
+        if "def greedy_ctc" in fonte or "def ids_to_text" in fonte:
+            reincidentes.append(f.name)
+    assert not reincidentes, (
+        "colapso CTC reimplementado em: " + ", ".join(reincidentes) + " — use common/ctc.py"
     )
 
 

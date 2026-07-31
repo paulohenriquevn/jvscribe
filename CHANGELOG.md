@@ -13,6 +13,41 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **`jvscribe/common/onnx_session.py`** — uma configuração de sessão ONNX, medida, para todos
+  os entrypoints. Havia **quatro divergentes**: `batch/` inteiro com a arena DESLIGADA
+  enquanto `realtime/` a usava ligada. Medido com bootstrap pareado: arena ligada rende −6,7%
+  [IC95% −18,3; −3,9] ms, e a config completa −17,1%. 7 testes.
+  `bench_rtfx` e `runtime_bench` mantêm config explícita **de propósito** — neles a
+  configuração é a variável sob teste, e adotá-la invalidaria comparação com RTFx publicado.
+- Testes para `decode_onnx_local` (5) e `eval_public_hf` (7) — **nenhum dos dois tinha teste**.
+
+### Fixed
+- **`eval_public_hf.py` estava QUEBRADO**: apontava para `m5_avg.int8.onnx`, renomeado na
+  reorganização. Nenhum teste cobria o arquivo, então a suíte seguia verde.
+- **O WER publicado saiu de uma régua diferente do resto do projeto.** `eval_public_hf` tinha
+  `norm()` própria, que **preservava acentos**, enquanto `normalize_for_wer_compare` os remove.
+  Os **16,14%** de `results/public-benchmarks.md` vieram dela; os **15,99%** medidos no mesmo
+  subconjunto vieram da régua canônica. A diferença **não era ruído de amostra** — era régua
+  diferente, e os dois números nunca foram comparáveis.
+- **`decode_onnx_local.py` reimplementava o colapso CTC** (`load_tokens`, `ids_to_text`,
+  `greedy_ctc`). Delegado a `common/ctc.py`; a guarda que comparava cópias virou uma que
+  **proíbe a cópia voltar**.
+- **`eval_public_hf.py` não tinha guarda `__main__`** — importar o módulo baixava o FLEURS e
+  rodava inferência. Era o único dos 4 entrypoints sem ela.
+- Defaults de modelo relativos ao `cwd` em `decode_onnx_local` e modelo posicional obrigatório
+  em `bench_rtfx` — os dois passam a resolver pelo `model_card.json`.
+- `tempfile.mkdtemp` sem cleanup e `int(sys.argv[1])` sem validação em `eval_public_hf`.
+- Três imports de `onnxruntime` que ficaram mortos após a delegação à fábrica.
+
+### Notes
+- Nove dos onze achados eram **a mesma classe**: conhecimento que deveria estar no shared
+  kernel, reimplementado localmente — três cópias do colapso CTC, duas réguas de normalização,
+  quatro configs de sessão. Nenhum derrubava um teste: **passavam na suíte e quebravam em
+  produção**.
+- ⚠️ `jvscribe/results/public-benchmarks.md` precisa ser **re-medido** com a régua canônica.
+
+
 ### Changed
 - **`jvscribe/README.md` reescrito** — estava induzindo a erro: dizia que "o runtime de produção
   é Rust em `crates/`" (removido em 2026-07-30), citava pastas que não existem (`scripts/`,

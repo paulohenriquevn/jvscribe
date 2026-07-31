@@ -67,7 +67,10 @@ def test_eval_public_hf_nao_tem_caminho_absoluto():
     """Critério de aceite T1.3: o script não pode estar amarrado à máquina do dono."""
     src = (REPO / "jvscribe/batch/eval_public_hf.py").read_text(encoding="utf-8")
     assert "/home/paulo" not in src, "caminho absoluto ainda presente"
-    assert "JVSCRIBE_MODEL_DIR" in src, "deve honrar a variável de ambiente canônica"
+    # A checagem era pelo literal `JVSCRIBE_MODEL_DIR`. O script passou a DELEGAR ao
+    # `common/artifact.py`, que resolve a variável **e** lê o `model_card.json` — melhor que
+    # reimplementar a cadeia. A guarda segue o mesmo propósito: não amarrar à máquina do dono.
+    assert "default_model_path" in src, "deve resolver pelo artefato canônico"
 
 
 def test_models_current_e_symlink_nao_copia():

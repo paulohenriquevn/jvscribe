@@ -37,6 +37,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path  # noqa: E402
 from calibracao import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
 from cpu_topology import detectar  # noqa: E402
+from onnx_session import criar_sessao  # noqa: E402
 
 SR = 16000
 JANELAS = (2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
@@ -82,7 +83,6 @@ def main() -> int:
     ap.add_argument("--json", type=pathlib.Path, default=None)
     a = ap.parse_args()
 
-    import onnxruntime as ort
     import soundfile as sf
     from lhotse import Fbank, FbankConfig
 
@@ -103,11 +103,10 @@ def main() -> int:
     if sr != SR:
         raise SystemExit(f"esperado {SR} Hz, veio {sr} Hz")
 
-    so = ort.SessionOptions()
-    so.intra_op_num_threads = topo.threads_recomendadas
-    so.inter_op_num_threads = max(1, topo.threads_recomendadas // 2)
-    so.enable_cpu_mem_arena = True
-    sess = ort.InferenceSession(modelo, so, providers=["CPUExecutionProvider"])
+    # Fábrica do shared kernel: este script mede o PRODUTO, então tem de usar a
+    # mesma sessão que a produção. (`runtime_bench` e `bench_rtfx` mantêm config
+    # explícita de propósito — neles a configuração é a variável sob teste.)
+    sess = criar_sessao(modelo, topo.threads_recomendadas)
     fb = Fbank(FbankConfig(num_mel_bins=80))
 
     print(f"  curva de custo ({a.reps} repetições por ponto):")

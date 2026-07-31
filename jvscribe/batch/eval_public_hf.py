@@ -1,66 +1,124 @@
 #!/usr/bin/env python3
-"""Mede WER do batch_transcribe num dataset PÚBLICO do HF (FLEURS pt_br) — fala lida
-banda-larga (perfil ~128 kbps). Pega bytes crus (decode=False, sem torchcodec), grava
-como arquivos, roda batch_transcribe, compara com a referência humana via jiwer."""
-import os, re, sys, json
-from pathlib import Path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # batch/ — co-locado com batch_transcribe
-from datasets import load_dataset, Audio
-import jiwer
-from batch_transcribe import transcribe_folder
+"""Mede WER do `batch_transcribe` num dataset PÚBLICO do HF (FLEURS pt_br).
 
-N = int(sys.argv[1]) if len(sys.argv) > 1 else 100
-import tempfile; SC = tempfile.mkdtemp(prefix="fleurs_eval_")
-AUD = Path(f"{SC}/fleurs_aud"); OUT = Path(f"{SC}/fleurs_out")
-# Diretório do artefato: JVSCRIBE_MODEL_DIR > models/current (symlink canônico) > o caminho
-# histórico deste benchmark. O caminho absoluto anterior amarrava o script à máquina do dono
-# (M9/T1.3) e — pior — apontava para um modelo DIFERENTE do que o runtime Rust carrega, o que
-# é a origem do 16,14% de WER publicado sem dizer de qual artefato veio.
-_REPO = Path(__file__).resolve().parents[2]
-M = str(
-    Path(os.environ.get("JVSCRIBE_MODEL_DIR"))
-    if os.environ.get("JVSCRIBE_MODEL_DIR")
-    else (_REPO / "models/current" if (_REPO / "models/current").exists()
-          else _REPO / "models/m5-final-medium-phoneme")
-)
+Fala lida, banda larga (~128 kbps). Pega os bytes crus (`decode=False`, sem torchcodec), grava
+como arquivos, roda o pipeline de lote e compara com a referência humana.
 
-def norm(t):
-    t = t.lower()
-    t = re.sub(r"[^0-9a-zàáâãéêíóôõúüç ]", " ", t)
-    return re.sub(r"\s+", " ", t).strip()
+Uso:
+    python3 jvscribe/batch/eval_public_hf.py --n 100
+    python3 jvscribe/batch/eval_public_hf.py --n 919 --json resultado.json
 
-AUD.mkdir(parents=True, exist_ok=True)
-ds = load_dataset("google/fleurs", "pt_br", split="test", streaming=True)
-ds = ds.cast_column("audio", Audio(decode=False))
-refs = {}
-for i, ex in enumerate(ds):
-    if i >= N: break
-    b = ex["audio"]["bytes"]
-    if b is None:  # às vezes vem como path
-        b = Path(ex["audio"]["path"]).read_bytes()
-    fid = f"utt{i:04d}"
-    (AUD / f"{fid}.wav").write_bytes(b)
-    refs[fid] = ex["transcription"]
-print(f"[fleurs] {len(refs)} amostras gravadas")
+⚠️ **A régua de normalização é a canônica do projeto**, não uma local. A versão anterior deste
+script tinha a própria `norm()`, que **preservava acentos** enquanto
+`normalize_for_wer_compare` os remove. Consequência medida: o WER de **16,14%** publicado em
+`jvscribe/results/public-benchmarks.md` saiu daqui, e os **15,99%** medidos com a régua
+canônica no mesmo subconjunto — a diferença **não era ruído de amostra, era régua diferente**.
+"""
+from __future__ import annotations
 
-s = transcribe_folder(str(AUD), str(OUT), f"{M}/m5_avg.int8.onnx", f"{M}/tokens.txt",
-                      batch=8, workers=4, threads=6)
+import argparse
+import json
+import pathlib
+import sys
+import tempfile
 
-R, H = [], []
-for fid, ref in refs.items():
-    hyp = (OUT / f"{fid}.txt").read_text(encoding="utf-8").strip()
-    rn, hn = norm(ref), norm(hyp)
-    if rn:
-        R.append(rn); H.append(hn)
-o = jiwer.process_words(R, H)
-nwords = o.hits + o.substitutions + o.deletions
-print(json.dumps({
-    "dataset": "google/fleurs pt_br test",
-    "n": len(R), "ref_words": nwords,
-    "WER_pct": round(o.wer * 100, 2),
-    "hits_pct": round(o.hits / nwords * 100, 1),
-    "sub_pct": round(o.substitutions / nwords * 100, 1),
-    "del_pct": round(o.deletions / nwords * 100, 1),
-    "ins_pct": round(o.insertions / nwords * 100, 1),
-    "audio_sec": s["audio_sec"], "wall_sec": s["wall_sec"], "rtfx": s["rtfx_agregado"],
-}, ensure_ascii=False, indent=2))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+
+from artifact import default_model_path, default_sibling  # noqa: E402
+from batch_transcribe import transcribe_folder  # noqa: E402
+from text_normalize_ptbr import normalize_for_wer_compare  # noqa: E402
+
+
+def baixar_amostras(destino: pathlib.Path, n: int) -> dict[str, str]:
+    """Grava `n` áudios do FLEURS pt_br test e devolve `{id: transcrição de referência}`."""
+    from datasets import Audio, load_dataset
+
+    destino.mkdir(parents=True, exist_ok=True)
+    ds = load_dataset("google/fleurs", "pt_br", split="test", streaming=True)
+    ds = ds.cast_column("audio", Audio(decode=False))
+
+    refs: dict[str, str] = {}
+    for i, ex in enumerate(ds):
+        if i >= n:
+            break
+        b = ex["audio"]["bytes"]
+        if b is None:                       # às vezes o dataset entrega caminho em vez de bytes
+            b = pathlib.Path(ex["audio"]["path"]).read_bytes()
+        fid = f"utt{i:04d}"
+        (destino / f"{fid}.wav").write_bytes(b)
+        refs[fid] = ex["transcription"]
+    return refs
+
+
+def medir(refs: dict[str, str], saida: pathlib.Path) -> tuple[list[str], list[str]]:
+    """Pareia referência e hipótese, ambas na régua CANÔNICA. Ignora referência vazia."""
+    R, H = [], []
+    for fid, ref in refs.items():
+        arq = saida / f"{fid}.txt"
+        hyp = arq.read_text(encoding="utf-8").strip() if arq.exists() else ""
+        rn = normalize_for_wer_compare(ref)
+        if rn:
+            R.append(rn)
+            H.append(normalize_for_wer_compare(hyp))
+    return R, H
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--n", type=int, default=100, help="quantas utterances do test set")
+    ap.add_argument("--model", default=None, help="default: o artefato canônico (model_card.json)")
+    ap.add_argument("--tokens", default=None)
+    ap.add_argument("--batch", type=int, default=8)
+    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--threads", type=int, default=6)
+    ap.add_argument("--json", type=pathlib.Path, default=None, help="grava o resultado")
+    a = ap.parse_args()
+
+    if a.n < 1:
+        raise SystemExit(f"--n tem de ser >= 1, veio {a.n}")
+
+    import jiwer
+
+    modelo = a.model or default_model_path()
+    tokens = a.tokens or default_sibling("tokens.txt")
+
+    # `TemporaryDirectory` como context manager: a versão anterior usava `mkdtemp` sem cleanup
+    # e cada execução deixava N wavs mais as transcrições em /tmp.
+    with tempfile.TemporaryDirectory(prefix="fleurs_eval_") as tmp:
+        base = pathlib.Path(tmp)
+        aud, out = base / "aud", base / "out"
+
+        refs = baixar_amostras(aud, a.n)
+        print(f"[fleurs] {len(refs)} amostras gravadas · modelo: {modelo}", flush=True)
+
+        s = transcribe_folder(str(aud), str(out), modelo, tokens,
+                              batch=a.batch, workers=a.workers, threads=a.threads)
+        R, H = medir(refs, out)
+
+    o = jiwer.process_words(R, H)
+    palavras = o.hits + o.substitutions + o.deletions
+    resultado = {
+        "dataset": "google/fleurs pt_br test",
+        "modelo": modelo,
+        "regua": "normalize_for_wer_compare (canônica — remove acento)",
+        "n": len(R),
+        "ref_words": palavras,
+        "WER_pct": round(o.wer * 100, 2),
+        "hits_pct": round(100 * o.hits / palavras, 1),
+        "sub_pct": round(100 * o.substitutions / palavras, 1),
+        "del_pct": round(100 * o.deletions / palavras, 1),
+        "ins_pct": round(100 * o.insertions / palavras, 1),
+        "audio_sec": s["audio_sec"],
+        "wall_sec": s["wall_sec"],
+        "rtfx": s["rtfx_agregado"],
+    }
+    saida = json.dumps(resultado, ensure_ascii=False, indent=2)
+    print(saida)
+    if a.json:
+        a.json.write_text(saida + "\n", encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

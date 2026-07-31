@@ -76,3 +76,6 @@ onnxruntime_profile__*.json
 # Logs de treino brutos: o sinal cabe em <1% das linhas. Extraia as métricas
 # (grep -E 'loss|Epoch|WER') e versione só isso.
 train_*.log
+
+# Saída da revisão de código (loop-code-review) — artefato de auditoria, não fonte
+code-review-output/

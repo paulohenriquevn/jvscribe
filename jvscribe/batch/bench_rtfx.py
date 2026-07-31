@@ -17,8 +17,14 @@ import argparse
 import statistics
 import time
 
+import pathlib
+import sys
+
 import numpy as np
 import onnxruntime as ort
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
+from artifact import default_model_path  # noqa: E402
 
 
 def session_options(threads: int) -> ort.SessionOptions:
@@ -39,7 +45,9 @@ def make_session(path: str, threads: int) -> ort.InferenceSession:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("model")
+    # Opcional, com default no artefato canônico: exigir o caminho força o operador a
+    # escolher um peso, que pode não ser o que o `model_card.json` declara.
+    ap.add_argument("model", nargs="?", default=None)
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--warmup", type=int, default=3)
     ap.add_argument("--iters", type=int, default=20)
@@ -47,14 +55,15 @@ def main():
                     help="se >0: roda continuamente N min a 10s de áudio, logando RTFx por janela (RNF-04 soak térmico)")
     args = ap.parse_args()
 
-    sess = make_session(args.model, args.threads)
+    modelo = args.model or default_model_path()
+    sess = make_session(modelo, args.threads)
     inputs = {i.name: i for i in sess.get_inputs()}
     print("=== ONNX I/O ===")
     for i in sess.get_inputs():
         print(f"  in : {i.name} {i.shape} {i.type}")
     for o in sess.get_outputs():
         print(f"  out: {o.name} {o.shape} {o.type}")
-    print(f"=== RTFx @ {args.threads} thread(s), i7-1355U ===")
+    print(f"=== RTFx @ {args.threads} thread(s) · modelo: {modelo} ===")
 
     # fbank 80-dim, 100 frames/s. Valores não afetam o tempo (compute data-independent).
     FPS = 100

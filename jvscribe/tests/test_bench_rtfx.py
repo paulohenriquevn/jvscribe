@@ -30,3 +30,33 @@ def test_rtfx_e_razao_audio_sobre_wall():
     # a definição fixada no blueprint: RTFx = duração_áudio ÷ tempo_de_parede
     audio_s, wall_s = 10.0, 0.16
     assert abs((audio_s / wall_s) - 62.5) < 1e-6
+
+
+# --- resolução do artefato -------------------------------------------------
+
+def test_o_modelo_e_opcional_e_cai_no_artefato_canonico():
+    """Exigir o caminho posicionalmente força o operador a saber onde o peso está — e a
+    escolher um, que pode não ser o canônico. O `model_card.json` já sabe."""
+    import inspect
+
+    import bench_rtfx
+
+    fonte = inspect.getsource(bench_rtfx)
+    assert 'ap.add_argument("model")' not in fonte, "modelo ainda é posicional obrigatório"
+    assert "default_model_path" in fonte
+
+
+def test_a_config_de_sessao_permanece_EXPLICITA_aqui():
+    """Contraintuitivo e deliberado: este script NÃO usa a fábrica compartilhada.
+
+    Ele é um instrumento de medição — a configuração de sessão é a **variável sob teste**,
+    não uma decisão de produto. Adotar a fábrica mudaria o que ele mede e invalidaria a
+    comparação com os RTFx já publicados.
+    """
+    import inspect
+
+    import bench_rtfx
+
+    fonte = inspect.getsource(bench_rtfx)
+    assert "def session_options" in fonte, "a config explícita é o ponto deste script"
+    assert "criar_sessao" not in fonte, "não deve usar a fábrica: mudaria a medição"

@@ -23,7 +23,6 @@ Ctrl+C para sair.
 from __future__ import annotations
 import argparse, queue, sys, time
 import numpy as np
-import onnxruntime as ort
 import sounddevice as sd
 from lhotse import Fbank, FbankConfig
 
@@ -34,6 +33,7 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path as _default_model_path  # noqa: E402
 from artifact import default_sibling as _default_sibling  # noqa: E402
+from onnx_session import criar_sessao  # noqa: E402
 
 # Motor de streaming: `streaming.py` (um por canal em live_transcribe.py). Re-exportado
 # aqui porque este script e seus testes já o consomem por este nome.
@@ -58,10 +58,8 @@ def main():
     a = ap.parse_args()
 
     print("[init] carregando modelo ONNX...", flush=True)
-    so = ort.SessionOptions()
-    so.intra_op_num_threads = a.threads
-    so.enable_cpu_mem_arena = False
-    sess = ort.InferenceSession(a.model, so, providers=["CPUExecutionProvider"])
+    # Fábrica do shared kernel — uma configuração medida para todos os entrypoints.
+    sess = criar_sessao(a.model, a.threads)
     id2tok = load_tokens(a.tokens)
     dec = StreamingCTC(sess, id2tok, hop_s=a.hop, window_s=a.window)
 

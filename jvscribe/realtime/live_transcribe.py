@@ -34,6 +34,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
 from cpu_topology import detectar  # noqa: E402
+from onnx_session import criar_sessao  # noqa: E402
 from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
 
 # mic e loopback são papéis fixos por construção da captura — ver o docstring.
@@ -243,8 +244,6 @@ def main() -> int:
                     help="declara que há carga concorrente real rodando (RNF-05)")
     a = ap.parse_args()
 
-    import onnxruntime as ort
-
     from dual_capture import DualCapture
 
     modelo = a.model or default_model_path()
@@ -262,14 +261,8 @@ def main() -> int:
           + f" · intra={threads} (sem afinidade — ver cpu_topology)"
           + f"{RESET}", flush=True)
 
-    so = ort.SessionOptions()
-    so.intra_op_num_threads = threads
-    # `inter_op` e a arena de memória seguem o sherpa-onnx (`csrc/session.cc:149,156`), o
-    # runtime CPU de referência. A arena estava DESLIGADA aqui sem justificativa e custava
-    # 6,7% [IC95% -18,3; -3,9] ms — realocação a cada `run()`.
-    so.inter_op_num_threads = max(1, threads // 2)
-    so.enable_cpu_mem_arena = True
-    sess = ort.InferenceSession(modelo, so, providers=["CPUExecutionProvider"])
+    # Fábrica do shared kernel — a mesma configuração medida para todos os entrypoints.
+    sess = criar_sessao(modelo, threads)
     id2tok = load_tokens(tokens)
 
     # Uma sessão ONNX compartilhada pelos dois canais (`run()` é thread-safe e o modelo tem
