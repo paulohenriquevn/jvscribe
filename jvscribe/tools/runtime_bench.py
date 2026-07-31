@@ -27,6 +27,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "realtime"))
 
 from artifact import default_model_path  # noqa: E402
+from stats import comparar_pareado  # noqa: E402
 
 SR = 16000
 
@@ -73,21 +74,6 @@ def _iqr(v: list[float]) -> tuple[float, float]:
     return o[max(0, n // 4)], o[min(n - 1, (3 * n) // 4)]
 
 
-def _bootstrap_delta(pares: list[float], n: int = 5000, seed: int = 42) -> tuple[float, float]:
-    """IC95% da média dos deltas PAREADOS (config − baseline na MESMA rodada).
-
-    Comparar distribuições marginais desperdiça o desenho: a carga da máquina oscila entre
-    rodadas e entra igual nos dois lados. O delta pareado cancela essa componente comum — foi
-    o que separou 15,99% de 17,32% de WER quando o não-pareado não separava.
-    """
-    import random
-
-    rng = random.Random(seed)
-    k = len(pares)
-    medias = sorted(sum(pares[rng.randrange(k)] for _ in range(k)) / k for _ in range(n))
-    return medias[int(0.025 * n)], medias[int(0.975 * n)]
-
-
 def relatar(amostras: dict[str, list[float]], baseline: str) -> int:
     b = amostras[baseline]
     b_med = statistics.median(b)
@@ -98,15 +84,14 @@ def relatar(amostras: dict[str, list[float]], baseline: str) -> int:
         if nome == baseline:
             print(f"  {nome:<40} {med:7.1f} ms  {'—':>26}  baseline")
             continue
-        pares = [vi - bi for vi, bi in zip(v, b)]          # mesma rodada, mesma carga
-        lo, hi = _bootstrap_delta(pares)
-        pct = 100 * statistics.mean(pares) / b_med
-        if hi < 0:
-            vered = "MELHOR — IC não cruza zero"
-        elif lo > 0:
-            vered = "PIOR — IC não cruza zero"
-        else:
-            vered = "inconclusivo — IC cruza zero"
+        # Pareado pelo kernel compartilhado: `melhor=None` quando o IC cruza zero — a recusa
+        # explícita a declarar vencedor sem separação (ver jvscribe/common/stats.py).
+        c = comparar_pareado(b, v, rotulo_a="baseline", rotulo_b=nome, unidade="ms")
+        lo, hi = c.ic95
+        pct = 100 * c.delta_medio / b_med
+        vered = ("MELHOR — IC não cruza zero" if c.melhor == nome else
+                 "PIOR — IC não cruza zero" if c.conclusivo else
+                 "inconclusivo — IC cruza zero")
         print(f"  {nome:<40} {med:7.1f} ms  [{lo:+7.1f}, {hi:+7.1f}] ms {pct:+6.1f}%  {vered}")
     return 0
 

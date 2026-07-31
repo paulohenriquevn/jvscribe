@@ -33,6 +33,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
+from cpu_topology import detectar  # noqa: E402
 from streaming import SR, StreamingCTC, load_tokens  # noqa: E402
 
 # mic e loopback são papéis fixos por construção da captura — ver o docstring.
@@ -235,10 +236,8 @@ def main() -> int:
     # cresce sem limite. Ver `jvscribe/results/m6-live-dual-channel.md`.
     ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode por canal (s)")
     ap.add_argument("--window", type=float, default=6.0, help="janela redecodificada (s) — ver o envelope medido")
-    # Metade dos cores, teto 8. Medido nesta máquina (12 cores): intra=8 + inter=4 + arena
-    # ligada dá -17,1% de tempo de inferência, IC95% pareado [-36,9; -17,8] ms. NÃO extrapole
-    # o número para a frota: num BYOD de 4 cores, 8 threads intra disputariam a mesma CPU.
-    ap.add_argument("--threads", type=int, default=min(8, max(2, (os.cpu_count() or 4) // 2)))
+    ap.add_argument("--threads", type=int, default=None,
+                    help="intra_op; default = metade dos lógicos RÁPIDOS (ver cpu_topology)")
     ap.add_argument("--relatorio", type=pathlib.Path, default=None)
     ap.add_argument("--com-carga", action="store_true",
                     help="declara que há carga concorrente real rodando (RNF-05)")
@@ -252,12 +251,23 @@ def main() -> int:
     tokens = a.tokens or default_sibling("tokens.txt")
     print(f"{DIM}[init] modelo: {modelo}{RESET}", flush=True)
 
+    # A topologia decide só a CONTAGEM de threads. Medido no soak de 2 canais: intra=2 dá
+    # RTFx 6,88× contra 4,95× de intra=6 e 3,94× de intra=12 — mais threads gastam mais
+    # instruções em spin-wait de barreira do que em conta. Afinidade NÃO é aplicada: ela vaza
+    # para os `parec` da captura e derrubou o RTFx de 4,60× para 2,33% ao vivo.
+    topo = detectar()
+    threads = a.threads or topo.threads_recomendadas
+    print(f"{DIM}[init] CPU: {topo.total} lógicos"
+          + (f", híbrida (rápidos {topo.afinidade_taskset()} @ {topo.mhz_max} MHz)" if topo.hibrida else "")
+          + f" · intra={threads} (sem afinidade — ver cpu_topology)"
+          + f"{RESET}", flush=True)
+
     so = ort.SessionOptions()
-    so.intra_op_num_threads = a.threads
+    so.intra_op_num_threads = threads
     # `inter_op` e a arena de memória seguem o sherpa-onnx (`csrc/session.cc:149,156`), o
     # runtime CPU de referência. A arena estava DESLIGADA aqui sem justificativa e custava
     # 6,7% [IC95% -18,3; -3,9] ms — realocação a cada `run()`.
-    so.inter_op_num_threads = max(2, a.threads // 2)
+    so.inter_op_num_threads = max(1, threads // 2)
     so.enable_cpu_mem_arena = True
     sess = ort.InferenceSession(modelo, so, providers=["CPUExecutionProvider"])
     id2tok = load_tokens(tokens)

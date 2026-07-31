@@ -13,6 +13,44 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **`jvscribe/common/cpu_topology.py`** — detecta CPU híbrida (P-cores vs E-cores) pelo sysfs
+  e recomenda contagem de threads. Nesta máquina: 12 lógicos, rápidos `0-3` a 5000 MHz,
+  recomenda `intra=2`. 14 testes, incluindo CPU homogênea, boost por núcleo (que **não** é
+  hibridez), sysfs ausente e nunca recomendar zero threads.
+- **`jvscribe/common/stats.py`** — `comparar_pareado()` com IC95% por bootstrap. Devolve
+  `melhor=None` quando o intervalo cruza zero e **recusa** amostras < 3. O `runtime_bench`
+  passou a consumi-lo em vez da própria cópia. 9 testes, incluindo "configurações idênticas
+  nunca produzem vencedor".
+- `jvscribe/results/m6-cpu-topology-2026-07-31.md` — a rodada completa, com o `perf` liberado.
+
+### Changed
+- **`intra_op_num_threads` passa a vir da topologia** (2 nesta máquina, era 6). Em inferência
+  isolada é `[MEDIDO]`: 70,2 ms contra 94,0 ms, com mecanismo confirmado por `perf` — IPC 1,87
+  vs 1,22 e **30,9 G contra 90,9 G de instruções** para o mesmo trabalho (spin-wait em
+  barreira; o cache miss é idêntico, ~26%, então não é limite de memória).
+  No nível de **sistema** o ganho é `[DESCONHECIDO]` — ver Fixed. O default fica pelo argumento
+  que não depende de velocidade: ocupar 2 dos 12 lógicos em vez de 6 deixa CPU para o
+  softphone que o RNF-05 exige.
+
+### Fixed
+- **Fixar afinidade nos P-cores foi aplicado, medido e REVERTIDO.** Isolado dava 25% de ganho;
+  no app ao vivo derrubou o RTFx de **4,60× para 2,33×**. Causa verificada:
+  `sched_setaffinity` **é herdado pelos processos filhos**, então os `parec` da captura
+  passavam a disputar os mesmos 2 P-cores com a inferência. No soak sem subprocessos a
+  afinidade é neutra (6,49× vs 6,88×). Ganho zero, modo de falha real → removida.
+  Teste de regressão falha se alguém reintroduzir qualquer função que mute afinidade.
+
+### Notes
+- **O instrumento não separa o que se queria comparar.** Harness ao vivo, config idêntica,
+  quatro corridas: 3,51× · 2,90× · 2,82× · 2,50×. Determinístico, 3 repetições por config:
+  intra=2 → 4,20/3,95/6,31, intra=6 → 2,92/4,54/5,03 — **indistinguíveis**. Com a máquina em
+  load 3–4 não há separação para contagem de threads no nível de sistema. Um soak limpo exige
+  a máquina ociosa.
+- RNF-04 e RNF-05 seguem **não exercitados**: nenhuma corrida chegou a 30 min nem teve
+  softphone ativo.
+
+
 ### Changed
 - **README raiz atualizado** — estava parado em 2026-07-30, antes da renomeação, da publicação
   e das medições de M6. Corrigido:
