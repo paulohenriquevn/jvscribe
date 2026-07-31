@@ -29,6 +29,32 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Fixed
+- **`LIMIAR_LOAD` — a constante que decide se qualquer medição do projeto CONTA — estava
+  declarada em três lugares**, e num deles como número mágico solto (`elif carga > 1.0`). Mesma
+  classe do `SR = 16000` em sete arquivos, no lugar mais caro possível: cópias divergentes fazem
+  uma ferramenta declarar a medição válida e outra declará-la indeterminada para o **mesmo**
+  estado da máquina — e as duas publicam. Consolidado em `common/cpu.py` junto com
+  `carga_media()` (que também estava duplicada, e cuja cópia devolvia `-1.0` como sentinela de
+  falha — valor que passa em `carga > 1.0`, então numa plataforma sem `getloadavg` a ferramenta
+  nunca avisaria). A guarda de constante duplicada (`test_dominios`) passa a vigiar `LIMIAR_LOAD`.
+- **`finetune/patch_ctc_decode.py` executava em nível de módulo.** Importá-lo abria
+  `/workspace/icefall/…`, escrevia o arquivo de saída e podia chamar `sys.exit` — por isso a
+  cobertura era **0%**: não havia como importar para testar. Também não tinha
+  `if __name__ == "__main__"`, então escapava do inventário de entrypoints e do smoke de
+  `--help`. Mesmo defeito de `audit/tagarela_noise_audit.py`. Reestruturado em `adaptar()` puro
+  + `main()` com argparse.
+
+### Added
+- **Testes para os detectores de vazamento treino/teste** (`audit/`), que tinham **zero**. É o
+  lugar mais caro do repositório para um bug: um falso negativo não faz nada falhar — deixa o
+  WER publicado subir e ninguém descobre (falácia § 3 #10). 20 testes cobrindo `find_leaks`,
+  `path_tokens`, `tedx_video_ids` e `speaker_key`, incluindo o caso em que `speaker_key` devolve
+  `None`: inventar chave ali faria cada utterance parecer um locutor distinto e a auditoria
+  concluiria "sem overlap" por construção.
+- **Testes para os patchers do icefall** — idempotência, preservação do backup original (e que
+  a segunda corrida não o regrave com o estado intermediário) e a mensagem de âncora quebrada.
+
+### Fixed
 - **Os patches do icefall pararam de casar com o upstream, e a revisão-alvo não estava
   registrada em lugar nenhum.** Clonar o icefall e rodar os três patchers mostrou que a receita
   está intacta e mesmo assim não roda: contra o `HEAD`, `model.py` falha. `[MEDIDO]` por

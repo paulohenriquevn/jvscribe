@@ -138,7 +138,7 @@ def test_nenhuma_constante_de_dominio_duplicada():
     réguas de texto e dos sete colapsos CTC. Trocar a taxa exige retreinar, então a
     divergência entre cópias seria silenciosa e cara.
     """
-    VIGIADAS = ("SR", "BLANK", "TELEPHONE_SR")
+    VIGIADAS = ("SR", "BLANK", "TELEPHONE_SR", "LIMIAR_LOAD")
     onde: dict[str, list[str]] = collections.defaultdict(list)
     for pipe in TODAS:
         for f in sorted((PKG / pipe).rglob("*.py")):

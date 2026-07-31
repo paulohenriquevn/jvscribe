@@ -35,29 +35,18 @@ import numpy as np
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from engine import resolver  # noqa: E402
-from cpu import TETO_OCUPACAO, janela_maxima, ocupacao  # noqa: E402
+from cpu import (  # noqa: E402
+    LIMIAR_LOAD,
+    TETO_OCUPACAO,
+    carga_media,
+    janela_maxima,
+    ocupacao,
+)
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 
 from audio import SR  # noqa: E402 — declaração única do domínio de áudio
 JANELAS = (2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
-
-
-def _carga_media() -> float | None:
-    """Load average de 1 min, ou `None` quando a plataforma não expõe.
-
-    Devolvia `-1.0` como sentinela de falha e recebia um parâmetro `base` que nunca usava (o
-    único chamador passava `0`). O `-1.0` passava silenciosamente no `if carga > 1.0` do
-    chamador: numa plataforma sem `getloadavg` o calibrate **nunca avisaria** sobre carga, e a
-    ausência do aviso é indistinguível de "máquina ociosa". Valor mágico para sinalizar falha
-    é o que `error-handling.md` § 2 proíbe — `None` obriga o chamador a decidir.
-    """
-    try:
-        import os
-
-        return os.getloadavg()[0]
-    except (OSError, AttributeError):
-        return None
 
 
 def medir_curva(sess, fb, audio: np.ndarray, reps: int) -> dict[float, float]:
@@ -94,7 +83,7 @@ def main() -> int:
     import soundfile as sf
     from lhotse import Fbank, FbankConfig
 
-    carga = _carga_media()
+    carga = carga_media()
     topo = detectar()
     modelo, _tokens = resolver(None, None)
     modelo = str(modelo)
@@ -109,7 +98,7 @@ def main() -> int:
         # máquina limpa, e a calibração sairia de uma medição que ninguém validou.
         print("  ⚠️ load average indisponível nesta plataforma — não dá para atestar que a "
               "máquina está ociosa. Confira manualmente antes de confiar na curva.")
-    elif carga > 1.0:
+    elif carga > LIMIAR_LOAD:
         print(f"  ⚠️ load average {carga:.1f} — a medição vai ser ruidosa. Rode com a máquina ociosa.")
     print()
 

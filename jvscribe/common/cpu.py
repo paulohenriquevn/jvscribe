@@ -144,3 +144,40 @@ def janela_maxima(
 
     cabem = [j for j, custo in curva.items() if ocupacao(custo, canais, hop_s) <= teto]
     return max(cabem) if cabem else None
+
+
+# ── Condição da máquina no momento da medição ───────────────────────────────────────────────
+#
+# `LIMIAR_LOAD` decide se uma medição deste projeto CONTA. Estava declarado em `stress_test`
+# e em `live_transcribe`, e o `calibrate` comparava contra um `1.0` solto no meio de um `elif`
+# — a mesma classe do `SR = 16000` em sete arquivos, no lugar mais caro possível: se as cópias
+# divergirem, uma ferramenta declara a medição válida e a outra a declara indeterminada para o
+# MESMO estado da máquina, e as duas publicam.
+#
+# O número vem de medição, não de gosto: a mesma configuração deu RTFx 3,51× / 2,90× / 2,82× /
+# 2,50× com a máquina em load 3–4 `[MEDIDO]`.
+LIMIAR_LOAD = 1.0
+
+
+def carga_media() -> float | None:
+    """Load average de 1 min, ou `None` quando a plataforma não expõe.
+
+    Uma das cópias devolvia `-1.0` como sentinela de falha, e `-1.0` passa em `carga > 1.0`:
+    numa plataforma sem `getloadavg` a ferramenta **nunca avisaria** sobre carga, e a ausência
+    do aviso é indistinguível de "máquina ociosa". Valor mágico para sinalizar falha é o que
+    `error-handling.md` § 2 proíbe — `None` obriga o chamador a decidir.
+    """
+    try:
+        return os.getloadavg()[0]
+    except (OSError, AttributeError):
+        return None
+
+
+def medicao_de_tempo_e_confiavel(carga: float | None = None) -> bool:
+    """A máquina está ociosa o bastante para um número de tempo significar algo?
+
+    `None` (load indisponível) devolve **False**: não saber não é o mesmo que estar ocioso, e
+    tratar desconhecido como bom é como a sentinela `-1.0` enganava o chamador.
+    """
+    c = carga_media() if carga is None else carga
+    return c is not None and c <= LIMIAR_LOAD

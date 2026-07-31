@@ -173,25 +173,30 @@ def test_stress_test_registra_carga_e_recusa_veredito_contaminado():
     import ast
     import pathlib
 
-    fonte = (pathlib.Path(__file__).resolve().parents[1] / "bench" / "stress_test.py")
-    src = fonte.read_text(encoding="utf-8")
+    import cpu
+    from bench import stress_test
 
-    assert "getloadavg" in src, "não registra a carga durante o soak"
-    assert "LIMIAR_LOAD" in src, "não declara o limiar acima do qual o veredito não vale"
+    # O limiar tem de ser O MESMO objeto do kernel, não um valor igual por coincidência.
+    # A versão anterior desta guarda comparava o LITERAL de `stress_test` contra o TEXTO de
+    # `calibrate.py` — e quebrou quando o limiar foi consolidado em `common/cpu.py`, que é a
+    # correção que ela pedia. Guarda que checa texto reprova o conserto do que ela vigia.
+    assert stress_test.LIMIAR_LOAD is cpu.LIMIAR_LOAD, (
+        "limiar local em vez do kernel — duas cópias divergem e cada ferramenta julga a "
+        "mesma máquina de um jeito (`test_dominios` guarda a declaração única)"
+    )
+
+    fonte = pathlib.Path(stress_test.__file__)
+    src = fonte.read_text(encoding="utf-8")
+    arvore = ast.parse(src)
+
+    # Registra a carga DURANTE o soak — sem amostrar, o limiar não tem o que comparar.
+    usa_carga = any(
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "carga_media"
+        for n in ast.walk(arvore)
+    )
+    assert usa_carga, "não amostra a carga durante o soak"
     assert "INDETERMINADO" in src, (
         "sob carga o veredito tem de ser INDETERMINADO — nem PASSA nem FALHA"
-    )
-    # o limiar tem de bater com o do calibrate.py: dois limiares divergentes é o mesmo
-    # defeito de 'duas réguas' que este repositório já pagou três vezes.
-    arvore = ast.parse(src)
-    limiar = next(
-        n.value.value for n in arvore.body
-        if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)
-        and n.targets[0].id == "LIMIAR_LOAD"
-    )
-    calib = (fonte.parent / "calibrate.py").read_text(encoding="utf-8")
-    assert "load average" in calib and str(limiar) in calib.replace("1.0", "1.0"), (
-        f"limiar de carga ({limiar}) não casa com o de calibrate.py"
     )
 
 

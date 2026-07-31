@@ -32,6 +32,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from engine import carregar_tokens, resolver  # noqa: E402
+from cpu import LIMIAR_LOAD, carga_media  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
@@ -207,19 +208,6 @@ class MetricasRNF:
 
 
 # Mesmo limiar de `bench/calibrate.py` e `bench/stress_test.py` — três ferramentas, um limiar.
-LIMIAR_LOAD = 1.0
-
-
-def _carga_media() -> float | None:
-    """Load average de 1 min, ou `None` quando a plataforma não expõe."""
-    try:
-        import os as _os
-
-        return _os.getloadavg()[0]
-    except (OSError, AttributeError):
-        return None
-
-
 def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -> str:
     r = m.resumo()
     L = ["# Transcrição ao vivo — evidência de RNF", "",
@@ -237,7 +225,7 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     # texto declarava indeterminada — e quem bate o olho num relatório lê a tabela.
     # Reprovar e não-medir são resultados diferentes: um manda consertar o produto, o outro
     # manda repetir a medição numa máquina ociosa.
-    carga_atual = _carga_media()
+    carga_atual = carga_media()
     tempo_e_confiavel = carga_atual is not None and carga_atual <= LIMIAR_LOAD
 
     def _simbolo(c: Criterio, depende_de_tempo: bool) -> str:

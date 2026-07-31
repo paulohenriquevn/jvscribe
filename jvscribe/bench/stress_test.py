@@ -29,13 +29,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path  # noqa: E402
+from cpu import LIMIAR_LOAD, carga_media  # noqa: E402
 from engine import Motor  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
 from streaming import StreamingCTC  # noqa: E402
 
 # Mesmo limiar do `calibrate.py` — acima disto a medição vira ruído de contenção, e o
 # veredito de RNF-04 deixa de valer (`asr-evidence-discipline.md` § 5).
-LIMIAR_LOAD = 1.0
+
 
 
 def _rss_mb() -> float | None:
@@ -137,7 +138,7 @@ def main() -> int:
             atual.add(a.hop, dt, time.perf_counter() - alvo)
         m0 = motores[0]
         if (i + 1) * a.hop >= (minuto + 1) * 60:
-            atual.load = os.getloadavg()[0]
+            atual.load = carga_media()
             janelas.append(atual)
             print(f"  {minuto + 1:>4} {atual.rtfx():>7.2f} {atual.p99_ms():>9.0f} "
                   f"{(_rss_mb() or 0):>9.0f} {len(m0.cache.features()):>8} "

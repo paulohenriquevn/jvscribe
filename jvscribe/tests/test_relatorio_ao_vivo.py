@@ -41,7 +41,7 @@ def _linhas_da_tabela(texto: str) -> dict[str, str]:
 def test_sob_carga_os_criterios_de_tempo_nao_saem_como_reprovados(
     medicao_que_reprova, monkeypatch
 ):
-    monkeypatch.setattr(lt, "_carga_media", lambda: lt.LIMIAR_LOAD + 8.0)
+    monkeypatch.setattr(lt, "carga_media", lambda: lt.LIMIAR_LOAD + 8.0)
     texto = lt.render_relatorio(medicao_que_reprova, lt.Transcricao(), carga=False, modelo="x")
 
     linhas = _linhas_da_tabela(texto)
@@ -59,7 +59,7 @@ def test_sob_carga_a_condicao_da_corrida_continua_sendo_julgada(
 
     A duração da corrida é a duração da corrida, com a máquina ocupada ou não.
     """
-    monkeypatch.setattr(lt, "_carga_media", lambda: lt.LIMIAR_LOAD + 8.0)
+    monkeypatch.setattr(lt, "carga_media", lambda: lt.LIMIAR_LOAD + 8.0)
     linhas = _linhas_da_tabela(
         lt.render_relatorio(medicao_que_reprova, lt.Transcricao(), carga=False, modelo="x")
     )
@@ -70,7 +70,7 @@ def test_com_maquina_ociosa_o_veredito_de_tempo_volta_a_valer(
     medicao_que_reprova, monkeypatch
 ):
     """A guarda não pode virar desculpa universal: ociosa, ❌ é ❌."""
-    monkeypatch.setattr(lt, "_carga_media", lambda: 0.1)
+    monkeypatch.setattr(lt, "carga_media", lambda: 0.1)
     linhas = _linhas_da_tabela(
         lt.render_relatorio(medicao_que_reprova, lt.Transcricao(), carga=False, modelo="x")
     )
@@ -83,7 +83,7 @@ def test_load_indisponivel_e_tratado_como_nao_medido(medicao_que_reprova, monkey
 
     Afirmar ❌ aqui seria concluir a partir de uma condição desconhecida.
     """
-    monkeypatch.setattr(lt, "_carga_media", lambda: None)
+    monkeypatch.setattr(lt, "carga_media", lambda: None)
     linhas = _linhas_da_tabela(
         lt.render_relatorio(medicao_que_reprova, lt.Transcricao(), carga=False, modelo="x")
     )
