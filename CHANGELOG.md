@@ -29,6 +29,21 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **Diarização opcional, com portão de orçamento aritmético** (`common/diarizacao.py`,
+  `--diarizar` em `realtime/live_transcribe.py`). **O padrão continua sem diarização**: no caso
+  1:1 o canal **é** o falante, com custo zero e acurácia 100%. A opção destrava os casos que a
+  captura por canal genuinamente não resolve — escritório aberto (o mic pega a baia ao lado),
+  supervisor na ligação (M7), duas pessoas do lado do cliente.
+  **A flag confere a conta antes de ligar**, porque taxas somam pelo **inverso**: ASR a 3× mais
+  diarização a 3× dá **1,5×**, não 3×. `[MEDIDO]` com o RTFx ao vivo de **3,58×**, um diarizador
+  precisaria de **18,5×** para o pipeline ficar em ≥3× — e `--diarizar` sem `--rtfx-diarizador`
+  é recusado, porque sem o número medido não há conta a conferir. Candidatos levantados com os
+  números que se conseguiu verificar: `sherpa-onnx` (k2-fsa, **mesma organização do icefall**, já
+  em ONNX Runtime) é o melhor ponto de partida; ERes2NetV2 tem **17,8M params e 12,6 GFLOPs**
+  (`arXiv:2406.02167`) e é pesado para o orçamento. Nenhum implementador real foi acoplado — a
+  lição de E4 é **medir o custo antes da capacidade**.
+
+### Added
 - **`docs/paper/post-decode-budget.md`** — paper de resultados, incluindo os negativos: *"What Is
   Actually Recoverable? A Measured Budget for Post-Decode Correction in a 64M CPU-Only CTC ASR for
   Brazilian Portuguese"*. Quatro contribuições medidas: a taxonomia do erro em **três terços quase

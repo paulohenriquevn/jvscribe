@@ -33,6 +33,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from engine import carregar_tokens, resolver  # noqa: E402
 from cpu import LIMIAR_LOAD, carga_media  # noqa: E402
+from diarizacao import cabe_no_orcamento  # noqa: E402
 from cpu import detectar  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402
 from audio import SR  # taxa do domínio de áudio
@@ -45,6 +46,9 @@ FALANTES = {"mic": "ATENDENTE", "loopback": "CLIENTE"}
 ALVO_RTFX = 3.0        # RNF-01 — pipeline completo
 ALVO_P99_MS = 500.0    # RNF-02 — fim da fala → texto disponível
 ALVO_BACKLOG_PCT = 0.1  # RNF-03 — backlog = 0 em 99,9% das amostras
+RTFX_ASR_AO_VIVO = 3.58
+"""RTFx do pipeline completo `[MEDIDO]` 2026-07-31 ao vivo, dois canais. NÃO é o RTFx isolado
+do modelo (56,8×) — usar aquele aqui aprovaria diarizações que na prática derrubam o RNF-01."""
 MIN_SOAK_S = 1800.0    # RNF-04 — 30 min; benchmark curto em chip U mente (falácia § 3 #4)
 
 CORES = {"ATENDENTE": "\033[36m", "CLIENTE": "\033[33m"}
@@ -262,6 +266,29 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     return "\n".join(L) + "\n"
 
 
+def _exigir_orcamento_de_diarizacao(rtfx_diarizador: float | None) -> None:
+    """Confere a conta ANTES de ligar. Taxas somam pelo inverso.
+
+    Ligar diarização e descobrir depois que o pipeline caiu abaixo do RNF-01 é o erro que a
+    § 4 da disciplina de evidência descreve — componente que não transfere para o sistema. A
+    afinidade de CPU já custou essa lição: 25% melhor isolada, 46% pior no pipeline.
+
+    O RTFx do ASR usado aqui é o **medido ao vivo** (`wiki/medicoes/m6-rnf-ao-vivo.md`), não uma
+    estimativa: é o número que o pipeline entrega com dois canais e os `parec` da captura.
+    """
+    if rtfx_diarizador is None:
+        raise SystemExit(
+            "--diarizar exige --rtfx-diarizador com o valor MEDIDO do candidato.\n"
+            "Sem ele não há como conferir o orçamento, e taxas somam pelo INVERSO: um ASR a 3× "
+            "somado a uma diarização a 3× dá 1,5×, não 3×.\n"
+            "Meça o candidato isolado e passe o número."
+        )
+    cabe, motivo = cabe_no_orcamento(RTFX_ASR_AO_VIVO, rtfx_diarizador)
+    if not cabe:
+        raise SystemExit(f"diarização recusada — {motivo}")
+    print(f"{DIM}[init] diarização: {motivo}{RESET}", flush=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default=None)
@@ -276,6 +303,13 @@ def main() -> int:
     ap.add_argument("--threads", type=int, default=None,
                     help="intra_op; default = metade dos lógicos RÁPIDOS (ver cpu_topology)")
     ap.add_argument("--relatorio", type=pathlib.Path, default=None)
+    ap.add_argument("--diarizar", action="store_true",
+                    help="habilita diarização por canal (open-plan, supervisor, 2 pessoas do "
+                         "lado do cliente). PADRÃO DESLIGADO: no caso 1:1 o canal JÁ É o "
+                         "falante, com custo zero e acurácia 100%%")
+    ap.add_argument("--rtfx-diarizador", type=float, default=None,
+                    help="RTFx MEDIDO do diarizador; obrigatório com --diarizar, porque taxas "
+                         "somam pelo inverso e a conta é conferida antes de ligar")
     ap.add_argument("--com-carga", action="store_true",
                     help="declara que há carga concorrente real rodando (RNF-05)")
     a = ap.parse_args()
@@ -315,6 +349,8 @@ def main() -> int:
     t_ini = time.perf_counter()
     hop_amostras = int(a.hop * SR)
 
+    if a.diarizar:
+        _exigir_orcamento_de_diarizacao(a.rtfx_diarizador)
     print(f"{DIM}[init] falando: ATENDENTE = mic · CLIENTE = loopback. Ctrl+C encerra.{RESET}\n",
           flush=True)
     try:
