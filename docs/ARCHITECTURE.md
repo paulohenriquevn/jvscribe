@@ -137,7 +137,8 @@ Três confirmações independentes:
 
 O encoder é **não-causal**: a atenção enxerga o contexto inteiro nos dois sentidos. Um modelo
 streaming teria tensores de cache entrando e saindo do grafo — é o `GetEncoderInitStates()`
-que o `sherpa-onnx` usa (`csrc/online-zipformer2-transducer-model.h:32`).
+que o `sherpa-onnx` usa ([`csrc/online-zipformer2-transducer-model.h:32`](https://github.com/k2-fsa/sherpa-onnx/blob/116a44e72c5b/sherpa-onnx/csrc/online-zipformer2-transducer-model.h#L32),
+commit `116a44e7`).
 
 Consequência direta e medida: reprocessar uma janela de 6 s custa **121 ms**; processar só os
 0,5 s novos custaria **11 ms**. São **10,6× de retrabalho por atualização** — o piso de
@@ -275,7 +276,8 @@ não um conserto grátis.
 
 ### Configuração do ONNX Runtime
 
-Segue o `sherpa-onnx` (`csrc/session.cc:149,156`), o runtime CPU de referência:
+Segue o `sherpa-onnx` ([`csrc/session.cc:149,156`](https://github.com/k2-fsa/sherpa-onnx/blob/116a44e72c5b/sherpa-onnx/csrc/session.cc#L149), commit
+`116a44e7`), o runtime CPU de referência:
 
 | opção | valor | por quê |
 |---|---|---|

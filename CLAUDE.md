@@ -231,7 +231,7 @@ notícias); equivalência batch↔streaming; comportamento no piso da frota.
 | `PRD.md` | RF/RNF, arquitetura, riscos, questões abertas |
 | `ROADMAP.md` | Milestones M0–M9 com DoD |
 | `CHANGELOG.md` | Toda mudança relevante (Regra Inquebrável 6) |
-| `knowledge-base/adrs/` | Decisões travadas, com racional e alternativas descartadas |
+| `wiki/` | **Base de conhecimento (OKF)** — modelo, motor, treino, otimização, medições, decisões |
 | `.claude/rules/asr-evidence-discipline.md` | **Contrato de evidência** — leia antes de concluir qualquer coisa |
 
 ---

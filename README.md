@@ -35,8 +35,8 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 Dos 5 candidatos avaliados contra 8 critérios, a família **CTC/transducer** venceu o critério
 de velocidade em CPU (M2). O piloto comparativo de M4 então **travou o finalista**:
 **Zipformer-CTC `medium` (64M), int8, com cabeça de fonema auxiliar** —
-[ADR 0003](knowledge-base/adrs/0003-m4-finalist-medium.md), que supersede o eixo de tamanho do
-[ADR 0002](knowledge-base/adrs/0002-m4-architecture-finalist.md) após medição de soak e carga.
+[ADR 0003](wiki/decisoes/0003-finalista-medium.md), que supersede o eixo de tamanho do
+[ADR 0002](wiki/decisoes/0002-zipformer-ctc-small.md) após medição de soak e carga.
 
 `[MEDIDO]` head-to-head com parâmetros equivalentes: Zipformer domina Conformer nos dois eixos
 de acurácia (WER 28,86% vs 31,57%, IC95% do delta excluindo 0). A cabeça de fonema levou o
@@ -46,7 +46,7 @@ medium a **27,49% WER** ([evidência](jvscribe/results/m4-medium-phoneme-ablatio
 clip de 12 s, o transducer é **~2× mais rápido** que o AED em tamanho comparável —
 Zipformer 20M = 15,90 ± 2,06× tempo real vs Moonshine tiny 27M = 7,93 ± 0,72×
 (n=10, separação estatística limpa;
-[medição completa](knowledge-base/measurements/m2-rtfx-candidates.md)). A razão é
+[medição completa](wiki/medicoes/m2-rtfx-candidatos.md)). A razão é
 arquitetural: o AED é autoregressivo (custo cresce com os tokens gerados), o
 transducer/CTC faz um passe (custo fixo pelos frames de áudio).
 
@@ -120,8 +120,8 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 | [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
 | [`jvscribe/results/`](jvscribe/results/) | Toda medição, com hipótese, evidência e limitações separadas |
 | [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
-| [`knowledge-base/adrs/`](knowledge-base/adrs/) | Decisões de arquitetura com racional |
-| [`knowledge-base/discoveries/blueprints/`](knowledge-base/discoveries/blueprints/) | Blueprints de investigação (prior art) |
+| [`wiki/`](wiki/index.md) | **Base de conhecimento** em Open Knowledge Format — modelo, motor, treino, otimização, medições e decisões |
+| [`wiki/decisoes/`](wiki/decisoes/index.md) | ADRs — o que foi travado, com racional e alternativas |
 | [`.claude/rules/asr-evidence-discipline.md`](.claude/rules/asr-evidence-discipline.md) | Contrato de evidência — todo número carrega rótulo de proveniência |
 
 ## Disciplina de evidência

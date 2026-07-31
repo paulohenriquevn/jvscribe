@@ -191,6 +191,10 @@ python3 jvscribe/tools/stress_test.py --audio-dir <wavs> --minutos 30
 - Unifying Streaming and Non-streaming Zipformer — <https://arxiv.org/abs/2506.14434>
 - Zipformer — <https://arxiv.org/abs/2310.11230>
 - Recipe blank-skip do icefall — <https://icefall.readthedocs.io/en/latest/recipes/Non-streaming-ASR/librispeech/zipformer_ctc_blankskip.html>
-- `sherpa-onnx` `[FONTE-REPO]`: sessão em `sherpa-onnx/csrc/session.cc:149,156`; features
-  incrementais em `sherpa-onnx/csrc/features.h:106,117,131`; estado do encoder streaming em
-  `sherpa-onnx/csrc/online-zipformer2-transducer-model.h:32`
+- `sherpa-onnx` `[FONTE-REPO]`, commit `116a44e72c5b` — as citações são permalinks fixados,
+  verificáveis por qualquer pessoa (o clone local de 51 MB foi removido em favor disto):
+  sessão em [`csrc/session.cc:149,156`](https://github.com/k2-fsa/sherpa-onnx/blob/116a44e72c5b/sherpa-onnx/csrc/session.cc#L149);
+  features incrementais em [`csrc/features.h:106,117,131`](https://github.com/k2-fsa/sherpa-onnx/blob/116a44e72c5b/sherpa-onnx/csrc/features.h#L106);
+  estado do encoder streaming em
+  [`csrc/online-zipformer2-transducer-model.h:32`](https://github.com/k2-fsa/sherpa-onnx/blob/116a44e72c5b/sherpa-onnx/csrc/online-zipformer2-transducer-model.h#L32).
+  Contexto em `wiki/referencias/sherpa-onnx.md`

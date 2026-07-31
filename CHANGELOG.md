@@ -13,6 +13,34 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **`wiki/` — o conhecimento do projeto em Open Knowledge Format (OKF v0.1).** 43 documentos:
+  markdown com frontmatter YAML, um conceito por arquivo, links markdown, `index.md` por
+  diretório e `log.md` na raiz. Organizado por `modelo/`, `motor/`, `treino/`, `otimizacao/`,
+  `medicoes/`, `decisoes/`, `disciplina/` e `referencias/`.
+  Guardado por 8 testes (`test_wiki_okf.py`): frontmatter, campo `type` obrigatório, links
+  internos, `index.md` por diretório, vocabulário de campos da spec, e nenhum conceito sem
+  corpo — porque documentação sem guarda apodrece em silêncio.
+
+### Removed
+- **`knowledge-base/` removida — 52 MB, 5.265 arquivos.** O conhecimento real eram **15
+  documentos**; os outros 5.250 eram o clone do `sherpa-onnx`.
+  - Os 15 viraram conceitos OKF em `wiki/`, com a verificação de que cada um sobreviveu.
+  - O clone virou **permalinks fixados no commit `116a44e72c5b`** — as citações `[FONTE-REPO]`
+    em `docs/ARCHITECTURE.md` e nos results passaram a apontar para o GitHub, o que as torna
+    verificáveis por **qualquer pessoa**, não só por quem tem o clone. Contexto em
+    `wiki/referencias/sherpa-onnx.md`.
+
+### Fixed
+- **Três arquivos ESCREVIAM dentro de `knowledge-base/`** — `baseline_fleurs_ptbr.py`,
+  `baseline_minds14.py` e `run_pipeline.py` agora escrevem em `jvscribe/results/`.
+- **Quatro docstrings citavam arquivos já removidos antes** (`plans/m5-scale-model-wer-plan.md`,
+  `blueprints/m3-corpus-blueprint.md`, `plans/repo-faang-reorg-plan.md`, `audits/`) —
+  apontadas para a wiki.
+- Links do README, ROADMAP e CLAUDE.md para `knowledge-base/` → `wiki/`. O
+  `test_readme_links.py` pegou a quebra no ato.
+
+
 ### Changed
 - **`CLAUDE.md` reescrito com foco em arquitetura, otimização, treino e disciplina de
   medição.** Ele é carregado em toda sessão, então cada linha precisa se pagar. O anterior

@@ -111,7 +111,7 @@ existir modelo próprio.
 > M5/M6: é **estruturalmente impossível com o modelo emprestado** (600M offline), e
 > essa impossibilidade é a própria premissa do projeto. M0 prova o **encanamento**;
 > a transcrição real-time sustentada pertence ao modelo próprio streaming. Análise
-> completa em `knowledge-base/discoveries/m0-borrowed-model-dod-analysis.md`.
+> completa em `wiki/log.md`.
 
 **Dependencies:** none (this is the foundation).
 
@@ -362,7 +362,7 @@ de fechar essas lacunas produz número que não transfere — exatamente a falá
 
 ## State-of-the-art references
 
-Peers cloned under `knowledge-base/references/`. See `_catalog.md` in that folder for license-gate decisions and study notes.
+Peers documentados em `wiki/referencias/` com commit fixado — as citações `[FONTE-REPO]` são permalinks públicos, não caminhos de clone local.
 
 | Peer | License | Why it's here | Supports milestone(s) |
 |---|---|---|---|
