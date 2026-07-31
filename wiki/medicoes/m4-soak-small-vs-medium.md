@@ -1,3 +1,11 @@
+---
+type: Medição
+title: M4 — soak que decidiu o tamanho
+description: Sob carga concorrente small e medium empatam em RTFx; empatado o RTFx, o desempate migra para acurácia.
+tags: [medicao, m4, soak, adr-0003]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # Soak RNF-04 + carga RNF-05: small vs medium — o tamanho por medição
 
 **Data:** 2026-07-28 · **Máquina:** i7-1355U de referência (esta) · **Modelos:** Zipformer-CTC

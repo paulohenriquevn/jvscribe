@@ -1,3 +1,11 @@
+---
+type: Medição
+title: int8 é lossless contra fp32
+description: Medido no runtime Rust: int8 (27 MB) contra fp32 (92 MB) — a diferença fica dentro do ruído.
+tags: [medicao, int8, quantizacao, rust]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # Eval do Runtime Rust — WER + RTFx através do caminho de produção
 
 **Data:** 2026-07-26 · **Máquina:** i7-1355U de referência · **Modelo:** `model.int8.onnx` (Zipformer-CTC small 22M, int8) · **Harness:** `training/scripts/eval_runtime_wer.py`

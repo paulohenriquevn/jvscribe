@@ -31,7 +31,7 @@ def test_declara_os_dois_jobs():
 def test_job_model_free_nao_referencia_artefato_de_modelo():
     """O job obrigatório não pode depender de peso não versionado."""
     body = yaml.dump(_load()["jobs"]["test-model-free"])
-    for proibido in ("models/", "results/onnx", ".onnx", "m5-final"):
+    for proibido in ("models/current", ".onnx", "m5-final"):
         assert proibido not in body, (
             f"o job obrigatório referencia artefato de modelo ({proibido!r}) — "
             "isso o torna não-reprodutível em runner limpo"

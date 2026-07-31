@@ -1,3 +1,11 @@
+---
+type: Medição
+title: M4 — piloto comparativo em FLEURS
+description: A corrida que comparou os candidatos no test set público.
+tags: [medicao, m4, fleurs, piloto]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # M4 — Piloto FLEURS-only: primeiro WER held-out na recipe REAL do icefall
 
 **Data:** 2026-07-25 · **Custo:** ~$0,22 `[MEDIDO]` (vast.ai RTX 3090, 71 min) · **Status:** pipeline

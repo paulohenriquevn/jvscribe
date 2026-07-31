@@ -11,7 +11,7 @@ Uso:
 ⚠️ **A régua de normalização é a canônica do projeto**, não uma local. A versão anterior deste
 script tinha a própria `norm()`, que **preservava acentos** enquanto
 `normalize_for_wer_compare` os remove. Consequência medida: o WER de **16,14%** publicado em
-`jvscribe/results/public-benchmarks.md` saiu daqui, e os **15,99%** medidos com a régua
+`wiki/medicoes/benchmarks-publicos.md` saiu daqui, e os **15,99%** medidos com a régua
 canônica no mesmo subconjunto — a diferença **não era ruído de amostra, era régua diferente**.
 """
 from __future__ import annotations

@@ -1,3 +1,11 @@
+---
+type: Medição
+title: M4 — a cabeça de fonema transferiu para o medium
+description: Ablação que fechou o deliverable de M4: WER 28,86% → 27,49%, −4,74% relativo.
+tags: [medicao, m4, fonema, ablacao]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # M4 — deliverable final: Zipformer-CTC medium (64M) + cabeça de fonema
 
 **Data:** 2026-07-28 · **Corpus:** MLS-PT ~161h train, FLEURS held-out test (919 cuts,

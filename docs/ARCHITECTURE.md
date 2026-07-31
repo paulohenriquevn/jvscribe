@@ -3,7 +3,7 @@
 Documento de referência do `jvscribe-ptbr-zipformer-ctc-64m` e do motor que o executa.
 Todo número aqui foi **extraído do artefato ou do código**, não da memória de quem escreve:
 os de estrutura vêm de `onnx.load` e do `state_dict` do checkpoint; os de custo, do profiler
-por operador do ONNX Runtime (`jvscribe/results/m6-runtime-profile-2026-07-31.md`).
+por operador do ONNX Runtime (`wiki/medicoes/m6-profile-por-operador.md`).
 
 ---
 
@@ -326,9 +326,9 @@ estado faz. Isso é treino com `--causal 1`, não ajuste de runtime.
 
 | assunto | onde |
 |---|---|
-| Profile por operador e prior art | `jvscribe/results/m6-runtime-profile-2026-07-31.md` |
-| Medição de RNF ao vivo | `jvscribe/results/m6-live-dual-channel.md` |
-| Reprodutibilidade do artefato | `jvscribe/results/reproducibility-2026-07-30.md` |
+| Profile por operador e prior art | `wiki/medicoes/m6-profile-por-operador.md` |
+| Medição de RNF ao vivo | `wiki/medicoes/m6-rnf-ao-vivo.md` |
+| Reprodutibilidade do artefato | `wiki/medicoes/reprodutibilidade.md` |
 | Como retomar o treino | `models/current/finetune/README.md` |
 | Model card | `models/current/README.md` |
 | Requisitos RF/RNF | `PRD.md` § 5, § 6 |

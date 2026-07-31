@@ -5,7 +5,7 @@ Fluxo (Integration Validation do plano m3-corpus):
   filtro por concordância (aplicado AO MANIFEST) → manifest Lhotse com telephone
   on-the-fly → evidência [MEDIDO].
 
-Grava `jvscribe/results/m3-cer-distribution.md`. Uso:
+Grava `wiki/medicoes/m3-cer-distribution.md`. Uso:
   python3 jvscribe/corpus/run_pipeline.py --n 20 --sizes small base
 """
 
@@ -30,7 +30,7 @@ from corpus.agreement_filter import agree, calibrate_tau, pairwise_cer  # noqa: 
 from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_audio  # noqa: E402
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
 
-REPORT = "jvscribe/results/m3-cer-distribution.md"
+REPORT = "wiki/medicoes/m3-cer-distribution.md"
 _BOOTSTRAP_SEED = 20260725  # fixo → IC reprodutível
 
 

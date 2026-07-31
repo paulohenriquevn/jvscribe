@@ -23,7 +23,7 @@ compliance LGPD e UI ficam fora (`PRD.md` § 3.2).
 
 Reproduzido **a partir do download do HF**, não dos arquivos locais: sha256 e
 `vocab_fingerprint` conferem, e o checkpoint publicado carrega, codifica PT-BR e treina
-(`jvscribe/results/reproducibility-2026-07-30.md`).
+(`wiki/medicoes/reprodutibilidade.md`).
 
 ---
 
@@ -98,7 +98,7 @@ janela de decode (sai da ocupação de CPU). Procedimento em `docs/CALIBRATION.m
 | **Blank layer-skipping** (`arXiv:2305.11558`) | **~0%** | ❌ acelera o **joiner do transducer**; somos CTC puro |
 
 > O DoD do M6 no `ROADMAP.md` ainda lista FLToP e blank-skip. **Os dois não se aplicam a este
-> pipeline** — evidência em `jvscribe/results/m6-runtime-profile-2026-07-31.md`. A alavanca real
+> pipeline** — evidência em `wiki/medicoes/m6-profile-por-operador.md`. A alavanca real
 > é treino causal, e `arXiv:2506.14434` mostra que ela **não custa acurácia** (−7,9% de WER
 > relativo com chunked attention masking).
 
@@ -227,7 +227,7 @@ notícias); equivalência batch↔streaming; comportamento no piso da frota.
 | `docs/ARCHITECTURE.md` | Como o modelo e o motor funcionam — grafo, stacks, custo por operador, pipelines |
 | `docs/CALIBRATION.md` | Runbook ao trocar de CPU — o que é portável e o que remedir |
 | `models/current/finetune/README.md` | Retomar o treino — comandos, flags, armadilhas |
-| `jvscribe/results/` | Toda medição, com hipótese, evidência e limitações separadas |
+| `wiki/medicoes/` | Toda medição, com hipótese, evidência e limitações separadas |
 | `PRD.md` | RF/RNF, arquitetura, riscos, questões abertas |
 | `ROADMAP.md` | Milestones M0–M9 com DoD |
 | `CHANGELOG.md` | Toda mudança relevante (Regra Inquebrável 6) |

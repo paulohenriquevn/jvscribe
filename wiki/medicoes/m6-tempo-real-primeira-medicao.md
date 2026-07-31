@@ -1,3 +1,11 @@
+---
+type: Medição
+title: M6 — primeira medição de tempo real
+description: RTFx do modelo atual no caminho de tempo real, com as condições que invalidaram parte dos números.
+tags: [medicao, m6, tempo-real, rtfx]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # M6 early — critérios de real-time no modelo atual (Zipformer-CTC small int8)
 
 ---

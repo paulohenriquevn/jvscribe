@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Extrai o wav 16 kHz da MESMA utterance FLEURS pt_br usada por
-`jvscribe/results/onnx/fleurs_one.f32`/`fleurs_one.txt` (consumidos por
+`data/eval/fleurs/fleurs_one.f32` / `jvscribe/tests/fixtures/fleurs_one.txt` (consumidos por
 `crates/macaw-asr/tests/real_speech_test.rs`), para fechar o teste end-to-end
 real (wav → `jvscribe_audio::kaldi_fbank` → `AsrEngine::transcribe`) em
 `crates/macaw-asr/tests/real_speech_from_wav_test.rs`.

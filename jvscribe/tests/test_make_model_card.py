@@ -12,7 +12,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 
 # Fingerprint MEDIDO pela implementação Rust (Vocab::fingerprint) em 2026-07-30 sobre
-# jvscribe/results/onnx/tokens.txt. O Python DEVE reproduzi-lo bit a bit — é o teste de
+# jvscribe/tests/fixtures/tokens-m4.txt (vocabulário da geração M4). O Python DEVE
+# reproduzi-lo bit a bit — é o teste de
 # conformidade cross-language que o blueprint recomendou.
 RUST_FINGERPRINT_RUNTIME = "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2754140212647"
 
@@ -20,7 +21,7 @@ RUST_FINGERPRINT_RUNTIME = "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2
 def test_fingerprint_python_reproduz_o_do_rust():
     from make_model_card import vocab_fingerprint
 
-    tokens = REPO / "jvscribe/results/onnx/tokens.txt"
+    tokens = REPO / "jvscribe/tests/fixtures/tokens-m4.txt"
     if not tokens.exists():
         import pytest
 

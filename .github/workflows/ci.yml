@@ -84,22 +84,22 @@ jobs:
         env:
           ARTIFACT_URL: ${{ vars.JVSCRIBE_ARTIFACT_URL }}
         run: |
-          mkdir -p jvscribe/results/onnx
+          mkdir -p models/ci-artifact
           curl -fsSL "$ARTIFACT_URL" -o /tmp/artifact.tgz
-          tar xzf /tmp/artifact.tgz -C jvscribe/results/onnx --strip-components=1
+          tar xzf /tmp/artifact.tgz -C models/ci-artifact --strip-components=1
 
       # Valida a IDENTIDADE do vocabulário antes de medir qualquer coisa: cardinalidade não
       # distingue dois artefatos de 500 tokens com 492 ids divergentes (M9).
       - name: Validar o par (modelo, vocabulário)
-        run: .venv/bin/python jvscribe/common/make_model_card.py jvscribe/results/onnx
+        run: .venv/bin/python jvscribe/common/make_model_card.py models/ci-artifact
 
       - name: Transcrição de ponta a ponta
         run: |
           mkdir -p /tmp/ci-audio /tmp/ci-out
-          test -f jvscribe/results/onnx/_eval_wavs/a000.wav \
-            && cp jvscribe/results/onnx/_eval_wavs/a000.wav /tmp/ci-audio/
+          test -f models/ci-artifact/_eval_wavs/a000.wav \
+            && cp models/ci-artifact/_eval_wavs/a000.wav /tmp/ci-audio/
           # Sem `cd`: o script resolve modelo e tokens pelo artefato canônico
           # (JVSCRIBE_MODEL_DIR > models/current > cwd).
-          JVSCRIBE_MODEL_DIR="$PWD/jvscribe/results/onnx" \
+          JVSCRIBE_MODEL_DIR="$PWD/models/ci-artifact" \
             .venv/bin/python jvscribe/batch/batch_transcribe.py \
               --input-dir /tmp/ci-audio --out-dir /tmp/ci-out --threads 2

@@ -12,7 +12,7 @@ Robustez: parquet direto do HF (evita `datasets`/`torchcodec`); ctranslate2
 single-thread (`cpu_threads=1`, evita deadlock de futex).
 
 Uso: python3 scripts/baseline_fleurs_ptbr.py [n_utterances] [modelos-csv]
-Emite jvscribe/results/m1-baseline-report.md (multi-modelo).
+Emite wiki/medicoes/m1-baseline-report.md (multi-modelo).
 """
 
 from __future__ import annotations

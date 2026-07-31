@@ -219,7 +219,7 @@ por uma fração do custo do treino completo.
 
 ---
 
-### M5 — [~] Modelo em escala (2/3 DoDs; DoD#3 telefônico DEFERIDO — data-limited, Top Risk #2 materializou; ver jvscribe/results/m5-final-results.md)
+### M5 — [~] Modelo em escala (2/3 DoDs; DoD#3 telefônico DEFERIDO — data-limited, Top Risk #2 materializou; ver wiki/medicoes/m5-modelo-final.md)
 
 **Objective:** Treinar o modelo final e atingir o alvo de WER.
 

@@ -21,9 +21,9 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 | M0 — Fundação do runtime · M1 — Instrumentação | ✅ concluídos |
 | M2 — Decisão de arquitetura · M3 — Corpus | ✅ concluídos |
 | M4 — Piloto comparativo | ✅ concluído |
-| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](jvscribe/results/m5-final-results.md)) |
+| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](wiki/medicoes/m5-modelo-final.md)) |
 | M9 — Governança de artefato e reprodutibilidade | ✅ concluído |
-| M6 — Runtime otimizado | 🔬 em medição ([profile por operador](jvscribe/results/m6-runtime-profile-2026-07-31.md), [RNF ao vivo](jvscribe/results/m6-live-dual-channel.md)) |
+| M6 — Runtime otimizado | 🔬 em medição ([profile por operador](wiki/medicoes/m6-profile-por-operador.md), [RNF ao vivo](wiki/medicoes/m6-rnf-ao-vivo.md)) |
 | M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
 
 > A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
@@ -40,7 +40,7 @@ de velocidade em CPU (M2). O piloto comparativo de M4 então **travou o finalist
 
 `[MEDIDO]` head-to-head com parâmetros equivalentes: Zipformer domina Conformer nos dois eixos
 de acurácia (WER 28,86% vs 31,57%, IC95% do delta excluindo 0). A cabeça de fonema levou o
-medium a **27,49% WER** ([evidência](jvscribe/results/m4-medium-phoneme-ablation-results.md)).
+medium a **27,49% WER** ([evidência](wiki/medicoes/m4-cabeca-de-fonema-no-medium.md)).
 
 **O achado de M2 que orientou a escolha da família** `[MEDIDO]`: em CPU, na mesma máquina e na mesma
 clip de 12 s, o transducer é **~2× mais rápido** que o AED em tamanho comparável —
@@ -70,7 +70,7 @@ fonema auxiliar. Publicado em `paulohenriquevn/jvscribe` (HuggingFace, privado).
 | RTFx | **40,0×** | i7 12-core, ONNX int8, 4 threads, load average < 1 |
 
 `[MEDIDO]` 2026-07-31 e **reproduzido a partir do download do HuggingFace**, não dos arquivos
-locais ([evidência](jvscribe/results/reproducibility-2026-07-30.md)): sha256 e
+locais ([evidência](wiki/medicoes/reprodutibilidade.md)): sha256 e
 `vocab_fingerprint` conferem com o model card, e o checkpoint publicado carrega, codifica
 PT-BR e aceita treino.
 
@@ -118,7 +118,7 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Como o modelo e o motor funcionam** — grafo, stacks, custo por operador, pipelines de lote e tempo real |
 | [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
 | [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
-| [`jvscribe/results/`](jvscribe/results/) | Toda medição, com hipótese, evidência e limitações separadas |
+| [`wiki/medicoes/`](wiki/medicoes/) | Toda medição, com hipótese, evidência e limitações separadas |
 | [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
 | [`wiki/`](wiki/index.md) | **Base de conhecimento** em Open Knowledge Format — modelo, motor, treino, otimização, medições e decisões |
 | [`wiki/decisoes/`](wiki/decisoes/index.md) | ADRs — o que foi travado, com racional e alternativas |

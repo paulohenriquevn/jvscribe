@@ -8,7 +8,7 @@ Nota honesta: isto mede a inferência OFFLINE do encoder+CTC (batch, áudio inte
 RTFx streaming real (chunk a chunk, com cache) é outro número — fase separada. Mas o
 throughput offline é o piso de viabilidade: se não fecha aqui, não fecha streaming.
 
-Uso: python3 bench_rtfx.py jvscribe/results/onnx/model.int8.onnx [--threads 1]
+Uso: python3 bench_rtfx.py [modelo] [--threads 1]   # sem modelo: o artefato canônico
 """
 
 from __future__ import annotations

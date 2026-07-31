@@ -15,7 +15,7 @@ telefônica (a-law round-trip) sobre o áudio já-8 kHz, exercitando a régua in
 
 Uso: python3 scripts/baseline_minds14.py [n_utterances] [modelo]
 
-Emite jvscribe/results/m1-baseline-report.md.
+Emite wiki/medicoes/m1-baseline-report.md.
 """
 
 from __future__ import annotations

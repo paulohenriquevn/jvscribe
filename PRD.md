@@ -237,7 +237,7 @@ preserva a diluição. Treinar do zero coloca 100% da capacidade em PT-BR.
 > **Substituição registrada:** o 2º finalista
 > efetivamente medido foi **Conformer-CTC (icefall)**, não FastConformer-NeMo —
 > un-provisionable neste ambiente (4+ falhas), trocado para eliminar confounds de
-> framework (`jvscribe/results/m4-decision-161h-results.md`). Limites honestos no
+> framework (`wiki/medicoes/index.md`). Limites honestos no
 > ADR: WER é wideband FLEURS (não 8 kHz call center — M5); treino causal/equivalência
 > streaming são M4-fase-3/M6. Restam da § 8.1 `✅ Decidido` acima: BPE, supervisão
 > fonética (M4 fase 3 **concluída** — cabeça auxiliar dá −4,63% relativo de WER, DoD ≥3%

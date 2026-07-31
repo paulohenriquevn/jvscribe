@@ -39,7 +39,7 @@ def test_dump_binario_de_eval_continua_ignorado():
     entrarem no histórico. Se um golden voltar a ser versionado, adicione a negação DEPOIS da
     regra geral — a ordem é o que determina quem vence em `.gitignore`.
     """
-    assert _is_ignored("jvscribe/results/onnx/fleurs_one.f32"), (
+    assert _is_ignored("data/eval/fleurs/fleurs_one.f32"), (
         "dump binário de eval não pode ser versionável"
     )
 
@@ -57,10 +57,10 @@ def _obsoleto_test_dump_de_eval_f32():
     """Regressão pega durante a própria T2.1.
 
     A primeira tentativa de corrigir o shadowing removeu a regra `*.f32` inteira — o que
-    tornaria `jvscribe/results/onnx/fleurs_one.f32` (214 K de dump de eval) rastreável num
+    tornaria `data/eval/fleurs/fleurs_one.f32` (214 K de dump de eval) rastreável num
     `git add`. A correção certa é regra geral SEGUIDA da exceção, não ausência de regra.
     """
-    assert _is_ignored("jvscribe/results/onnx/fleurs_one.f32"), (
+    assert _is_ignored("data/eval/fleurs/fleurs_one.f32"), (
         "dump binário de eval não pode ser versionável"
     )
     assert not _is_ignored("crates/macaw-audio/tests/fixtures/kaldi_fbank80_golden.f32"), (

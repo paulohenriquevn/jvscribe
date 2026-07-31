@@ -11,7 +11,7 @@ recuperável do projeto — horas de GPU paga sobre um corpus que pode não ser 
 
 Uso:
     python3 jvscribe/common/make_model_card.py <dir-do-artefato> [--wer 35.53 --wer-source arquivo.md]
-    python3 jvscribe/common/make_model_card.py jvscribe/results/onnx
+    python3 jvscribe/common/make_model_card.py models/current
 """
 from __future__ import annotations
 

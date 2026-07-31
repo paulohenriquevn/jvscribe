@@ -234,7 +234,7 @@ def main() -> int:
     # Defaults MEDIDOS, não escolhidos: o decode custa ~172 ms numa janela de 6 s (mediana de
     # 5, i7 12-core, int8, 4 threads). Dois canais a cada 0,5 s ocupam 69% da CPU. Com a
     # janela de 10 s o custo sobe para 262 ms e a ocupação passa de 100% — satura e o backlog
-    # cresce sem limite. Ver `jvscribe/results/m6-live-dual-channel.md`.
+    # cresce sem limite. Ver `wiki/medicoes/m6-rnf-ao-vivo.md`.
     ap.add_argument("--hop", type=float, default=0.5, help="intervalo de re-decode por canal (s)")
     ap.add_argument("--window", type=float, default=6.0, help="janela redecodificada (s) — ver o envelope medido")
     ap.add_argument("--threads", type=int, default=None,

@@ -52,8 +52,8 @@ def decode_all(sess, in_names, fbanks, id2tok, beta):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=150)
-    ap.add_argument("--model", default=str(REPO / "jvscribe/results/onnx/model.int8.onnx"))
-    ap.add_argument("--tokens", default=str(REPO / "jvscribe/results/onnx/tokens.txt"))
+    ap.add_argument("--model", default=str(REPO / "models/m4-legacy-onnx/model.int8.onnx"))
+    ap.add_argument("--tokens", default=str(REPO / "models/m4-legacy-onnx/tokens.txt"))
     args = ap.parse_args()
     id2tok = load_id2tok(Path(args.tokens))
     sess = ort.InferenceSession(args.model, providers=["CPUExecutionProvider"])

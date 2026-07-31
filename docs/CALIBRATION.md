@@ -119,7 +119,7 @@ RTFx. Comparação de config sai do passo 3 (pareado) ou do 4 (determinístico).
 ## Se o número mudar muito
 
 Um resultado muito diferente do registrado aqui é informação, não erro. Registre em
-`jvscribe/results/` com a condição de medição ao lado — CPU, load average, número de
+`wiki/medicoes/` com a condição de medição ao lado — CPU, load average, número de
 repetições. Um número sem condição não é comparável com nada.
 
 Referência desta máquina (i7 híbrido, 2 P-cores a 5,0 GHz + 8 E-cores a 3,7 GHz):
@@ -147,7 +147,7 @@ tensores de estado. Ver `docs/ARCHITECTURE.md`.
 | assunto | onde |
 |---|---|
 | Como o modelo e o motor funcionam | `docs/ARCHITECTURE.md` |
-| Profile por operador e prior art | `jvscribe/results/m6-runtime-profile-2026-07-31.md` |
-| Topologia, afinidade e o limite do instrumento | `jvscribe/results/m6-cpu-topology-2026-07-31.md` |
-| Envelope medido ao vivo | `jvscribe/results/m6-live-dual-channel.md` |
+| Profile por operador e prior art | `wiki/medicoes/m6-profile-por-operador.md` |
+| Topologia, afinidade e o limite do instrumento | `wiki/medicoes/m6-topologia-de-cpu.md` |
+| Envelope medido ao vivo | `wiki/medicoes/m6-rnf-ao-vivo.md` |
 | Critérios RNF-01..08 | `PRD.md` § 6 |

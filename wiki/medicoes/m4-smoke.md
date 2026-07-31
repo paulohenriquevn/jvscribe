@@ -1,3 +1,11 @@
+---
+type: Medição
+title: M4 — smoke do piloto
+description: Verificação de que o pipeline de treino roda antes de gastar GPU no piloto completo.
+tags: [medicao, m4, smoke]
+timestamp: 2026-07-31T00:00:00Z
+---
+
 # M4 — Smoke de treino: evidência [MEDIDO] e a lição de overfitting
 
 **Data:** 2026-07-25 · **Infra:** vast.ai RTX 3090 (imagem oficial `k2fsa/icefall:torch2.4.1-cuda12.1`) · **Custo:** ~$0,35 (instância ~1,5 h a $0,179/h)
