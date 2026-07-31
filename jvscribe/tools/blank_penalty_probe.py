@@ -24,8 +24,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 # pasta que deixou de existir — o probe quebrava em ModuleNotFoundError ao ser executado.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from tta_feature_align_probe import BLANK, build_dataset, load_id2tok, wer  # noqa: E402
-from bootstrap_wer_ci import paired_bootstrap  # noqa: E402
-from wer_core import word_edit_distance  # noqa: E402
+from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 
 
 def greedy_penalized(logp: np.ndarray, id2tok: dict[int, str], beta: float) -> str:

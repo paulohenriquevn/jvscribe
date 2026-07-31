@@ -36,8 +36,19 @@ eval/eval_wer.py          112 LoC   WER com IC95 bootstrap
 common/stats.py            98 LoC   comparação pareada, recusa veredito sem separação
 ```
 
-`bootstrap_wer_ci.py` e `stats.py` fazem **a mesma coisa** — bootstrap pareado que decide se
-duas medições se separam — em pastas diferentes, com APIs diferentes.
+> ⚠️ **Correção (2026-07-31).** Este parágrafo afirmava que `bootstrap_wer_ci.py` e `stats.py`
+> "fazem a mesma coisa". **Estava errado, e fundi-los teria corrompido todo delta de WER
+> publicado.** Medido no mesmo par de utterances:
+>
+> | método | Δ |
+> |---|---|
+> | razão de somas (`bootstrap_wer_ci`) — correto para WER | **4,76 p.p.** |
+> | média de diferenças pareadas (`stats`) — correto para latência | **26,25 p.p.** |
+>
+> São a mesma *técnica* (bootstrap pareado) sobre *estatísticas diferentes*. Não se faz média
+> de WERs por utterance: uma frase de 2 palavras pesaria igual a uma de 40. Os dois módulos
+> são vizinhos e permanecem **separados de propósito** — está escrito no topo de
+> `common/metrics.py` para que ninguém repita a tentativa.
 
 ---
 
@@ -132,8 +143,8 @@ Vale registrar, porque a conclusão não é "reorganize tudo":
 
 | # | Ação | Risco | Por que vale |
 |---|---|---|---|
-| 1 | **Fundir `common/text.py` em `text_normalize_ptbr.py`** e renomear para `common/text.py` | baixo | Elimina a ambiguidade de caminho que já escondeu um defeito de régua. 17 imports a repontar, todos cobertos por teste |
-| 2 | **Fundir `tools/bootstrap_wer_ci.py` em `common/stats.py`** | baixo | Duas implementações do mesmo bootstrap pareado |
+| 1 | ✅ **FEITO** — `common/text.py` é o módulo único; `text_normalize_ptbr.py` removido | baixo | Equivalência provada em 3.000 strings antes da remoção; 13 arquivos repontados |
+| 2 | ❌ **CANCELADO** — a medição refutou a premissa (ver a correção acima) | — | Fundir teria mudado todo delta de WER publicado |
 | 3 | **Mover o canal telefônico para `common/audio/`** (ou `signal/`) | médio | Remove 4 das 5 violações de fronteira; o domínio passa a estar onde seus três consumidores podem alcançá-lo legalmente |
 | 4 | **Quebrar `tools/` nos domínios reais** — `probes/`, `audit/`, `bench/` | médio | 7 domínios numa pasta é o anti-pattern que a própria `architecture.md` nomeia |
 | 5 | **Consolidar métrica WER/CER num só lugar** (`common/metrics/`) | médio | 6 arquivos, 3 pastas, 1 conceito |

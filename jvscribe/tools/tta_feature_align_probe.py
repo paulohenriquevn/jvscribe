@@ -38,8 +38,7 @@ _PKG = Path(__file__).resolve().parents[1]
 for _pipe in ("tools", "corpus", "common"):
     sys.path.insert(0, str(_PKG / _pipe))
 from eval_runtime_wer import normalize_ptbr, find_test_parquet  # noqa: E402
-from wer_core import word_edit_distance  # noqa: E402
-from bootstrap_wer_ci import paired_bootstrap  # noqa: E402
+from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 from telephone_channel import apply_telephone_channel  # noqa: E402
 import ctc  # noqa: E402  — shared kernel
 

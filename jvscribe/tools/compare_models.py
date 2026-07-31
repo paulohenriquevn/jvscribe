@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from text import normalize_for_wer_compare  # noqa: E402
-from wer_core import word_edit_distance  # noqa: E402
+from metrics import word_edit_distance  # noqa: E402
 
 
 def _carregar(refs_path: Path, hyps_dir: Path) -> list[tuple[str, str]]:

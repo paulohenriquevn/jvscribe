@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from wer_core import word_edit_distance
+from metrics import word_edit_distance
 
 
 def test_sequencias_iguais_tem_distancia_zero():

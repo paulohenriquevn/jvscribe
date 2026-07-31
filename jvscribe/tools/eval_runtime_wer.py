@@ -31,10 +31,9 @@ import soundfile as sf
 REPO = Path(__file__).resolve().parents[2]
 CLI = REPO / "target" / "release" / "macaw-cli"   # binário do runtime removido — ver docstring
 
-from wer_core import word_edit_distance  # Levenshtein puro, reusado (Regra 9 / DRY)
-
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path  # noqa: E402  — resolvedor canônico de artefato
+from metrics import word_edit_distance  # noqa: E402  — Levenshtein puro (Regra 9 / DRY)
 # Este módulo MEDE WER → régua de COMPARAÇÃO (remove acento). Não confundir com
 # `finetune/prep_icefall.py`, que prepara o CORPUS DE TREINO e por isso usa
 # `normalize_train_target` (preserva acento — o modelo precisa aprender a acentuar).

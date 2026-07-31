@@ -6,7 +6,7 @@ um bug aqui produziria um número errado num artefato de decisão.
 
 import pytest
 
-from cer_from_recogs import score_recogs  # noqa: E402
+from metrics import score_recogs  # noqa: E402
 
 
 def test_wer_e_cer_de_um_recogs_conhecido():

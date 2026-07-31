@@ -6,7 +6,7 @@ reamostragem produziria um IC errado num artefato de decisão.
 
 import pytest
 
-from bootstrap_wer_ci import paired_bootstrap, per_utterance_errors  # noqa: E402
+from metrics import paired_bootstrap, per_utterance_errors  # noqa: E402
 
 
 def test_ponto_e_ic_de_caso_conhecido_e_deterministico():
