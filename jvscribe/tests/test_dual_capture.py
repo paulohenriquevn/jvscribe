@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "realtime"))
 
-from dual_capture import CaptureError, DualCapture, default_sources, list_sources
+from dual_capture import CaptureError, DualCapture, Stream, default_sources, list_sources
 
 
 def _tem_pulse() -> bool:
@@ -76,3 +76,70 @@ def test_encerra_sem_deixar_processo_orfao():
     assert all(st.proc is None for st in cap.streams), "stop() deve zerar as referências"
     for p in procs:
         assert p.poll() is not None, "processo de captura ficou órfão após stop()"
+
+
+def test_read_drena_a_fila_em_vez_de_devolver_um_chunk_por_stream():
+    """Defeito real de 2026-07-31: `read()` devolvia 1 chunk por stream por chamada.
+
+    Com o `parec` produzindo ~30 chunks/s por canal e o consumidor chamando `read()` a cada
+    ciclo de decode, o consumo era ESTRUTURALMENTE menor que a produção: o backlog media
+    101 → 227 chunks em 4,4 s, crescendo sem limite. A app de tempo real reprovava RNF-03
+    (backlog) e RNF-02 (p99 792 ms) por encanamento, não por lentidão do modelo.
+    """
+    from queue import Queue
+
+    cap = DualCapture.__new__(DualCapture)
+    cap.streams = [Stream(label="mic", source="s1"), Stream(label="loopback", source="s2")]
+    for st in cap.streams:
+        st.queue = Queue()
+        for i in range(5):
+            st.queue.put(bytes([i]))
+
+    lidos = cap.read(timeout=0.01)
+
+    assert len(lidos) == 10, f"esperava drenar os 10 chunks enfileirados, veio {len(lidos)}"
+    assert cap.backlog() == {"mic": 0, "loopback": 0}
+
+
+def test_read_respeita_um_teto_para_nao_travar_o_consumidor():
+    """Drenar não pode virar laço infinito quando o produtor é mais rápido que o loop."""
+    from queue import Queue
+
+    cap = DualCapture.__new__(DualCapture)
+    cap.streams = [Stream(label="mic", source="s1")]
+    cap.streams[0].queue = Queue()
+    for i in range(500):
+        cap.streams[0].queue.put(bytes([i % 256]))
+
+    lidos = cap.read(timeout=0.01, max_chunks=64)
+
+    assert len(lidos) == 64, "o teto por chamada tem de ser respeitado"
+    assert cap.backlog()["mic"] == 436
+
+
+def test_um_stream_cheio_nao_mata_de_fome_o_outro():
+    """`max_chunks` é teto POR STREAM, não orçamento global disputado.
+
+    Se o mic tem 1000 chunks na fila e o teto for global, ele consome tudo e o loopback
+    fica com um chunk só — na prática, perder o áudio do CLIENTE. O rótulo de falante
+    continuaria certo, mas metade da conversa sumiria.
+    """
+    from queue import Queue
+
+    cap = DualCapture.__new__(DualCapture)
+    cap.streams = [Stream(label="mic", source="s1"), Stream(label="loopback", source="s2")]
+    for st in cap.streams:
+        st.queue = Queue()
+    for i in range(300):
+        cap.streams[0].queue.put(b"m")
+    for i in range(300):
+        cap.streams[1].queue.put(b"l")
+
+    lidos = cap.read(timeout=0.01, max_chunks=64)
+
+    por_stream = {"mic": 0, "loopback": 0}
+    for label, _ in lidos:
+        por_stream[label] += 1
+    assert por_stream == {"mic": 64, "loopback": 64}, (
+        f"cada stream deve render até 64; veio {por_stream}"
+    )

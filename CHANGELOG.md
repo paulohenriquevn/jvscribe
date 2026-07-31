@@ -14,6 +14,32 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **`jvscribe/realtime/live_transcribe.py` — app de transcrição ao vivo dos dois canais.**
+  Captura mic (ATENDENTE) e loopback (CLIENTE) em paralelo, transcreve com um motor
+  `StreamingCTC` por canal e imprime o diálogo rotulado, medindo os critérios do `PRD.md § 6`
+  em tempo real. Sem diarização por construção: no caso 1:1 o papel vem da origem do stream.
+  Verificado ao vivo contra referência conhecida tocada nas caixas.
+- `jvscribe/realtime/streaming.py` — motor de janela + LocalAgreement-2 extraído de
+  `mic_transcribe.py`, que agora tem um segundo consumidor. Sem dependência de captura.
+- `jvscribe/results/m6-live-dual-channel.md` — primeira medição de RNF sobre o pipeline
+  completo, com a curva de custo de decode por janela e a varredura de configuração.
+
+### Fixed
+- **`DualCapture.read()` devolvia UM chunk por stream por chamada** enquanto o `parec` produz
+  ~30/s por canal — o consumo era estruturalmente menor que a produção e o backlog crescia sem
+  limite (medido: 101 → 227 chunks em 4,4 s). A app de tempo real reprovava RNF-02 e RNF-03
+  por encanamento, e diagnosticar como "modelo lento" teria levado a otimizar a coisa errada.
+  Agora drena a fila com teto **por stream** — o teto global da primeira tentativa deixava um
+  canal cheio matar o outro de fome, o que na prática perderia metade da conversa.
+  Backlog caiu de **100% para 2,5%** das amostras.
+
+### Changed
+- Defaults de `live_transcribe` passam a ser **medidos**: janela 6 s / hop 0,5 s. A janela de
+  10 s custa 262 ms de decode e, com dois canais a cada 0,5 s, pede **104,9% da CPU** — satura
+  por construção.
+
+
+### Added
 - **Modelo publicado em `paulohenriquevn/jvscribe`** (HuggingFace, privado): ONNX oficial,
   vocabulário, model card, alternativos e os artefatos de finetune (~3,0 GB). Excluídos os
   dados de avaliação (`testdata/`, 1,2 GB) e o `.pt` truncado — que permanece em disco.

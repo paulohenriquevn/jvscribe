@@ -189,14 +189,31 @@ class DualCapture:
 
     # -- leitura -----------------------------------------------------------------
 
-    def read(self, timeout: float = 1.0) -> list[tuple[str, bytes]]:
-        """Um chunk de cada stream que tiver dado disponível, rotulado pela origem."""
+    def read(self, timeout: float = 1.0, max_chunks: int = 256) -> list[tuple[str, bytes]]:
+        """DRENA cada stream, rotulando cada chunk pela origem.
+
+        Antes devolvia **um** chunk por stream por chamada. Com o `parec` produzindo ~30
+        chunks/s por canal e o consumidor chamando isto uma vez por ciclo de decode, o
+        consumo era estruturalmente menor que a produção: o backlog crescia sem limite
+        (medido: 101 → 227 chunks em 4,4 s) e a app de tempo real reprovava RNF-02 e RNF-03
+        por encanamento, não por lentidão do modelo.
+
+        `timeout` só se aplica ao PRIMEIRO chunk de cada stream — depois dele o dreno é
+        não-bloqueante, senão a chamada pagaria o timeout inteiro em todo stream silencioso.
+        `max_chunks` é o teto POR STREAM: sem ele, um produtor mais rápido que o laço
+        prenderia o consumidor aqui para sempre.
+        """
         out: list[tuple[str, bytes]] = []
         for st in self.streams:
             try:
                 out.append((st.label, st.queue.get(timeout=timeout)))
             except Empty:
                 continue
+            for _ in range(max_chunks - 1):   # o teto conta POR STREAM, incluindo o 1º chunk
+                try:
+                    out.append((st.label, st.queue.get_nowait()))
+                except Empty:
+                    break
         return out
 
     def backlog(self) -> dict[str, int]:
