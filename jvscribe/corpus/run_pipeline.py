@@ -22,6 +22,7 @@ import statistics
 import sys
 from pathlib import Path
 
+import jinja2
 import numpy as np
 import pyarrow.parquet as pq
 import soundfile as sf
@@ -34,6 +35,24 @@ from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_au
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
 
 _BOOTSTRAP_SEED = 20260725  # fixo → IC reprodutível
+PAR_DO_ADR3 = ("small", "medium")  # o par de transcritores que o ADR-3 especifica
+
+# O corpo do relatório é PROSA — caveats, leitura honesta, separação hipótese/evidência. Sai
+# do código porque ela tem CONDIÇÕES: o caveat H-1 só vale quando a corrida se desvia do par
+# do ADR-3, e como f-string era emitido sempre — a corrida com o par certo produzia
+# "usou small+medium, não o small+medium do ADR-3". Num template a condição é visível.
+#
+# `StrictUndefined` é o ponto que justifica o ambiente explícito: no default do Jinja, uma
+# variável com nome errado renderiza VAZIO. Num documento de evidência isso é um número que
+# some sem ninguém notar. Aqui levanta.
+_AMBIENTE = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(Path(__file__).resolve().parent / "templates"),
+    undefined=jinja2.StrictUndefined,
+    trim_blocks=True,
+    lstrip_blocks=True,
+    keep_trailing_newline=True,
+    autoescape=False,  # destino é Markdown, não HTML — escapar quebraria `&`, `<`, aspas
+)
 
 # `wiki/medicoes/*.md` é CONCLUSÃO — curada por humano, uma por assunto. `dados-brutos/` é
 # EVIDÊNCIA de corrida, e a convenção de lá é nomear pela CONDIÇÃO que a produziu
@@ -134,41 +153,22 @@ def write_report(cers: dict[str, float], tau: float, kept: set[str],
     tau_lo, tau_hi = _bootstrap_tau_ci(vals, keep_fraction)
     now = datetime.datetime.now().isoformat(timespec="seconds")
 
-    lines = [
-        "# M3 — Distribuição de CER par-a-par (evidência [MEDIDO])",
-        "",
-        f"**Data:** {now} · **Hardware:** {_cpu_model()} (int8, CPU, cpu_threads=1)",
-        f"**Comando exato:** `{cmd}` — **1 run, n={n} clips** de FLEURS pt_br (não repetições)",
-        f"**Transcritores:** faster-whisper `{sizes[0]}` + `{sizes[1]}` (sequenciais — RAM-safe)",
-        "**Métrica:** CER **direcional** de hyp₂ contra hyp₁ (modelo #1 como referência),",
-        "ambas normalizadas PT-BR. Não é simétrica; ordena por magnitude de discordância.",
-        "",
-        "## Estatística da distribuição `[MEDIDO]`",
-        "",
-        f"- **spread** entre clips: média {mean:.3f} ± {std:.3f} (σ amostral) · mediana {median:.3f} · min {min(vals):.3f} · max {max(vals):.3f} (n={n})",
-        f"- **incerteza** da média (≠ spread): SEM {sem:.3f} → IC95% ≈ [{ci_lo:.3f}, {ci_hi:.3f}]",
-        f"- **τ calibrado** (percentil-{int(keep_fraction*100)} empírico): **{tau:.3f}** · IC95% bootstrap [{tau_lo:.3f}, {tau_hi:.3f}] (2000 reamostragens, seed fixa)",
-        f"- **manifest filtrado**: {n_cuts} cuts mantidos == {len(kept)} aprovados pelo filtro (review B-1: o filtro É aplicado ao manifest)",
-        f"- prova on-the-fly: `load_telephone_audio` do 1º cut retorna sr = **{sr_proof} Hz** (augmentação em RAM, sem WAV em disco)",
-        "",
-        "## CER por clip",
-        "",
-        "| clip | CER(h1→h2) | mantido? |",
-        "|---|---|---|",
-    ]
-    for cid in sorted(cers):
-        lines.append(f"| {cid} | {cers[cid]:.3f} | {'✅' if cid in kept else '❌ descartado'} |")
-    lines += [
-        "",
-        "## Leitura honesta (caveats do review)",
-        "",
-        f"- **H-1 (par de transcritores):** esta run usou `{sizes[0]}`+`{sizes[1]}`, não o `small`+`medium` do ADR-3. `base` é mais próximo de `small` que `medium` → dois modelos adjacentes correlacionam erros **ainda mais**; a distribuição estreita (média {mean:.3f}) é parcialmente artefato do par, não sinal de qualidade. small+medium fica para quando houver RAM/tempo.",
-        "- **M-2 (fração mantida é tautológica):** manter ~80% aqui é por construção (`keep_fraction=0.8` calibra τ na MESMA amostra). Não é evidência de qualidade dos pseudo-labels; medir qualidade exige um conjunto com referência humana (M4/fine-tune), que não existe neste piloto.",
-        "- **M-3 (fonte-piloto):** os clips vêm do split `test` do **FLEURS** — usado aqui como **fonte-piloto de conveniência**, NÃO o test set de call-center do produto (`PRD § 7.3`). Nenhum pseudo-label toca a suíte de avaliação; o invariante § 3 #10 é respeitado por convenção do operador (o split train/test do produto é materializado fora deste módulo).",
-        "- **Caveat ADR-3 (correlação):** os 2 whisper são da mesma família → correlacionam erros; a concordância superestima confiança. Um 2º transcritor de arquitetura distinta (parakeet) melhora o sinal (backlog).",
-        "- **Escopo estatístico:** n=20 é piloto; o IC de τ (percentil de 20 pontos) é largo (ver acima). Re-calibrar em corpus maior em M4 — este τ não é verdade final, é o operacional do piloto.",
-    ]
-    texto = "\n".join(lines)
+    contexto = {
+        "agora": now, "cpu": _cpu_model(), "cmd": cmd,
+        "n": n, "n_clips": n, "a": sizes[0], "b": sizes[1],
+        # A prosa do H-1 depende disto — e a condição fica VISÍVEL no template.
+        "usou_par_do_adr": tuple(sizes) == PAR_DO_ADR3,
+        "media": mean, "desvio": std, "mediana": median,
+        "minimo": min(vals), "maximo": max(vals),
+        "sem": sem, "ic_lo": ci_lo, "ic_hi": ci_hi,
+        "tau": tau, "tau_lo": tau_lo, "tau_hi": tau_hi,
+        "keep_fraction": keep_fraction, "keep_pct": int(keep_fraction * 100),
+        "n_cuts": n_cuts, "n_mantidos": len(kept), "sr_proof": sr_proof,
+        "clips": [{"id": cid, "cer": cers[cid], "mantido": cid in kept}
+                  for cid in sorted(cers)],
+    }
+    texto = _AMBIENTE.get_template("m3-cer-distribution.md.j2").render(contexto)
+
     try:
         escrever_relatorio(destino, texto, force=force)
     except FileExistsError as e:

@@ -1,0 +1,41 @@
+# M3 — Distribuição de CER par-a-par (evidência [MEDIDO])
+
+**Data:** {{ agora }} · **Hardware:** {{ cpu }} (int8, CPU, cpu_threads=1)
+**Comando exato:** `{{ cmd }}` — **1 run, n={{ n }} clips** de FLEURS pt_br (não repetições)
+**Transcritores:** faster-whisper `{{ a }}` + `{{ b }}` (sequenciais — RAM-safe)
+**Métrica:** CER **direcional** de hyp₂ contra hyp₁ (modelo #1 como referência),
+ambas normalizadas PT-BR. Não é simétrica; ordena por magnitude de discordância.
+
+## Estatística da distribuição `[MEDIDO]`
+
+- **spread** entre clips: média {{ "%.3f"|format(media) }} ± {{ "%.3f"|format(desvio) }} (σ amostral) · mediana {{ "%.3f"|format(mediana) }} · min {{ "%.3f"|format(minimo) }} · max {{ "%.3f"|format(maximo) }} (n={{ n_clips }})
+- **incerteza** da média (≠ spread): SEM {{ "%.3f"|format(sem) }} → IC95% ≈ [{{ "%.3f"|format(ic_lo) }}, {{ "%.3f"|format(ic_hi) }}]
+- **τ calibrado** (percentil-{{ keep_pct }} empírico): **{{ "%.3f"|format(tau) }}** · IC95% bootstrap [{{ "%.3f"|format(tau_lo) }}, {{ "%.3f"|format(tau_hi) }}] (2000 reamostragens, seed fixa)
+- **manifest filtrado**: {{ n_cuts }} cuts mantidos == {{ n_mantidos }} aprovados pelo filtro (review B-1: o filtro É aplicado ao manifest)
+- prova on-the-fly: `load_telephone_audio` do 1º cut retorna sr = **{{ sr_proof }} Hz** (augmentação em RAM, sem WAV em disco)
+
+## CER por clip
+
+| clip | CER(h1→h2) | mantido? |
+|---|---|---|
+{% for clip in clips %}
+| {{ clip.id }} | {{ "%.3f"|format(clip.cer) }} | {{ '✅' if clip.mantido else '❌ descartado' }} |
+{% endfor %}
+
+## Leitura honesta (caveats do review)
+
+{#
+   H-1 é PROSA CONDICIONAL: só existe quando a corrida se desvia do par que o ADR-3
+   especifica. Como f-string era emitida sempre, e rodar o par certo produzia a frase
+   "usou small+medium, não o small+medium do ADR-3" — evidência que se nega.
+   A condição agora é visível e revisável; era esse o ponto de sair do código.
+#}
+{% if usou_par_do_adr %}
+- **H-1 (par de transcritores):** esta corrida usou `{{ a }}`+`{{ b }}`, o par que o **ADR-3 especifica** — sem desvio a declarar aqui. O caveat de correlação entre modelos da mesma família continua valendo (abaixo).
+{% else %}
+- **H-1 (par de transcritores):** esta corrida usou `{{ a }}`+`{{ b }}`, **não** o `small`+`medium` do ADR-3 — desvio deliberado, por RAM/tempo. Um par diferente do especificado muda a distribuição de CER, então a largura observada (média {{ "%.3f"|format(media) }}) é em parte artefato da escolha do par, não sinal de qualidade dos pseudo-labels. O par do ADR fica para quando houver RAM/tempo.
+{% endif %}
+- **M-2 (fração mantida é tautológica):** manter ~{{ keep_pct }}% aqui é por construção (`keep_fraction={{ keep_fraction }}` calibra τ na MESMA amostra). Não é evidência de qualidade dos pseudo-labels; medir qualidade exige um conjunto com referência humana (M4/fine-tune), que não existe neste piloto.
+- **M-3 (fonte-piloto):** os clips vêm do split `test` do **FLEURS** — usado aqui como **fonte-piloto de conveniência**, NÃO o test set de call-center do produto (`PRD § 7.3`). Nenhum pseudo-label toca a suíte de avaliação; o invariante § 3 #10 é respeitado por convenção do operador (o split train/test do produto é materializado fora deste módulo).
+- **Caveat ADR-3 (correlação):** os 2 whisper são da mesma família → correlacionam erros; a concordância superestima confiança. Um 2º transcritor de arquitetura distinta (parakeet) melhora o sinal (backlog).
+- **Escopo estatístico:** n={{ n_clips }} é piloto; o IC de τ (percentil de {{ n_clips }} pontos) é largo (ver acima). Re-calibrar em corpus maior em M4 — este τ não é verdade final, é o operacional do piloto.

@@ -28,7 +28,24 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   whisper. Verificado nos três caminhos: recusa com md5 do publicado inalterado, grava em destino
   novo, e `FORCE=1` sobrescreve.
 
+### Fixed
+- **O relatório de corrida do pipeline de corpus se contradizia sobre a própria configuração.**
+  O caveat H-1 é prosa **condicional** — só vale quando a corrida se desvia do par de
+  transcritores que o ADR-3 especifica (`small`+`medium`). Escrito como f-string, era emitido
+  sempre: rodar exatamente o par do ADR produzia *"esta run usou `small`+`medium`, não o
+  `small`+`medium` do ADR-3"*, e seguia analisando `base`, que não participou. O documento de
+  evidência negava a configuração que a própria corrida usou. Corrigido com regressão primeiro
+  (`tests/test_corpus_relatorio.py`, RED antes do fix).
+
 ### Changed
+- **O corpo do relatório sai do código para um template** (`corpus/templates/*.md.j2`, Jinja2).
+  A motivação não é estética: f-string com prosa condicional **esconde a condição** — nada no
+  código dizia "esta frase só vale se o par for outro". Em template a condição é `{% if %}`,
+  visível e revisável, e a prosa dos caveats passa a ser editável sem tocar em Python.
+  `write_report` cai de 59 para 40 linhas e passa a calcular contexto, não a montar texto.
+  `StrictUndefined` ligado de propósito: no default do Jinja uma variável com nome errado
+  renderiza **vazio**, o que num documento de evidência é um número que some sem ninguém notar.
+  `jinja2` promovido de transitivo a declarado em `requirements-eval.txt`.
 - **O artefato de uma corrida do pipeline de corpus passa a ser nomeado pela configuração que a
   define** (`corpus/run_pipeline.py`). O destino era fixo — `wiki/medicoes/m3-cer-distribution.md`
   — e isso somava dois defeitos: corridas **incomparáveis** disputavam um arquivo (`--n 200`

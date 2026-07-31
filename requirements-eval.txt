@@ -8,3 +8,7 @@ numpy>=1.24,<3.0
 faster-whisper>=1.0,<2.0
 huggingface_hub>=0.20
 pyarrow>=14.0
+# Relatório de medição por template (`corpus/templates/*.md.j2`): a prosa dos caveats tem
+# CONDIÇÕES, e f-string as esconde. Já vinha transitivo (torch, mkdocs, spacy); declarado
+# porque agora é uso direto — depender de dependência-de-dependência quebra em ambiente limpo.
+jinja2>=3.1,<4.0
