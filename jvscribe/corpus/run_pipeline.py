@@ -30,7 +30,9 @@ from corpus.agreement_filter import agree, calibrate_tau, pairwise_cer  # noqa: 
 from corpus.build_manifest import build_cutset, filter_cutset, load_telephone_audio  # noqa: E402
 from corpus.pseudo_label import transcribe_pair  # noqa: E402
 
-REPORT = "wiki/medicoes/m3-cer-distribution.md"
+# Destino sobrescrevível por env: uma corrida de teste não pode apagar evidência
+# publicada (ver common/metrics.escrever_relatorio).
+REPORT = os.environ.get("JVSCRIBE_REPORT", "wiki/medicoes/m3-cer-distribution.md")
 _BOOTSTRAP_SEED = 20260725  # fixo → IC reprodutível
 
 

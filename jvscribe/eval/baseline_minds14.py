@@ -113,7 +113,17 @@ def main() -> int:
             f"do dev (NÃO o piso da frota BYOD, Q-01)."
         ),
     )
-    out_path = os.path.join(REPO, "jvscribe", "results", "m1-baseline-report.md")
+    # `jvscribe/results/` foi removida; e o destino da wiki é evidência publicada.
+    out_path = os.environ.get(
+        "JVSCRIBE_REPORT",
+        os.path.join(REPO, "wiki", "medicoes", "m1-baseline-minds14.md"),
+    )
+    _FORCE = os.environ.get("JVSCRIBE_REPORT_FORCE") == "1"
+    if os.path.exists(out_path) and not _FORCE:
+        print(f"\n⚠️  {out_path} já existe (evidência publicada). "
+              f"Defina JVSCRIBE_REPORT_FORCE=1 ou JVSCRIBE_REPORT=<outro>.")
+        print("\n" + report)
+        return 1
     with open(out_path, "w") as f:
         f.write(report + "\n")
     print("\n" + report)

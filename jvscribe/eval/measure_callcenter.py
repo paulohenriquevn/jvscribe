@@ -84,6 +84,21 @@ def main():
     argumentos_de_modelo(ap, threads=False)
     a = ap.parse_args()
 
+    # Fail-fast COM instrução na fronteira: sem isto o script morre no traceback cru da lib
+    # (`FileNotFoundError`/`LibsndfileError`), que não diz ao operador o que buscar.
+    # `error-handling.md` § 2: valide na entrada, falhe claro. Achado no live test 2026-07-31.
+    import pathlib as _p
+    if not _p.Path(a.wav).exists():
+        raise SystemExit(
+            f"áudio do call center não encontrado: {a.wav}\n"
+            "O dado de call center é LOCAL por LGPD — não é versionado neste repositório."
+        )
+    if not _p.Path(a.transcript).exists():
+        raise SystemExit(
+            f"transcrição humana timestampada não encontrado: {a.transcript}\n"
+            "O dado de call center é LOCAL por LGPD — não é versionado neste repositório."
+        )
+
     # Sessão pela fábrica medida do kernel (arena LIGADA — a desligada custava −6,7%
     # [IC95% −18,3; −3,9] ms) e par (modelo, vocabulário) validado antes de transcrever.
     motor = Motor.carregar(a.model, a.tokens)

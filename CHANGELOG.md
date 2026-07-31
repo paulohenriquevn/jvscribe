@@ -14,6 +14,29 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Fixed
+- **Um teste rápido apagava uma medição publicada.** `eval/baseline_fleurs_ptbr.py` gravava num
+  caminho fixo dentro de `wiki/medicoes/`; rodá-lo com `n=2` durante o live test **substituiu o
+  baseline real de M1** (12 utterances, 3 modelos) por uma corrida de duas. Só o git salvou.
+  `common/metrics.escrever_relatorio` agora recusa sobrescrever; `JVSCRIBE_REPORT` redireciona e
+  `JVSCRIBE_REPORT_FORCE=1` autoriza deliberadamente. Mesmo tratamento em `baseline_minds14.py`
+  (que ainda apontava para `jvscribe/results/`, removida) e `corpus/run_pipeline.py`.
+- **Quatro scripts falhavam com traceback cru da biblioteca** em vez de erro que diz o que
+  buscar (`error-handling.md` § 2): `measure_callcenter`, `make_callcenter_cuts`,
+  `coraa_speaker_overlap`, `tagarela_coraa_leak_check`.
+- **`audit/tagarela_noise_audit.py` tinha interface posicional não documentada** na ordem
+  `[amostra] [manifesto]`, parseada em nível de módulo — importar o arquivo já lia `sys.argv`, e
+  passar o caminho primeiro dava `ValueError: invalid literal for int()`. Agora `argparse`.
+- **`realtime/live_transcribe.py` emitia veredito de RNF sem registrar a carga da máquina** —
+  marcou RNF-02 ❌ com load 11,8. Mesma classe já corrigida em `bench/stress_test.py`. O
+  relatório agora declara `INDETERMINADO` acima do limiar e aponta o que continua válido.
+
+### Added
+- **`docs/LIVE-TEST.md`** — os 37 entrypoints executados de verdade, com argumentos reais.
+  Mapeia: testado sim/não · funcional ou não · utilidade real ou ruído. A prova mais forte é o
+  `live_transcribe` transcrevendo fala ao vivo pelos dois canais — nenhum teste unitário
+  demonstra isso.
+
+### Fixed
 - **Nove entrypoints carregavam modelo e vocabulário sem validar se o par combina.** É a
   proteção declarada fechada na revisão anterior, e ela existia em apenas **4 dos 13** lugares
   que carregam o motor. As duas gerações do artefato têm 500 tokens emitíveis e **492 dos 500

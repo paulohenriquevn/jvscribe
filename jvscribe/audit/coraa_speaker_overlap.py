@@ -72,6 +72,16 @@ def main():
     ap.add_argument("--splits", nargs="+", default=["train", "dev", "test"])
     args = ap.parse_args()
 
+    # Fail-fast COM instrução na fronteira: sem isto o script morre no traceback cru da lib
+    # (`FileNotFoundError`/`LibsndfileError`), que não diz ao operador o que buscar.
+    # `error-handling.md` § 2: valide na entrada, falhe claro. Achado no live test 2026-07-31.
+    import pathlib as _p
+    if not _p.Path(args.meta_dir).exists():
+        raise SystemExit(
+            f"diretório de metadados do CORAA não encontrado: {args.meta_dir}\n"
+            "Baixe o CORAA-v1.1 e aponte --meta-dir para a pasta com os metadata_*.csv."
+        )
+
     per_split = {}
     for split in args.splits:
         keys, unverif = load_keys(args.meta_dir, split)

@@ -82,6 +82,21 @@ def main():
     ap.add_argument("--coraa-meta", required=True, help="metadata_test_final.csv do CORAA")
     args = ap.parse_args()
 
+    # Fail-fast COM instrução na fronteira: sem isto o script morre no traceback cru da lib
+    # (`FileNotFoundError`/`LibsndfileError`), que não diz ao operador o que buscar.
+    # `error-handling.md` § 2: valide na entrada, falhe claro. Achado no live test 2026-07-31.
+    import pathlib as _p
+    if not _p.Path(args.tagarela_parquet_dir).exists():
+        raise SystemExit(
+            f"shards parquet do TAGARELA não encontrado: {args.tagarela_parquet_dir}\n"
+            "Rode finetune/download_tagarela_subset.py e baixe o CORAA antes desta auditoria."
+        )
+    if not _p.Path(args.coraa_meta).exists():
+        raise SystemExit(
+            f"metadados do CORAA não encontrado: {args.coraa_meta}\n"
+            "Rode finetune/download_tagarela_subset.py e baixe o CORAA antes desta auditoria."
+        )
+
     tedx = tedx_video_ids(args.coraa_meta)
     print(f"[leak-check] {len(tedx)} videoIDs TEDx no test CORAA", flush=True)
     if not tedx:

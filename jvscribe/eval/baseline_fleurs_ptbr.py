@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # `jvscribe/conftest.py` cobria e a suíte ficava verde; standalone — o modo de uso deste
 # script — quebrava em ModuleNotFoundError.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "common"))
+from metrics import escrever_relatorio  # noqa: E402
 from run_baseline import measure_baseline, render_report  # noqa: E402
 
 # `dirname(dirname(__file__))` de `jvscribe/eval/…` é `jvscribe/`, não a raiz do repositório —
@@ -128,11 +129,20 @@ def main() -> int:
     # `REPO` não existe (a constante virou `PKG` ao corrigir o caminho da augmentação) e
     # `jvscribe/results/` foi removida — este `os.path.join` era NameError garantido, depois
     # de transcrever N utterances com três modelos. O destino agora é onde as medições vivem.
-    out_path = os.path.join(os.path.dirname(PKG), "wiki", "medicoes", "m1-baseline.md")
-    with open(out_path, "w") as f:
-        f.write(report + "\n")
+    # `escrever_relatorio` RECUSA sobrescrever: este script já apagou o baseline real de M1
+    # (12 utterances, 3 modelos) numa corrida de teste com n=2. Ver common/metrics.py.
+    out_path = os.environ.get(
+        "JVSCRIBE_REPORT",
+        os.path.join(os.path.dirname(PKG), "wiki", "medicoes", "m1-baseline.md"),
+    )
+    force = os.environ.get("JVSCRIBE_REPORT_FORCE") == "1"
     print("\n" + report)
-    print(f"\nrelatório salvo em {out_path}")
+    try:
+        escrever_relatorio(out_path, report, force=force)
+        print(f"\nrelatório salvo em {out_path}")
+    except FileExistsError as e:
+        print(f"\n⚠️  relatório NÃO gravado: {e}")
+        return 1
     return 0
 
 

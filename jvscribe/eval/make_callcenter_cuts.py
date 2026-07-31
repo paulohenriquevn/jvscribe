@@ -31,6 +31,16 @@ def main():
     ap.add_argument("--min-sil-ms", type=int, default=350)
     ap.add_argument("--max-seg-s", type=float, default=25.0)
     args = ap.parse_args()
+
+    # Fail-fast COM instrução na fronteira: sem isto o script morre no traceback cru da lib
+    # (`FileNotFoundError`/`LibsndfileError`), que não diz ao operador o que buscar.
+    # `error-handling.md` § 2: valide na entrada, falhe claro. Achado no live test 2026-07-31.
+    import pathlib as _p
+    if not _p.Path(args.mp3).exists():
+        raise SystemExit(
+            f"gravação da ligação não encontrado: {args.mp3}\n"
+            "O dado de call center é LOCAL por LGPD — não é versionado neste repositório."
+        )
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     wav_dir = out / "wav"; wav_dir.mkdir(exist_ok=True)
 

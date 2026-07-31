@@ -206,6 +206,20 @@ class MetricasRNF:
         }
 
 
+# Mesmo limiar de `bench/calibrate.py` e `bench/stress_test.py` — três ferramentas, um limiar.
+LIMIAR_LOAD = 1.0
+
+
+def _carga_media() -> float | None:
+    """Load average de 1 min, ou `None` quando a plataforma não expõe."""
+    try:
+        import os as _os
+
+        return _os.getloadavg()[0]
+    except (OSError, AttributeError):
+        return None
+
+
 def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -> str:
     r = m.resumo()
     L = ["# Transcrição ao vivo — evidência de RNF", "",
@@ -220,8 +234,25 @@ def render_relatorio(m: MetricasRNF, t: Transcricao, carga: bool, modelo: str) -
     for chave, c in {**m.veredito(), **m.veredito_condicoes(carga)}.items():
         L.append(f"| {chave} | {c.medido} | {c.alvo} | {'✅' if c.aprovado else '❌'} |")
     L += ["", "> RNF-04 e RNF-05 são condições da execução, não resultados: um RTFx alto numa",
-          "> corrida curta e sem carga não sustenta conclusão sobre chip U de 15 W.",
-          "", "## Diálogo", ""]
+          "> corrida curta e sem carga não sustenta conclusão sobre chip U de 15 W."]
+
+    # A carga da máquina é condição da medição, igual ao tempo de corrida. `bench/stress_test`
+    # já marcava o veredito INDETERMINADO acima do limiar; este relatório emitia ❌ para
+    # RNF-01/02/03 sem dizer que a máquina estava ocupada — e um p99 medido em load 11,8 diz
+    # mais sobre contenção do que sobre o produto (asr-evidence-discipline § 5).
+    carga_atual = _carga_media()
+    if carga_atual is None:
+        L += ["", "> ⚠️ **load average indisponível** — não dá para atestar que a máquina "
+                  "estava ociosa. Os vereditos acima podem refletir contenção."]
+    elif carga_atual > LIMIAR_LOAD:
+        L += ["", f"> ⚠️ **VEREDITOS DE LATÊNCIA/RTFx INDETERMINADOS — máquina sob carga** "
+                  f"(load {carga_atual:.1f} > {LIMIAR_LOAD:g}). O que se mede assim é contenção "
+                  f"por CPU, não o custo do produto. Continua VÁLIDO o que não depende de "
+                  f"tempo: o diálogo transcrito abaixo prova a cadeia ponta a ponta."]
+    else:
+        L += ["", f"> load average {carga_atual:.1f} — máquina ociosa o bastante para medir."]
+
+    L += ["", "## Diálogo", ""]
     L += t.linhas() or ["_(nenhuma fala transcrita)_"]
     return "\n".join(L) + "\n"
 

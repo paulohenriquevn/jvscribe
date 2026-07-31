@@ -195,3 +195,29 @@ def find_test_parquet() -> Path:
     if not cands:
         raise SystemExit("parquet de teste FLEURS pt_br não encontrado no cache HF local")
     return sorted(cands)[0]
+
+
+def escrever_relatorio(destino: str | Path, texto: str, *, force: bool = False) -> Path:
+    """Grava um relatório de medição — **recusando sobrescrever** um já existente.
+
+    Os três scripts de baseline gravavam num caminho fixo dentro de `wiki/medicoes/`. Um deles
+    (`eval/baseline_fleurs_ptbr.py`) foi executado com `n=2` durante o live test de 2026-07-31
+    e **substituiu o baseline real de M1** — 12 utterances e 3 modelos — por uma corrida de
+    duas. Só o git salvou.
+
+    Medição publicada é evidência: sobrescrevê-la tem de ser um ato deliberado, não o efeito
+    colateral de um teste rápido. Por isso o default é recusar, e `--force` é explícito.
+
+    Raises:
+        FileExistsError: quando o destino já existe e `force` é falso.
+    """
+    p = Path(destino)
+    if p.exists() and not force:
+        raise FileExistsError(
+            f"{p} já existe e é evidência publicada. Rode com `--force` para substituir "
+            f"deliberadamente, ou aponte `--out` para outro caminho. "
+            f"(Uma corrida curta já apagou um baseline completo aqui.)"
+        )
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(texto if texto.endswith("\n") else texto + "\n", encoding="utf-8")
+    return p
