@@ -22,8 +22,9 @@ escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0
 | M2 — Decisão de arquitetura · M3 — Corpus | ✅ concluídos |
 | M4 — Piloto comparativo | ✅ concluído |
 | M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](jvscribe/results/m5-final-results.md)) |
-| M6 — Runtime otimizado · M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
-| M9 — Governança de artefato e reprodutibilidade | ⏳ próximo |
+| M9 — Governança de artefato e reprodutibilidade | ✅ concluído |
+| M6 — Runtime otimizado | 🔬 em medição ([profile por operador](jvscribe/results/m6-runtime-profile-2026-07-31.md), [RNF ao vivo](jvscribe/results/m6-live-dual-channel.md)) |
+| M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
 
 > A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
 > ([`test_readme_links.py`](jvscribe/tests/test_readme_links.py)) garante que todo link interno
@@ -57,12 +58,65 @@ transducer/CTC faz um passe (custo fixo pelos frames de áudio).
 
 ---
 
+## O modelo entregue
+
+**`jvscribe-ptbr-zipformer-ctc-64m`** — Zipformer-CTC de 64M parâmetros, int8, com cabeça de
+fonema auxiliar. Publicado em `paulohenriquevn/jvscribe` (HuggingFace, privado).
+
+| | valor | condição |
+|---|---|---|
+| WER | **15,99%** | FLEURS pt_br `test[0:100]`, 2.552 palavras, greedy CTC |
+| CER | **7,30%** | idem |
+| RTFx | **40,0×** | i7 12-core, ONNX int8, 4 threads, load average < 1 |
+
+`[MEDIDO]` 2026-07-31 e **reproduzido a partir do download do HuggingFace**, não dos arquivos
+locais ([evidência](jvscribe/results/reproducibility-2026-07-30.md)): sha256 e
+`vocab_fingerprint` conferem com o model card, e o checkpoint publicado carrega, codifica
+PT-BR e aceita treino.
+
+Dos dois candidatos M5 que coabitavam o artefato, o oficial foi decidido por **bootstrap
+pareado** — IC95% do delta em [−2,25; −0,43] pp, sem cruzar zero. O `model_card.json` é a
+autoridade sobre qual peso roda; nome de arquivo não conhece WER.
+
+> O número anterior deste README (27,49%) era o entregável de **M4**, uma geração atrás.
+
+**Limites honestos:** WER em telefonia 8 kHz e em fala espontânea de call center seguem
+`[DESCONHECIDO]` — FLEURS é leitura de notícias. E o modelo **não é streaming**: é não-causal,
+usado ao vivo por janela deslizante ([por quê](docs/ARCHITECTURE.md)).
+
+## Rodando
+
+```bash
+pip install -r requirements-eval.txt        # onnxruntime, lhotse, soundfile
+export MACAW_MODEL_DIR=/caminho/do/artefato # ou deixe models/current apontar para ele
+
+# lote — uma pasta de áudios em qualquer formato
+python3 jvscribe/batch/batch_transcribe.py --input-dir ./audios --out-dir ./saida
+
+# ao vivo, os dois lados da ligação (ATENDENTE = mic · CLIENTE = loopback)
+python3 jvscribe/realtime/live_transcribe.py --duracao 60 --relatorio evidencia.md
+```
+
+O tempo real exige `pulseaudio-utils` (`parec`, `pactl`) — a captura precisa prender cada
+stream à sua source, e `sounddevice` não expõe monitor sources.
+
+| ferramenta | para quê |
+|---|---|
+| [`jvscribe/tools/runtime_bench.py`](jvscribe/tools/runtime_bench.py) | varredura de configuração do ONNX com bootstrap pareado |
+| [`jvscribe/tools/stress_test.py`](jvscribe/tools/stress_test.py) | soak com o modelo real — degradação minuto a minuto |
+| [`jvscribe/tools/finetune_smoke.py`](jvscribe/tools/finetune_smoke.py) | prova que um checkpoint carrega, codifica PT-BR e treina |
+| [`jvscribe/tools/compare_models.py`](jvscribe/tools/compare_models.py) | compara dois modelos na mesma régua, com IC |
+
+---
+
 ## Como navegar
 
 | Documento | Papel |
 |---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Como o modelo e o motor funcionam** — grafo, stacks, custo por operador, pipelines de lote e tempo real |
 | [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
 | [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
+| [`jvscribe/results/`](jvscribe/results/) | Toda medição, com hipótese, evidência e limitações separadas |
 | [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
 | [`knowledge-base/adrs/`](knowledge-base/adrs/) | Decisões de arquitetura com racional |
 | [`knowledge-base/discoveries/blueprints/`](knowledge-base/discoveries/blueprints/) | Blueprints de investigação (prior art) |

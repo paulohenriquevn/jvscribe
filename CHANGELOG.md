@@ -13,6 +13,25 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+- **README raiz atualizado** — estava parado em 2026-07-30, antes da renomeação, da publicação
+  e das medições de M6. Corrigido:
+  - **M9 marcado como pendente quando o ROADMAP diz `[x]`**; M6 passa a "em medição" com link
+    para a evidência.
+  - **O número anunciado era 27,49%, o entregável de M4** — uma geração atrás. Agora traz o
+    modelo M5 publicado: WER **15,99%** / CER 7,30% / RTFx 40,0×, com a condição de medição
+    ao lado e o link para a verificação feita a partir do download do HuggingFace.
+  - **Faltava "como rodar"** — um README sem quickstart obriga o leitor a garimpar. Adicionadas
+    as invocações de lote e de tempo real, a dependência de `pulseaudio-utils` e a tabela de
+    ferramentas de medição.
+  - Link para `docs/ARCHITECTURE.md` e para `jvscribe/results/`.
+  - Declarados os limites: 8 kHz e call center seguem `[DESCONHECIDO]`, e o modelo **não é
+    streaming**.
+- `test_pipeline_layout.py` passa a exercitar também os entrypoints que o README documenta
+  (`live_transcribe`, `runtime_bench`, `stress_test`, `compare_models`, `finetune_smoke`).
+  Comando documentado que não roda é a mesma classe de falha que link quebrado.
+
+
 ### Added
 - **`docs/ARCHITECTURE.md` — arquitetura do modelo e do motor de inferência.** Todo número foi
   extraído do artefato ou do código, não da memória: estrutura via `onnx.load` e `state_dict`;

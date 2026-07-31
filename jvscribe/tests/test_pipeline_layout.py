@@ -151,6 +151,14 @@ def test_entrypoints_de_pipeline_rodam_standalone():
         "batch/batch_transcribe.py",
         "batch/decode_onnx_local.py",
         "batch/bench_rtfx.py",
+        # Entrypoints que o README raiz documenta no quickstart. Comando documentado que não
+        # roda é a mesma classe de falha que link quebrado — e o README já teve 5 de 5 links
+        # apontando para o vazio.
+        "realtime/live_transcribe.py",
+        "tools/runtime_bench.py",
+        "tools/stress_test.py",
+        "tools/compare_models.py",
+        "tools/finetune_smoke.py",
     ):
         script = TRAIN / rel
         if not script.exists():
