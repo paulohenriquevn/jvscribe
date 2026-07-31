@@ -325,16 +325,16 @@ modelo é ambíguo.
 
 **Definition of done:**
 
-- [ ] **Artefato canônico declarado** — `models/current/` (symlink ou manifesto) apontando o export vigente, com `model_card.json` (sha256, `vocab_size`, WER medido, data, proveniência de treino). Nenhum peso removido no processo
-- [ ] **Fail-fast de vocabulário** — `AsrEngine::load` (Rust) e o lado Python validam `vocab_size` do `tokens.txt` contra a dimensão de saída do modelo; apontar para o diretório errado falha alto em vez de transcrever errado
-- [ ] **`JVSCRIBE_MODEL_DIR` nos dois lados** — eliminado o caminho absoluto de `jvscribe/batch/eval_public_hf.py:15`
-- [ ] **`jvscribe/common/`** com `ctc.py` e `text.py`, consolidando as 7 implementações de colapso CTC e as 5 `normalize_ptbr`; guarda de layout alterada de "nenhum import cross-pipeline" para "cross-pipeline apenas a partir de `common/`"
-- [ ] **Teste de conformidade CTC cross-language** entre `common/ctc.py` e `macaw-asr::ctc_greedy`, no mesmo padrão do golden `kaldi_fbank_golden_test.rs`
-- [ ] **`.gitignore` corrigido** — linhas 57-58 (`*.wav`, `*.f32`) removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` e `crates/macaw-audio/tests/fixtures/` deixaram de ser ignoradas
-- [ ] **CI verde** — `cargo test --workspace` + `scripts/test_report.sh` (falhando se o nº de SKIPs subir) + `pytest jvscribe/tests scripts/tests`, rodando em runner limpo
-- [ ] **`LICENSE` Apache-2.0** na raiz (os 3 crates já declaram a licença sem arquivo que a sustente) e `rust-toolchain.toml` fixando a versão
-- [ ] **Grupo A da lista de remoção executado** — 89.874 linhas de dumps/código sem caller, conforme `system-design-output/target_architecture.md` § 4; Grupo B **arquivado, não apagado**
-- [ ] **README e citações mortas** — tabela "Como navegar" apontando para o que existe; sweep das 50 citações a `PRD.md`/`knowledge-base/` em 34 arquivos; endpoint `/m1` de `app.rs:501` corrigido ou removido (hoje engole ENOENT com `unwrap_or_default()`)
+- [x] **Artefato canônico declarado** — `models/current/` (symlink ou manifesto) apontando o export vigente, com `model_card.json` (sha256, `vocab_size`, WER medido, data, proveniência de treino). Nenhum peso removido no processo
+- [x] **Fail-fast de vocabulário** — `common/artifact.py::validar_par_modelo_vocabulario` compara o `tokens.txt` (inclusive o passado via `--tokens`) com o `vocab_fingerprint` do `model_card.json`; os 4 entrypoints chamam, com guarda de fiação. Validação por FINGERPRINT, não por contagem — as duas gerações têm 500 tokens. O lado Rust saiu do escopo com a remoção do runtime (2026-07-30)
+- [x] **`JVSCRIBE_MODEL_DIR`** — eliminado o caminho absoluto de `jvscribe/batch/eval_public_hf.py:15`
+- [x] **`jvscribe/common/`** com `ctc.py` e `text.py`, consolidando as 7 implementações de colapso CTC e as 5 `normalize_ptbr`; guarda de layout alterada de "nenhum import cross-pipeline" para "cross-pipeline apenas a partir de `common/`"
+- [~] **Conformidade CTC cross-language** — **NÃO APLICÁVEL** desde a remoção do runtime Rust (2026-07-30): não há segunda linguagem a conferir. Substituído por `tests/test_ctc_equivalence.py`, que compara o kernel contra uma referência independente e PROÍBE que as cópias voltem. O golden do fingerprint de vocabulário (medido pelo Rust) sobrevive congelado em `test_make_model_card.py`
+- [x] **`.gitignore` corrigido** — linhas 57-58 (`*.wav`, `*.f32`) removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` e `crates/macaw-audio/tests/fixtures/` deixaram de ser ignoradas
+- [~] **CI verde** — `pytest jvscribe/tests` verde em runner limpo. `cargo test --workspace` **NÃO APLICÁVEL** (sem crates desde 2026-07-30); `scripts/tests` não existe mais (pasta reorganizada)
+- [x] **`LICENSE` Apache-2.0** na raiz. `rust-toolchain.toml` **NÃO APLICÁVEL** (sem Rust)
+- [x] **Grupo A da lista de remoção executado** — 89.874 linhas de dumps/código sem caller, conforme `system-design-output/target_architecture.md` § 4; Grupo B **arquivado, não apagado**
+- [x] **README e citações mortas** — tabela "Como navegar" apontando para o que existe; sweep das 50 citações a `PRD.md`/`knowledge-base/` em 34 arquivos; endpoint `/m1` de `app.rs:501` corrigido ou removido (hoje engole ENOENT com `unwrap_or_default()`)
 
 **Dependencies:** M5 (o artefato de modelo a canonizar precisa existir; M5 está `[~]` — 2/3 DoDs, com o telefônico deferido, e o export já existe).
 

@@ -13,6 +13,80 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **RNF-04 exercitado pela primeira vez — soak de 30 min** (`wiki/medicoes/m6-soak-30min-rnf04.md`).
+  Nenhuma corrida do projeto tinha chegado a 30 minutos; `RNF-04`/`RNF-05` eram `[DESCONHECIDO]`
+  por ausência de dado. A corrida **não** fecha o RNF-04 (a máquina hospeda a sessão do usuário
+  e o load ficou entre 5 e 14 — `asr-evidence-discipline.md` § 5), mas fecha duas perguntas que
+  estavam abertas junto e **não dependem de tempo de relógio**: o motor **não vaza memória** em
+  30 min (RSS em platô) e o **teto de estado do motor segura** (`commit = 64` constante nos 30
+  minutos, em ambos os canais — antes havia só teste de unidade).
+- **WER do FLEURS re-medido com a régua canônica: 16,14% → 15,83%** `[MEDIDO]`
+  (`wiki/medicoes/benchmarks-publicos.md`, n=100, 2.552 palavras-ref).
+
+### Fixed
+- **`stress_test.py` emitia veredito de RNF sem olhar a carga.** A corrida de 30 min produziu
+  "RNF-04: FALHA" com o load entre 5 e 14 — um veredito autoritativo tirado de dado que a
+  própria disciplina do projeto rejeita, e a ferramenta que emite o veredito era a única cega
+  (o `calibrate.py` avisa acima de 1,0 desde sempre). Agora registra a carga por janela, marca
+  `INDETERMINADO (carga)` acima do limiar e devolve **exit 2** — indeterminado não é reprovado,
+  para que um CI ocupado não vire "regressão de produto".
+
+### Added
+- **Fail-fast do par (modelo, vocabulário) — DoD#2 de M9, que estava aberto.** Nenhum dos 4
+  entrypoints validava o `tokens.txt` contra o modelo. É o defeito mais perigoso do projeto
+  porque a saída é português **plausível**: sem exceção, sem caractere estranho, só um WER pior
+  inexplicável. `common/artifact.py::validar_par_modelo_vocabulario` compara pelo
+  `vocab_fingerprint` do `model_card.json` — **nunca pela contagem**, já que as duas gerações
+  têm 500 tokens e 492 dos 500 ids divergem. Cobre também o `--tokens` passado à mão, que é
+  onde o erro é mais provável. Provado contra o caso real: rejeita o vocabulário M4
+  (`4e145aad`) sobre o modelo M5 (`9fcb45e4`). Guarda de fiação impede que um entrypoint novo
+  esqueça de chamar.
+
+### Fixed
+- **`eval_runtime_wer.py` e `analyze_error_composition.py` mediam WER com a régua de TREINO.**
+  Ela **preserva** acento, então cada acento errado contava como palavra errada. `[MEDIDO]`:
+  numa frase em que só o acento difere, a régua de treino dá **62,5%** de WER onde a canônica
+  dá **0%**. ⚠️ **O WER de runtime publicado (29,92%) precisa ser re-medido** — não é
+  comparável com nenhum número medido pela canônica. A régua de treino continua correta e
+  agora exclusiva de `prep_icefall.py`, que prepara o corpus.
+- **WER de call center passou a usar a régua única do projeto.** `measure_callcenter.py` tinha
+  normalização própria que **preservava acento**, enquanto a régua canônica remove — o mesmo
+  defeito já corrigido em `eval_public_hf.py`. ⚠️ **O WER de call center publicado precisa ser
+  re-medido**: o número anterior não é comparável com os demais recortes. A limpeza específica
+  do domínio (máscaras de PII, marcador `⚠️`) foi preservada, agora compondo com a canônica.
+- **Dois probes voltaram a rodar por linha de comando.** `tta_feature_align_probe.py` e
+  `blank_penalty_probe.py` apontavam para `jvscribe/scripts/`, pasta extinta na reorganização —
+  quebravam em `ModuleNotFoundError` no único modo de uso que têm. Uma entrada morta em
+  `sys.path` não levanta erro, então a suíte seguia verde (o `conftest.py` cobria o import).
+- **`tta_feature_align_probe.py` levantava `NameError`** ao imprimir o resultado, depois de todo
+  o decode das 3 condições — a parte cara do probe.
+- **`measure_realcodec.py` não depende mais de `/workspace` hardcoded.** `codec_pool` e
+  `telephone_channel` são resolvidos no próprio repositório; a recipe do icefall virou
+  `--icefall-root` / `ICEFALL_ROOT`, com erro que diz o que configurar.
+- **`baseline_fleurs_ptbr.py` estava quebrado** — apontava para `jvscribe/scripts/telephone_augment.sh`,
+  pasta extinta, e a constante `REPO` na verdade resolvia para `jvscribe/`. É o módulo que
+  produziu o baseline de M1.
+- **`run_zipformer_ctc.sh` engolia falha de decode** com `|| true`: um decode quebrado dava
+  script com exit 0 e nenhum WER — silêncio num script de MEDIÇÃO. Agora cada falha aparece,
+  as duas variantes de averaging seguem independentes, e ausência total de `%WER` é erro.
+- **`prep_tagarela.py` contava bug de programação como "áudio corrompido"** (`except Exception`
+  sobre `sf.read`), descartando dado do corpus de TREINO em silêncio. Estreitado para
+  `sf.LibsndfileError`; perda acima de 5% do total agora falha alto (shard truncado no
+  download seguiria montando corpus com o que sobrou).
+- **`ICEFALL_ROOT` configurável** em `run_ft_codec.sh` e `run_ft_freeze.sh`, mesma convenção de
+  `measure_realcodec.py`.
+- **Fallback de codec deixou de engolir bug real.** `except Exception` em `codec_pool.py` trocava
+  o codec aplicado ao **dado de treino** em silêncio quando qualquer defeito ocorria; agora só a
+  família "backend indisponível" (`ImportError`/`RuntimeError`/`OSError`) cai para ffmpeg, e
+  avisando.
+
+### Added
+- **`tests/test_sys_path_vivo.py`** — nenhuma entrada de `sys.path` pode apontar para diretório
+  inexistente, e os probes standalone são verificados **em subprocesso** (dentro do pytest eles
+  herdariam o path do `conftest.py` e passariam mesmo quebrados).
+- Testes de que o fallback de codec propaga defeito de programação e avisa ao cair para ffmpeg.
+
 ### Removed
 - **`jvscribe/results/` removida.** Eram 933 MB, dos quais **927 MB não eram resultado**:
   6 pesos de modelo da geração M4 e 407 MB de áudio FLEURS. O conhecimento real eram 20
@@ -97,7 +171,8 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   479.545 linhas restantes: o que sustenta o número da ablação são os `recogs-*`, dos quais
   WER e CER são recomputáveis.
   Diretório: 56 MB → 1,3 MB. Documentado em
-  `wiki/medicoes/m4-phoneme-ablation/README.md`.
+  `wiki/medicoes/m4-cabeca-de-fonema-no-medium.md` (os `recogs-*` em
+  `wiki/medicoes/dados-brutos/`).
 
 ### Added
 - Regra no `.gitignore` para `train_*.log` — logs de treino brutos não são versionados; versione
@@ -401,10 +476,10 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 
 ### Added
-- **`models/finetune/` — tudo para retomar o treino dos dois modelos M5, em um lugar só.**
+- **`models/current/finetune/` — tudo para retomar o treino dos dois modelos M5, em um lugar só.**
   Renomeado de `backup/` (nome que não dizia para que servia) e completado com `tokens.txt` +
   dois READMEs: `models/README.md` (qual é o oficial e por quê) e
-  `models/m5-final-medium-phoneme/finetune/README.md` (comandos de retomada, as quatro flags
+  `models/current/finetune/README.md` (comandos de retomada, as quatro flags
   de arquitetura obrigatórias, e as armadilhas já pagas — LR de cabeça fresca, fp16 colapsando,
   full-FT com codec-aug colapsando o greedy).
 
@@ -447,7 +522,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   deliverable final de M5. Removidos `m0-borrowed` + `m0-borrowed-hf` (2,4 GB — o modelo
   emprestado que só o runtime Rust removido usava), `m4-final-medium-phoneme` (1,3 GB) e
   `m4-final-phoneme-small` (453 MB). Cada remoção foi precedida de verificação por hash: os
-  pesos de `m4-*` têm duplicata em `wiki/medicoes/onnx`.
+  pesos de `m4-*` têm duplicata em `models/m4-legacy-onnx/`.
   **Perda real registrada:** `m4-final-phoneme-small/model.fp32.onnx` (88 MB) era o único peso
   sem duplicata em outro lugar. `models/` é gitignored — não volta.
 - Cópias byte-idênticas de `decode_onnx_local.py` e `mic_transcribe.py` que viviam dentro do
@@ -455,7 +530,7 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 - **O artefato canônico apontava para o modelo errado.** `models/current` resolvia para
-  `wiki/medicoes/onnx`, cujo `model.int8.onnx` é o *small* de 27 MB (hash `6fbe9f05`) — não
+  o diretório da geração M4 (hoje `models/m4-legacy-onnx/`), cujo `model.int8.onnx` NÃO é
   o M5. É exatamente o defeito que M9 foi construído para impedir, e estava ativo. Agora
   aponta para `m5-final-medium-phoneme`, com `model_card.json` gerado (fingerprint
   `9fcb45e4…`, 500 tokens emitíveis).
