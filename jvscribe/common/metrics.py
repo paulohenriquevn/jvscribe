@@ -40,6 +40,7 @@ from __future__ import annotations
 import ast
 import random
 import re
+from pathlib import Path
 
 
 def word_edit_distance(ref: list[str], hyp: list[str]) -> int:
@@ -176,3 +177,21 @@ def paired_bootstrap(
         "dod_threshold": dod_threshold, "p_ge_thr_pct": 100.0 * n_ge_thr / n_boot,
         "n_utt": n, "n_boot": n_boot, "seed": seed,
     }
+
+
+def find_test_parquet() -> Path:
+    """Localiza o parquet do FLEURS pt_br test no cache local do HuggingFace.
+
+    Mora aqui — e não num harness específico — porque `eval/` e `probes/` precisam do MESMO
+    test set. Enquanto vivia em `eval_runtime_wer.py`, o probe importava cross-pipeline para
+    alcançá-lo, furando a regra "cross-pipeline apenas a partir de common/".
+    """
+    cands = list(
+        Path.home().glob(
+            ".cache/huggingface/hub/datasets--google--fleurs/snapshots/*/"
+            "parquet-data/pt_br/test-*.parquet"
+        )
+    )
+    if not cands:
+        raise SystemExit("parquet de teste FLEURS pt_br não encontrado no cache HF local")
+    return sorted(cands)[0]

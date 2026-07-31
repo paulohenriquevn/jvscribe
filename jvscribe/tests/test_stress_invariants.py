@@ -6,7 +6,7 @@ Estes testes alimentam o motor com MUITO áudio sem tocar em modelo nem hardware
 que o estado permanece limitado.
 
 São rápidos de propósito (áudio sintético, sem inferência) para caberem em CI. O soak real,
-com modelo e relógio de parede, é `jvscribe/tools/stress_test.py`.
+com modelo e relógio de parede, é `jvscribe/bench/stress_test.py`.
 """
 import sys
 from pathlib import Path
@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "jvscribe" / "realtime"))
+sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
 pytest.importorskip("lhotse")
 
@@ -172,7 +172,7 @@ def test_stress_test_registra_carga_e_recusa_veredito_contaminado():
     import ast
     import pathlib
 
-    fonte = (pathlib.Path(__file__).resolve().parents[1] / "tools" / "stress_test.py")
+    fonte = (pathlib.Path(__file__).resolve().parents[1] / "bench" / "stress_test.py")
     src = fonte.read_text(encoding="utf-8")
 
     assert "getloadavg" in src, "não registra a carga durante o soak"
@@ -202,7 +202,7 @@ def test_soak_indeterminado_nao_reprova_como_falha():
     """
     import pathlib
 
-    src = (pathlib.Path(__file__).resolve().parents[1] / "tools" / "stress_test.py").read_text(
+    src = (pathlib.Path(__file__).resolve().parents[1] / "bench" / "stress_test.py").read_text(
         encoding="utf-8"
     )
     assert "return 2" in src, "indeterminado precisa de código de saída próprio"

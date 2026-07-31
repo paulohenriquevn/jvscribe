@@ -31,7 +31,7 @@ O caso mais claro é **métrica WER/CER**: seis arquivos, três pastas, um só c
 tools/wer_core.py          20 LoC   distância de edição (o numerador)
 tools/bootstrap_wer_ci.py 109 LoC   IC bootstrap pareado
 tools/cer_from_recogs.py   91 LoC   CER a partir de recogs do icefall
-tools/compare_models.py   115 LoC   compara dois modelos na mesma régua
+eval/compare_models.py   115 LoC   compara dois modelos na mesma régua
 eval/eval_wer.py          112 LoC   WER com IC95 bootstrap
 common/stats.py            98 LoC   comparação pareada, recusa veredito sem separação
 ```
@@ -110,7 +110,7 @@ tools → realtime stress_test.py          → streaming
 de M3), e por isso três pipelines furam a fronteira para alcançá-lo.
 
 Mesmo caso de `streaming.py`: é o motor de decodificação incremental, não um detalhe de
-`realtime/` — `tools/stress_test.py` precisa dele para medir.
+`realtime/` — `bench/stress_test.py` precisa dele para medir.
 
 ---
 

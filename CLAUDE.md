@@ -86,7 +86,7 @@ falantes (M7). `sounddevice` não serve — expõe zero monitor sources; daí o 
 
 **O que precisa ser remedido ao trocar de hardware**: contagem de threads (sai da topologia) e
 janela de decode (sai da ocupação de CPU). Procedimento em `docs/CALIBRATION.md`; ferramenta em
-`jvscribe/tools/calibrate.py`.
+`jvscribe/bench/calibrate.py`.
 
 | alavanca | ganho | estado |
 |---|---|---|

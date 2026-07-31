@@ -124,5 +124,5 @@ EOF
 perf stat -e cycles,instructions,cache-references,cache-misses \
   taskset -c 0-3 python3 <carga> 15 2
 
-python3 jvscribe/tools/stress_test.py --audio-dir <wavs> --minutos 1 --canais 2 --threads 2
+python3 jvscribe/bench/stress_test.py --audio-dir <wavs> --minutos 1 --canais 2 --threads 2
 ```

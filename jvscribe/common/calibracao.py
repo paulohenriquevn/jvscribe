@@ -10,7 +10,7 @@ canais e qual hop, devolve a maior janela que cabe no orçamento de CPU.
 **Maior é melhor**, não menor: mais janela dá mais contexto ao LocalAgreement-2 para confirmar
 palavra. A busca é pelo teto que ainda cabe, não pelo mais rápido.
 
-Quem mede a curva é `jvscribe/tools/calibrate.py`; quem a consome em produção é o
+Quem mede a curva é `jvscribe/bench/calibrate.py`; quem a consome em produção é o
 `live_transcribe`.
 """
 from __future__ import annotations

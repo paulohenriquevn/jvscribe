@@ -15,7 +15,7 @@ O alinhamento é GLOBAL (um transform por domínio, estimado do stream), NÃO pe
 sem vazamento de oráculo. Reusa normalize_ptbr, word_edit_distance, paired_bootstrap e
 apply_telephone_channel (Regra 9). CPU-only, sem GPU.
 
-Uso: python3 jvscribe/tools/tta_feature_align_probe.py [--n 150] [--model <int8.onnx>]
+Uso: python3 jvscribe/probes/tta_feature_align_probe.py [--n 150] [--model <int8.onnx>]
 """
 import argparse
 import io
@@ -33,11 +33,12 @@ REPO = Path(__file__).resolve().parent.parent.parent
 # Sob pytest o `jvscribe/conftest.py` já expõe as pipelines; rodando standalone (o modo de
 # uso deste probe) ele não roda, então o path é montado aqui. As entradas apontavam para
 # `jvscribe/scripts` e `scripts/corpus` — pastas que deixaram de existir na reorganização, o
-# que quebrava `python3 jvscribe/tools/tta_feature_align_probe.py` em ModuleNotFoundError.
+# que quebrava `python3 jvscribe/probes/tta_feature_align_probe.py` em ModuleNotFoundError.
 _PKG = Path(__file__).resolve().parents[1]
-for _pipe in ("tools", "common"):
+for _pipe in ("probes", "common"):
     sys.path.insert(0, str(_PKG / _pipe))
-from eval_runtime_wer import normalize_ptbr, find_test_parquet  # noqa: E402
+from metrics import find_test_parquet  # noqa: E402
+from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 from audio.channel import apply_telephone_channel  # noqa: E402
 import ctc  # noqa: E402  — shared kernel

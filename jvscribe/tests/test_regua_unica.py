@@ -32,7 +32,7 @@ ISENTOS_NORM = {"text.py"}
 
 
 def _fontes_de_producao():
-    for d in ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools"):
+    for d in ('common', 'corpus', 'finetune', 'batch', 'realtime', 'eval', 'bench', 'probes', 'audit'):
         yield from sorted((PKG / d).glob("*.py"))
 
 

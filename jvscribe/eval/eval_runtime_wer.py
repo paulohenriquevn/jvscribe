@@ -5,7 +5,7 @@
 em 2026-07-30 (`feat!: remove o runtime Rust; jvscribe passa a ser Python-only`) e existe só
 no histórico do git. O script fica porque é a **proveniência** do WER de runtime publicado
 (29,92%, n=470) e porque seus helpers continuam em uso: `normalize_ptbr` e
-`find_test_parquet` são importados por `tools/tta_feature_align_probe.py` e pelos testes.
+`find_test_parquet` são importados por `probes/tta_feature_align_probe.py` e pelos testes.
 
 O que ele fazia: extrai N utterances do FLEURS pt_br test (cache local HF), roda CADA UMA
 pelo runtime (wav → kaldi_fbank → transcribe) e computa o WER real contra a referência
@@ -13,7 +13,7 @@ normalizada com a MESMA régua do treino. Compara com o decode Python do icefall
 FLEURS test completo) — a equivalência que importa: o runtime degrada a acurácia?
 
 Uso (histórico):
-    python3 jvscribe/tools/eval_runtime_wer.py --n 50
+    python3 jvscribe/eval/eval_runtime_wer.py --n 50
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ CLI = REPO / "target" / "release" / "macaw-cli"   # binário do runtime removido
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 from artifact import default_model_path  # noqa: E402  — resolvedor canônico de artefato
-from metrics import word_edit_distance  # noqa: E402  — Levenshtein puro (Regra 9 / DRY)
+from metrics import find_test_parquet, word_edit_distance  # noqa: E402
 # Este módulo MEDE WER → régua de COMPARAÇÃO (remove acento). Não confundir com
 # `finetune/prep_icefall.py`, que prepara o CORPUS DE TREINO e por isso usa
 # `normalize_train_target` (preserva acento — o modelo precisa aprender a acentuar).
@@ -42,18 +42,6 @@ from metrics import word_edit_distance  # noqa: E402  — Levenshtein puro (Regr
 # onde a régua canônica dá 0% `[MEDIDO]` — o WER de runtime publicado (29,92%) saiu daí e
 # NÃO é comparável com os números medidos pela canônica.
 from text import normalize_for_wer_compare as normalize_ptbr  # noqa: E402
-
-
-def find_test_parquet() -> Path:
-    cands = list(
-        Path.home().glob(
-            ".cache/huggingface/hub/datasets--google--fleurs/snapshots/*/"
-            "parquet-data/pt_br/test-*.parquet"
-        )
-    )
-    if not cands:
-        raise SystemExit("parquet de teste FLEURS pt_br não encontrado no cache HF local")
-    return sorted(cands)[0]
 
 
 def main() -> None:

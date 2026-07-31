@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "jvscribe" / "tools"))
+sys.path.insert(0, str(REPO / "jvscribe" / "eval"))
 sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
 from compare_models import _bootstrap_ic, _carregar, _wer_cer  # noqa: E402

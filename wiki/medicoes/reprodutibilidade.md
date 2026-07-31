@@ -37,7 +37,7 @@ RTFx medido em 40,0× (1.367,8 s de áudio em 34,2 s). O piso do RNF-07 é 6×.
 
 ### H2, H3, H4 — o checkpoint é finetunável `[MEDIDO]`
 
-`jvscribe/tools/finetune_smoke.py` sobre `finetune/avg-124k-112k.pt`, 6 utterances reais do
+`jvscribe/bench/finetune_smoke.py` sobre `finetune/avg-124k-112k.pt`, 6 utterances reais do
 FLEURS com transcrição humana, tokenizadas pelo `bpe.model` publicado. CPU, venv limpo.
 
 ```
@@ -104,7 +104,7 @@ locais — que é a única forma de a reprodutibilidade significar algo.
 python3 jvscribe/batch/batch_transcribe.py --input-dir <wavs> --out-dir <saida> --threads 4
 
 # finetuning (venv limpo; icefall clonado; stub de k2 — ver Limitações)
-<venv>/bin/python jvscribe/tools/finetune_smoke.py \
+<venv>/bin/python jvscribe/bench/finetune_smoke.py \
   --checkpoint models/current/finetune/avg-124k-112k.pt \
   --bpe        models/current/finetune/bpe.model \
   --audio-dir <wavs> --refs <refs.tsv> \

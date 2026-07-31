@@ -6,7 +6,7 @@ Existe porque "qual modelo é melhor" foi decidido por nome mais de uma vez nest
 confiança por bootstrap, para que a comparação diga se a diferença é real ou ruído.
 
 Uso:
-    python3 jvscribe/tools/compare_models.py \\
+    python3 jvscribe/eval/compare_models.py \\
         --refs refs.tsv --hyps-a dirA --hyps-b dirB --label-a "small 27MB" --label-b "medium 68MB"
 
 Formato de `refs.tsv`: `<id>\\t<transcrição de referência>` por linha, onde `<id>` casa com o

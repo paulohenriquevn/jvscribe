@@ -33,7 +33,7 @@ com a **mesma `normalize_ptbr` do treino**.
 > conclusão "o runtime não degrada" não depende de qual régua foi usada.
 >
 > **Não é re-medível:** o runtime Rust foi removido do repositório em 2026-07-30 (commit
-> 266253f). Reproduzir exige checkout do commit anterior. `jvscribe/tools/eval_runtime_wer.py`
+> 266253f). Reproduzir exige checkout do commit anterior. `jvscribe/eval/eval_runtime_wer.py`
 > já foi corrigido para a canônica, então uma re-medição futura daria número diferente **e
 > correto**.
 

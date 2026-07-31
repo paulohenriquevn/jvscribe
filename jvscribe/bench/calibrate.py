@@ -15,8 +15,8 @@ i7. Num CPU mais fraco, 6 s também satura; num mais forte, dá para usar mais c
 acurácia. Herdar a constante é pior que medir.
 
 Uso:
-    python3 jvscribe/tools/calibrate.py --audio <wav> [--canais 2] [--hop 0.5] [--reps 7]
-    python3 jvscribe/tools/calibrate.py --audio <wav> --json config.json
+    python3 jvscribe/bench/calibrate.py --audio <wav> [--canais 2] [--hop 0.5] [--reps 7]
+    python3 jvscribe/bench/calibrate.py --audio <wav> --json config.json
 
 ⚠️ Rode com a máquina **ociosa**. Sob carga a medição não separa — comprovado: a mesma
 configuração deu RTFx 3,51× / 2,90× / 2,82× / 2,50× com a máquina em load 3–4.

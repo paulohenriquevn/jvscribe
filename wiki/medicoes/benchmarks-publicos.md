@@ -29,7 +29,7 @@ acento errado contava como palavra inteira errada. Δ = **−0,31 p.p.**
 > ⚠️ **O RTFx desta tabela não vale como medição.** Ambos os valores foram obtidos com a
 > máquina sob carga (load 1,7–5,1 durante a re-medição) — `asr-evidence-discipline.md` § 5:
 > "máquina sob carga não mede". WER é determinístico e não sofre com isso; RTFx sofre. Para
-> RTFx use `jvscribe/tools/runtime_bench.py` (pareado, round-robin) em máquina ociosa.
+> RTFx use `jvscribe/bench/runtime_bench.py` (pareado, round-robin) em máquina ociosa.
 
 **Leitura:** em áudio de **boa qualidade banda-larga** (perfil de 128 kbps), o modelo entrega
 ~16% WER — melhor que os 23% de fala espontânea (CORAA) e muito abaixo do telefônico 8 kHz

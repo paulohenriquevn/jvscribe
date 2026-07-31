@@ -15,7 +15,7 @@ O que ele afirma, e como prova cada afirmação:
 3. **O gradiente flui e o treino desce** — N passos de Adam com a loss caindo.
 
 Uso:
-    python3 jvscribe/tools/finetune_smoke.py \\
+    python3 jvscribe/bench/finetune_smoke.py \\
         --checkpoint models/current/finetune/avg-124k-112k.pt \\
         --bpe models/current/finetune/bpe.model \\
         --audio-dir <wavs> --refs <refs.tsv> --icefall <caminho do clone> [--steps 12]

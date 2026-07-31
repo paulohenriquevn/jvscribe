@@ -95,7 +95,7 @@ def test_todos_os_entrypoints_resolvem_o_MESMO_modelo_canonico():
     """
     import importlib
 
-    sys.path.insert(0, str(REPO / "jvscribe" / "realtime"))
+    sys.path.insert(0, str(REPO / "jvscribe" / "common"))
     from batch_transcribe import _default_model_path
 
     canonico = Path(_default_model_path())

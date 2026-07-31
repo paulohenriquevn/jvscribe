@@ -53,7 +53,7 @@ Só o `checkpoint-124000.pt` serve, porque só ele tem `optimizer`/`scheduler`. 
 ## Verificar que um checkpoint é utilizável
 
 ```bash
-python3 jvscribe/tools/finetune_smoke.py --checkpoint <pt> --bpe <bpe.model> \
+python3 jvscribe/bench/finetune_smoke.py --checkpoint <pt> --bpe <bpe.model> \
     --audio-dir <wavs> --refs <refs.tsv> --icefall <clone> --k2stub <stub>
 ```
 

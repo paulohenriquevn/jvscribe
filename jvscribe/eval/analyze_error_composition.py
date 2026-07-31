@@ -3,7 +3,7 @@
 
 ⚠️ O `main()` depende do runtime Rust, REMOVIDO deste repositório em 2026-07-30 (commit
 266253f). O módulo fica pela proveniência da medição e porque `normalize_ptbr` continua
-importada pelos testes. Ver `tools/eval_runtime_wer.py` para o mesmo caso, documentado.
+importada pelos testes. Ver `eval/eval_runtime_wer.py` para o mesmo caso, documentado.
 
 Testa empiricamente a ideia (Paulo, 2026-07-26): "se a palavra existe em PT-BR não
 mexe; se não existe, corrige". Classifica cada erro de substituição do runtime contra
@@ -16,7 +16,7 @@ um dicionário PT-BR (hashmap = /usr/share/dict/brazilian ∪ hunspell), medindo
 
 Alinhamento por difflib (stdlib). Transcrição pelo runtime real (macaw-cli). `[MEDIDO]`.
 
-Uso (histórico): ORT_DYLIB_PATH=... python3 jvscribe/tools/analyze_error_composition.py --n 100
+Uso (histórico): ORT_DYLIB_PATH=... python3 jvscribe/eval/analyze_error_composition.py --n 100
 """
 from __future__ import annotations
 

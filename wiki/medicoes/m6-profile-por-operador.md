@@ -185,10 +185,10 @@ so = ort.SessionOptions(); so.enable_profiling = True
 EOF
 
 # varredura de configuração com bootstrap pareado
-python3 jvscribe/tools/runtime_bench.py --audio <wav> --janela 6 --reps 25
+python3 jvscribe/bench/runtime_bench.py --audio <wav> --janela 6 --reps 25
 
 # soak com o modelo real
-python3 jvscribe/tools/stress_test.py --audio-dir <wavs> --minutos 30
+python3 jvscribe/bench/stress_test.py --audio-dir <wavs> --minutos 30
 ```
 
 ## Fontes

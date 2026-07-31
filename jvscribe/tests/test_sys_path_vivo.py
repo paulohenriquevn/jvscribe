@@ -5,7 +5,7 @@ isso o defeito é silencioso: sob pytest o `jvscribe/conftest.py` cobre todas as
 suíte fica verde, enquanto o mesmo script executado standalone quebra em
 `ModuleNotFoundError`. Foi exatamente o que a reorganização de pastas produziu — `scripts/` e
 `jvscribe/scripts/` deixaram de existir e 14 entradas continuaram apontando para elas, com
-`jvscribe/tools/tta_feature_align_probe.py` e `blank_penalty_probe.py` quebrados no modo de
+`jvscribe/probes/tta_feature_align_probe.py` e `blank_penalty_probe.py` quebrados no modo de
 uso deles (linha de comando) sem que nenhum teste falhasse.
 
 Guarda estrutural: varre a AST em vez do texto, e ordena os literais pela POSIÇÃO no código —

@@ -18,7 +18,7 @@ mas numa ferramenta cujo propósito É rigor de método, descrever o método err
 mais caro possível: quem lesse o docstring citaria a técnica errada num artefato de decisão.
 
 Uso:
-    python3 jvscribe/tools/runtime_bench.py --audio <wav> [--janela 6] [--reps 15]
+    python3 jvscribe/bench/runtime_bench.py --audio <wav> [--janela 6] [--reps 15]
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "realtime"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path  # noqa: E402
 from stats import comparar_pareado  # noqa: E402

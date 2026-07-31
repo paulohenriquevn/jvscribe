@@ -51,7 +51,7 @@ existe para que boost por núcleo **não** conte como hibridez.
 ### 2. Meça a curva de custo e obtenha a janela
 
 ```bash
-python3 jvscribe/tools/calibrate.py \
+python3 jvscribe/bench/calibrate.py \
     --audio <um wav de 16 kHz> --canais 2 --hop 0.5 --json config-<maquina>.json
 ```
 
@@ -68,7 +68,7 @@ hop maior ou hardware com mais folga.
 ### 3. Confirme os parâmetros de sessão do ONNX
 
 ```bash
-python3 jvscribe/tools/runtime_bench.py --audio <wav> --janela <a do passo 2> --reps 25
+python3 jvscribe/bench/runtime_bench.py --audio <wav> --janela <a do passo 2> --reps 25
 ```
 
 Compara arena, `inter_op`, contagem de threads e nível de otimização de grafo com **bootstrap
@@ -81,7 +81,7 @@ pareado**. Só declara vencedor quando o IC95% do delta não cruza zero — se s
 ### 4. Valide sob carga sustentada
 
 ```bash
-python3 jvscribe/tools/stress_test.py \
+python3 jvscribe/bench/stress_test.py \
     --audio-dir <pasta de wavs> --minutos 30 --canais 2 --threads <do passo 1>
 ```
 

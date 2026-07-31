@@ -14,7 +14,7 @@ kernel existe — 6 colapsos CTC independentes que ninguém sabia que divergiam.
   jvscribe/batch/decode_onnx_local.py       greedy_ctc(log_probs, lens)              -> ids
   jvscribe/eval/measure_callcenter.py       greedy(lp, id2tok)                       -> str
   jvscribe/eval/measure_realcodec.py        greedy(logp, lens, sp)                   -> str (sp.decode)
-  jvscribe/tools/tta_feature_align_probe.py greedy(logp, id2tok)                     -> str
+  jvscribe/probes/tta_feature_align_probe.py greedy(logp, id2tok)                     -> str
   (removida) crate Rust do runtime          ctc_greedy(...)                          -> ids
 """
 import numpy as np

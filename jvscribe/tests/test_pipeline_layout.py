@@ -11,7 +11,9 @@ import pytest
 pytest.importorskip("lhotse")
 
 TRAIN = pathlib.Path(__file__).resolve().parents[1]
-PIPES = ("finetune", "batch", "realtime", "eval")
+# TODAS as pipelines — `corpus` e `tools` ficavam de fora, e foi por isso que cinco
+# violações de fronteira passaram despercebidas até a auditoria de 2026-07-31.
+PIPES = ("finetune", "batch", "realtime", "eval", "corpus", "bench", "probes", "audit")
 # `common` é o shared kernel (M9/T3.1): é o ÚNICO destino permitido para import
 # cross-pipeline. A regra ficou mais forte — antes ela era contornada por cópia, que
 # é invisível para ela (o colapso CTC acabou replicado 7×).
@@ -48,6 +50,8 @@ def test_no_duplicate_module_basenames():  # EC-5
     seen = {}
     for pipe in PIPES:
         for f in (TRAIN / pipe).glob("*.py"):
+            if f.name == "__init__.py":
+                continue          # marcador de pacote, não módulo — duplica por construção
             assert f.name not in seen, (
                 f"basename duplicado entre pipelines: {f.name} em {pipe} e {seen[f.name]}"
             )
@@ -124,10 +128,17 @@ def test_modulo_de_pipeline_nao_pode_viver_fora_da_arvore():
     # pacote do repo.
     known = {n for n in _module_home() if n != "__init__"}
     known |= {f.stem for f in (TRAIN / SHARED).glob("*.py") if f.stem != "__init__"}
+    # `.claude/` é ferramental de AGENTE (skills, hooks, plugins), não código do produto:
+    # não está em `sys.path` do jvscribe e não pode sombrear módulo nenhum. Confundir os dois
+    # fez esta guarda acusar `quality-init/scripts/lib/calibrate.py` quando `bench/calibrate.py`
+    # nasceu — um falso positivo que forçaria renomear código do produto por causa de uma skill.
+    FORA_DO_PRODUTO = (".claude/", "scripts/", "docs/")
     offenders = [
         rel
         for rel in tracked
-        if not rel.startswith("jvscribe/") and pathlib.Path(rel).stem in known
+        if not rel.startswith("jvscribe/")
+        and not rel.startswith(FORA_DO_PRODUTO)
+        and pathlib.Path(rel).stem in known
     ]
     assert not offenders, (
         "módulo de pipeline duplicado fora de jvscribe/: " + "; ".join(sorted(offenders))
@@ -155,11 +166,11 @@ def test_entrypoints_de_pipeline_rodam_standalone():
         # roda é a mesma classe de falha que link quebrado — e o README já teve 5 de 5 links
         # apontando para o vazio.
         "realtime/live_transcribe.py",
-        "tools/runtime_bench.py",
-        "tools/stress_test.py",
-        "tools/compare_models.py",
-        "tools/finetune_smoke.py",
-        "tools/calibrate.py",
+        "bench/runtime_bench.py",
+        "bench/stress_test.py",
+        "eval/compare_models.py",
+        "bench/finetune_smoke.py",
+        "bench/calibrate.py",
         # `corpus/` estava FORA desta lista, e por isso `run_pipeline.py` quebrava standalone
         # com `ModuleNotFoundError: No module named 'text_normalize_ptbr'` — o mesmo defeito
         # de M9/T3.1, num diretório que a guarda não cobria.
@@ -210,6 +221,7 @@ def test_nao_existe_pasta_lixeira_chamada_scripts():
 
 def test_cada_pipeline_declarada_existe():
     """O `conftest.py` e a realidade não podem divergir."""
-    declaradas = ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools")
+    declaradas = ("common", "corpus", "finetune", "batch", "realtime", "eval",
+                  "bench", "probes", "audit")
     faltando = [d for d in declaradas if not (TRAIN / d).is_dir()]
     assert not faltando, f"pipelines declaradas no conftest mas ausentes: {faltando}"

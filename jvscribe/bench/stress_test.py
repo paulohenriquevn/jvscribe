@@ -11,8 +11,8 @@ Alimenta N canais em paralelo no ritmo do tempo real, a partir de um diretório 
 reporta por janela de minuto: RTFx, p99 de latência, RSS e tamanho do estado do motor.
 
 Uso:
-    python3 jvscribe/tools/stress_test.py --audio-dir <wavs> --minutos 30
-    python3 jvscribe/tools/stress_test.py --audio-dir <wavs> --minutos 5 --canais 4
+    python3 jvscribe/bench/stress_test.py --audio-dir <wavs> --minutos 30
+    python3 jvscribe/bench/stress_test.py --audio-dir <wavs> --minutos 5 --canais 4
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "realtime"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "common"))
 
 from artifact import default_model_path, default_sibling  # noqa: E402
 from onnx_session import criar_sessao  # noqa: E402

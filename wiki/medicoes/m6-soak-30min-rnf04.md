@@ -22,7 +22,7 @@ Critério declarado antes da corrida (`RNF-04`): `RTFx(último) ÷ RTFx(primeiro
 ## Método
 
 ```
-python3 jvscribe/tools/stress_test.py --audio-dir data/eval/fleurs/wavs \
+python3 jvscribe/bench/stress_test.py --audio-dir data/eval/fleurs/wavs \
         --minutos 30 --canais 2 --relatorio soak30.md
 ```
 

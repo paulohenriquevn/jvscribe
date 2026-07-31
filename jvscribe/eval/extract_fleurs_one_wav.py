@@ -18,7 +18,7 @@ mesma lida em `fleurs_one.txt`) dentro do parquet de teste do FLEURS pt_br
 (cache local do `huggingface_hub`, o mesmo usado por `jvscribe/smoke/prep_fleurs.py`).
 
 Uso:
-    python3 jvscribe/tools/extract_fleurs_one_wav.py
+    python3 jvscribe/eval/extract_fleurs_one_wav.py
 """
 from __future__ import annotations
 

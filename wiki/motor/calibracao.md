@@ -2,7 +2,7 @@
 type: Runbook
 title: Calibração — o que muda ao trocar de CPU
 description: Correções algorítmicas são portáveis; contagem de threads e janela de decode não são.
-resource: jvscribe/tools/calibrate.py
+resource: jvscribe/bench/calibrate.py
 tags: [calibracao, cpu, portabilidade, runbook]
 timestamp: 2026-07-31T00:00:00Z
 ---

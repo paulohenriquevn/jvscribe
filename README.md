@@ -102,11 +102,11 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 
 | ferramenta | para quê |
 |---|---|
-| [`jvscribe/tools/runtime_bench.py`](jvscribe/tools/runtime_bench.py) | varredura de configuração do ONNX com bootstrap pareado |
-| [`jvscribe/tools/stress_test.py`](jvscribe/tools/stress_test.py) | soak com o modelo real — degradação minuto a minuto |
-| [`jvscribe/tools/finetune_smoke.py`](jvscribe/tools/finetune_smoke.py) | prova que um checkpoint carrega, codifica PT-BR e treina |
-| [`jvscribe/tools/compare_models.py`](jvscribe/tools/compare_models.py) | compara dois modelos na mesma régua, com IC |
-| [`jvscribe/tools/calibrate.py`](jvscribe/tools/calibrate.py) | **calibra o runtime para a máquina-alvo** — rode ao trocar de CPU |
+| [`jvscribe/bench/runtime_bench.py`](jvscribe/bench/runtime_bench.py) | varredura de configuração do ONNX com bootstrap pareado |
+| [`jvscribe/bench/stress_test.py`](jvscribe/bench/stress_test.py) | soak com o modelo real — degradação minuto a minuto |
+| [`jvscribe/bench/finetune_smoke.py`](jvscribe/bench/finetune_smoke.py) | prova que um checkpoint carrega, codifica PT-BR e treina |
+| [`jvscribe/eval/compare_models.py`](jvscribe/eval/compare_models.py) | compara dois modelos na mesma régua, com IC |
+| [`jvscribe/bench/calibrate.py`](jvscribe/bench/calibrate.py) | **calibra o runtime para a máquina-alvo** — rode ao trocar de CPU |
 
 ---
 

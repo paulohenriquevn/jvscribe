@@ -23,11 +23,11 @@ estágio nítido do ciclo de vida do modelo.
 
 | ferramenta | responde |
 |---|---|
-| [`tools/calibrate.py`](tools/calibrate.py) | qual janela e quantas threads nesta máquina — **rode ao trocar de CPU** |
-| [`tools/runtime_bench.py`](tools/runtime_bench.py) | qual configuração de sessão ONNX é melhor, com bootstrap pareado |
-| [`tools/stress_test.py`](tools/stress_test.py) | o RTFx do minuto 30 é o do minuto 1? (RNF-04) |
-| [`tools/compare_models.py`](tools/compare_models.py) | qual de dois modelos é melhor, com IC |
-| [`tools/finetune_smoke.py`](tools/finetune_smoke.py) | este checkpoint carrega, codifica PT-BR e treina? |
+| [`bench/calibrate.py`](bench/calibrate.py) | qual janela e quantas threads nesta máquina — **rode ao trocar de CPU** |
+| [`bench/runtime_bench.py`](bench/runtime_bench.py) | qual configuração de sessão ONNX é melhor, com bootstrap pareado |
+| [`bench/stress_test.py`](bench/stress_test.py) | o RTFx do minuto 30 é o do minuto 1? (RNF-04) |
+| [`eval/compare_models.py`](eval/compare_models.py) | qual de dois modelos é melhor, com IC |
+| [`bench/finetune_smoke.py`](bench/finetune_smoke.py) | este checkpoint carrega, codifica PT-BR e treina? |
 
 ## Convenções
 

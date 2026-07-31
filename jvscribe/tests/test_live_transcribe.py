@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "jvscribe" / "realtime"))
+sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 sys.path.insert(0, str(REPO / "jvscribe" / "common"))
 
 from live_transcribe import MetricasRNF, Transcricao, rotular  # noqa: E402

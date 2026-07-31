@@ -10,7 +10,7 @@ Varre β no test wideband E telefone e mede WER. Se o melhor β no telefone bate
 ganha um primeiro número — em contraste com o −24,6pp do alinhamento de features (DISC-05).
 
 Reusa `build_dataset` + helpers do DISC-05 (Regra 9). CPU-only, sem GPU.
-Uso: python3 jvscribe/tools/blank_penalty_probe.py [--n 150]
+Uso: python3 jvscribe/probes/blank_penalty_probe.py [--n 150]
 """
 import argparse
 import sys
@@ -22,7 +22,7 @@ import onnxruntime as ort
 REPO = Path(__file__).resolve().parent.parent.parent
 # Standalone: o `jvscribe/conftest.py` só roda sob pytest. Apontava para `jvscribe/scripts`,
 # pasta que deixou de existir — o probe quebrava em ModuleNotFoundError ao ser executado.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "probes"))
 from tta_feature_align_probe import BLANK, build_dataset, load_id2tok, wer  # noqa: E402
 from metrics import paired_bootstrap, word_edit_distance  # noqa: E402
 

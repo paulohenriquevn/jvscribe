@@ -5,8 +5,8 @@ Cinco funções chamadas `normalize_ptbr` conviviam no repo. Medido em 2026-07-3
 
   REMOVE acento  → jvscribe/common/text.py:52        (comparação de WER)
   PRESERVA acento→ jvscribe/finetune/prep_icefall.py:49      (alvo de treino)
-                   jvscribe/tools/eval_runtime_wer.py:37   (cópia idêntica, documentada)
-                   jvscribe/tools/analyze_error_composition.py:37 (cópia idêntica)
+                   jvscribe/eval/eval_runtime_wer.py:37   (cópia idêntica, documentada)
+                   jvscribe/eval/analyze_error_composition.py:37 (cópia idêntica)
 
 Enquanto as duas compartilhavam um nome, todo WER do projeto carregava uma ambiguidade
 silenciosa sobre qual régua foi usada — e comparar "35,53% telefônico" com "16,14% FLEURS"

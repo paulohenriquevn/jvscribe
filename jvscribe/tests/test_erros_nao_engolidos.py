@@ -50,7 +50,7 @@ def _handlers_largos(arquivo: Path) -> list[tuple[int, str]]:
 
 def _producao():
     # `common/audio/` é subpacote — `glob("*.py")` não desce, `rglob` sim.
-    for d in ("common", "corpus", "finetune", "batch", "realtime", "eval", "tools"):
+    for d in ('common', 'corpus', 'finetune', 'batch', 'realtime', 'eval', 'bench', 'probes', 'audit'):
         for f in sorted((PKG / d).rglob("*.py")):
             if f.name not in ISENTOS:
                 yield f
