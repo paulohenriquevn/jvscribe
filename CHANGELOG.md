@@ -54,6 +54,25 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E8 — o split substituição/deleção/inserção, medido pela primeira vez neste projeto**
+  (`wiki/medicoes/e8-composicao-do-erro-na-regua-corrigida.md`). `[MEDIDO]` FLEURS test completo
+  (n=919), régua corrigida: **substituição 68,6% · deleção 12,9% · inserção 18,5%**.
+  **Os "três terços" nunca foram terços do erro** — são terços das substituições. Somados valem
+  68,6% da massa; os outros **31,4% são inserção e deleção**, inalcançáveis por qualquer técnica de
+  *substituição* (corretor lexical, reparo fonético, biasing por palavra): para consertar inserção
+  é preciso apagar, não trocar, e o portão de confiança não enxerga deleção. Isso reprecifica todo
+  teto já calculado sobre os três terços.
+  **A régua quebrada distorcia seletivamente as duas classes que guiavam decisão:** `rare_ref` caiu
+  de 34,2% para 25,8% das substituições (um dígito não está no léxico, então toda referência com
+  número virava "palavra rara" — a classe alvo do biasing estava inflada por artefato) e inserção
+  caiu de 26,8% para 18,5% (`2005` → `dois mil e cinco` fabrica 1 substituição **+ 3 inserções**).
+  Composição corrigida, como fração do erro **total**: `real_word_hyp` 26,3% · `non_word_hyp` 24,6%
+  · **inserção 18,5%** · `rare_ref` 17,7% · **deleção 12,9%**.
+- **E8b — viés de blank contra inserção: refutado, com o mecanismo visível.** `[MEDIDO]` validação
+  n=200: o viés **funciona** como previsto — inserções caem de 100 para 58 — mas cobra em deleção
+  (78 → 142) e substituição (409 → 457) mais do que economiza. **β=0 já é o ótimo** (13,47%); todo
+  valor não-nulo piora. A calibração de blank do modelo não tem folga a explorar, e a alavanca mais
+  barata contra o balde recém-descoberto está fechada.
 - **E6 etapa 2 — beam + LM funciona, e entrega um terço do que a literatura prometia**
   (`probes/beam_lm_probe.py::beam_prefixo_lm`, `probes/lm_ngram.py`,
   `wiki/medicoes/e6-beam-lm.md`). Fusão rasa de n-grama no beam de prefixo CTC.
