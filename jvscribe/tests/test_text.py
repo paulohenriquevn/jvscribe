@@ -34,3 +34,14 @@ class TestExpansaoDeNumeros:
         """
         from text import normalize_for_wer_compare
         assert normalize_for_wer_compare("na casa dos 20 anos") == "na casa dos 20 anos"
+
+    def test_numero_grande_demais_nao_derruba_o_processo(self):
+        """Regressão: a Wikipédia tem inteiros de 20 dígitos e `num2words` levanta OverflowError.
+
+        Encontrado ao construir o corpus do LM em 2026-08-01: o processo morreu com
+        `abs(46250370042016100256) must be less than 1000000000000000000`. Capturar só
+        ValueError/NotImplementedError deixava passar. Um número que a lib recusa volta como
+        veio — apagá-lo falsearia o texto.
+        """
+        from text import expandir_numeros
+        assert expandir_numeros("id 46250370042016100256 fim") == "id 46250370042016100256 fim"

@@ -145,9 +145,11 @@ def expandir_numeros(texto: str) -> str:
     def _falar(m: "re.Match[str]") -> str:
         try:
             return num2words(int(m.group()), lang="pt_BR")
-        except (ValueError, NotImplementedError):
-            # Número que a lib recusa (grande demais, formato inesperado): devolve como veio.
-            # Engolir aqui seria pior — a alternativa é apagar o token e falsear a referência.
+        except (ValueError, NotImplementedError, OverflowError):
+            # Número que a lib recusa: devolve como veio. `OverflowError` não é hipotético — a
+            # Wikipédia tem inteiros de 20 dígitos e `num2words` recusa acima de 1e18; sem esta
+            # captura o construtor do corpus morria. Devolver o token cru é a escolha certa:
+            # apagá-lo falsearia o texto, e converter à força inventaria uma leitura.
             return m.group()
 
     # `normalize_for_wer_compare` já removeu pontuação, então só restam dígitos contíguos.

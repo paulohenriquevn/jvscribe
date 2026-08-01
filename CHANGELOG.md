@@ -37,6 +37,23 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **Corpus de texto para o LM, com a auditoria de vazamento no MESMO script**
+  (`probes/lm_corpus.py`, `data/lm/wikipedia-pt.txt`). 233.848 sentenças · **5.000.380 palavras** ·
+  137.753 tipos, da Wikipédia pt via streaming, normalizadas na régua do decoder
+  (`normalize_for_wer_compare` + `expandir_numeros`) para o LM viver no mesmo espaço das hipóteses
+  que vai pontuar. **Vazamento medido: 0 sentenças do FLEURS test** `[MEDIDO]` — o pré-registro
+  exigia que esse número fosse publicado, não afirmado, porque o FLEURS deriva do FLoRes-101, cuja
+  fonte é a Wikipédia; treinar o LM ali e avaliar em FLEURS poderia ser dar o test set ao LM.
+  Construtor e auditor são o mesmo script de propósito: separá-los permitiria treinar sem nunca
+  rodar a checagem. Limitação registrada: a detecção é por igualdade literal — sobreposição
+  **parcial** (mesma sentença com uma palavra trocada) não é detectada.
+
+### Fixed
+- **`expandir_numeros` derrubava o processo em inteiro de 20 dígitos.** A Wikipédia tem
+  `46250370042016100256`; `num2words` recusa acima de 1e18 com `OverflowError`, que não estava na
+  captura. O número volta como veio — apagá-lo falsearia o texto. Teste de regressão adicionado.
+
+### Added
 - **A régua contava acerto do modelo como erro — 2,07 p.p. do WER publicado eram artefato**
   (`common/text.expandir_numeros`). `[MEDIDO]` 2026-07-31: **187 das 919** referências do FLEURS
   test contêm **dígito** depois da régua canônica (`na casa dos 20 anos`); o modelo foi treinado em
