@@ -54,6 +54,20 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E9 — o normalizador padrão da área pune modelos de forma falada, e só em não-inglês**
+  (`wiki/medicoes/e9-vies-do-normalizador-contra-modelos-de-forma-falada.md`). `[MEDIDO]` chamando
+  os normalizadores do Whisper direto (`transformers` 4.57.3): o **`EnglishTextNormalizer`**
+  converte `twenty` → `20`; o **`BasicTextNormalizer`** — o usado para português e todo não-inglês
+  — **não faz nada** com número, então `20` e `vinte` nunca casam.
+  A assimetria nos atinge estruturalmente: a referência do FLEURS pt_br traz dígito em 187 das 919
+  utterances, e o nosso texto de treino tem **zero** dígitos (CORAA, 106.620 palavras) — o modelo
+  **não consegue** emitir dígito, e é penalizado por não fazer algo que nunca foi treinado a fazer
+  e que é tarefa de ITN, a jusante do reconhecedor. Custo medido: **2,29 p.p.**
+  ⚠️ Declarado como NÃO estabelecido: não rodamos o Whisper: "ele emite dígito e por isso não paga
+  a penalidade" é plausível e **não verificado aqui**.
+  **Consequência de processo:** todo WER deste projeto passa a sair em **par** — régua canônica
+  (comparabilidade externa, mesmo enviesada) e régua com forma falada (decisão interna). Citar só
+  uma esconde ou infla.
 - **E8 — o split substituição/deleção/inserção, medido pela primeira vez neste projeto**
   (`wiki/medicoes/e8-composicao-do-erro-na-regua-corrigida.md`). `[MEDIDO]` FLEURS test completo
   (n=919), régua corrigida: **substituição 68,6% · deleção 12,9% · inserção 18,5%**.
