@@ -54,6 +54,21 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E11 — a banda é causa do gap de domínio, e é minoria** (`wiki/medicoes/e11-banda-e-causa-mas-e-minoria.md`).
+  Perfil espectral por corpus `[MEDIDO]`: **a banda acompanha o WER, o SNR não** — LapsBM e NURC-high
+  têm SNR quase igual (22,9 vs 21,2 dB) e WER de 9,7% contra 32,6%; o que os separa é banda 99% de
+  4405 contra 1588 Hz.
+  **Ablação controlada** (passa-baixa no MESMO áudio do FLEURS, n=60): íntegro 14,63% · 3400 Hz
+  **15,37%** (+0,74) · 1800 Hz **19,08%** (+4,45) · 1500 Hz **20,70%** (+6,07).
+  Se a banda explicasse o gap, o FLEURS filtrado ao perfil do NURC-low chegaria perto dos 49,22%
+  dele. Chega a 20,7%. **A banda responde por ~6 dos ~34 p.p. — cerca de um sexto.** O resto é
+  espontaneidade, locutores e época, que **augmentação não simula**.
+  **Achado colateral que contraria a intuição do produto:** banda telefônica sozinha custa só
+  **+0,74 p.p.**, contra os ~6 p.p. medidos no CORAA telefônico — logo o custo da telefonia **não é
+  principalmente a banda**, é codec, AGC, crosstalk e espontaneidade.
+  ⚠️ Defeito do próprio instrumento corrigido antes de concluir: a primeira medição deu `banda90 =
+  0 Hz` e SNR 1,2 dB para o LapsBM porque aqueles arquivos têm **offset DC** e o medidor não removia
+  a média antes da FFT — sem a correção, a conclusão teria sido a oposta da correta.
 - **E10 — busca por conjunto público PT-BR difícil: achado, e o rótulo "ruidoso" mentia**
   (`wiki/medicoes/e10-busca-por-conjunto-desafiador-ptbr.md`). Varredura da API do HF por tag de
   idioma (**205** datasets de áudio em PT, 33 com sinais de dificuldade), do catálogo
