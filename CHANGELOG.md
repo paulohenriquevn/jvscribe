@@ -37,6 +37,27 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E6 etapa 2 — beam + LM funciona, e entrega um terço do que a literatura prometia**
+  (`probes/beam_lm_probe.py::beam_prefixo_lm`, `probes/lm_ngram.py`,
+  `wiki/medicoes/e6-beam-lm.md`). Fusão rasa de n-grama no beam de prefixo CTC.
+  `[MEDIDO]` FLEURS test **completo** (n=919), α=0,1 · β=0,0 · largura 4 **congelados no split de
+  validação e não tocados no test**:
+  régua publicada **14,83% → 14,35%** (Δ +0,48 p.p., IC95 [+0,27; +0,69]); régua com forma falada
+  **12,54% → 11,95%** (Δ +0,59 p.p., IC95 [+0,37; +0,81]). Os dois IC **excluem zero** — o efeito é
+  real, e a etapa 1 (beam nu = nada) garante que ele vem do **LM**, não da busca.
+  **A predição pré-registrada errou e está registrada como erro:** previa 10–20% relativo, mediu
+  **4,7%**. É o segundo pré-registro deste projeto a errar, depois de E2 — e um alvo declarado
+  depois de ver o resultado teria "confirmado" a hipótese.
+  Custo: 29 ms/utt contra 134 ms de encoder (~+22% de parede, em lote).
+  **Consequência para o alvo de 10%:** beam+LM sozinho **não fecha** — de 12,54% chega a 11,95%,
+  faltando 1,95 p.p.
+- **N-grama com stupid backoff** (`probes/lm_ngram.py`). Regra 9 cumprida na ordem: `nltk.lm` está
+  instalado e foi tentado primeiro — `KneserNeyInterpolated(3)` **estourou 10 min de build em 10%**
+  do corpus e não terminou. Só então a exceção da Regra 9 ("abstração tão fina que a dependência
+  custa mais"). O próprio: build em **7 s**, 0,75 GB, consulta em **0,74 µs**.
+  Decisão de contrato com teste guardando: **OOV recebe piso finito, nunca −∞** — com −∞ o LM
+  poderia *eliminar* hipótese acústica plausível, deixando de ser prior e virando filtro, e um
+  filtro treinado em Wikipédia recusaria justamente os termos raros de call center.
 - **Corpus de texto para o LM, com a auditoria de vazamento no MESMO script**
   (`probes/lm_corpus.py`, `data/lm/wikipedia-pt.txt`). 233.848 sentenças · **5.000.380 palavras** ·
   137.753 tipos, da Wikipédia pt via streaming, normalizadas na régua do decoder

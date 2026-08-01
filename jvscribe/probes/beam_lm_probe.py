@@ -29,6 +29,7 @@ relatório publica a contagem de sobreposição, e ela tem de ser zero.
 from __future__ import annotations
 
 import argparse
+import math
 import pathlib
 import sys
 import time
@@ -50,9 +51,107 @@ from report import ambiente  # noqa: E402
 from text import normalize_for_wer_compare  # noqa: E402
 
 TEMPLATES = pathlib.Path(__file__).resolve().parent / "templates"
+NEG_INF = -float("inf")
+SEP = "▁"  # '▁' — o marcador de início de palavra do SentencePiece
 
 
-def posteriores_do_teste(n: int) -> list[tuple[np.ndarray, str]]:
+def _soma_log(a: float, b: float) -> float:
+    if a == NEG_INF:
+        return b
+    if b == NEG_INF:
+        return a
+    hi, lo = (a, b) if a > b else (b, a)
+    return hi + math.log1p(math.exp(lo - hi))
+
+
+class _EstadoLM:
+    """O que uma hipótese precisa lembrar do LM: histórico, palavra em construção, score.
+
+    Vive junto de `pb`/`pnb` no feixe porque é **por hipótese** — dois prefixos diferentes têm
+    históricos diferentes, e compartilhar estado misturaria as pontuações.
+    """
+
+    __slots__ = ("total", "historia", "parcial", "palavras")
+
+    def __init__(self, total=0.0, historia=(), parcial="", palavras=0):
+        self.total, self.historia, self.parcial, self.palavras = total, historia, parcial, palavras
+
+    def estender(self, peca: str, lm) -> "_EstadoLM":
+        """Consome uma peça BPE. Só pontua quando uma palavra **fecha**.
+
+        Pontuar palavra parcial penalizaria hipóteses no meio de uma palavra longa, que é
+        exatamente onde o beam mais precisa de liberdade para explorar.
+        """
+        if not peca.startswith(SEP):
+            return _EstadoLM(self.total, self.historia, self.parcial + peca, self.palavras)
+        # A peça abre palavra nova → a anterior está completa e agora pode ser pontuada.
+        if not self.parcial:
+            return _EstadoLM(self.total, self.historia, peca[1:], self.palavras)
+        s = self.total + lm.log_score(self.parcial, self.historia)
+        return _EstadoLM(s, (self.historia + (self.parcial,))[-4:], peca[1:], self.palavras + 1)
+
+    def fechar(self, lm) -> tuple[float, int]:
+        """Pontua a última palavra, que nenhum separador seguinte veio fechar."""
+        if not self.parcial:
+            return self.total, self.palavras
+        return self.total + lm.log_score(self.parcial, self.historia), self.palavras + 1
+
+
+def beam_prefixo_lm(log_probs, id2tok, lm, largura: int, alpha: float, beta: float,
+                    blank: int = ctc.BLANK, poda: int = 12) -> list[int]:
+    """Beam de prefixo CTC com **fusão rasa** de modelo de linguagem.
+
+    Score de ordenação: `log P_acústico + alpha · log P_LM + beta · nº de palavras`.
+
+    `beta` não é enfeite: o termo do LM é uma soma de logaritmos negativos, então **quanto mais
+    palavras, pior o score** — sem o bônus, a fusão rasa enviesa sistematicamente para hipóteses
+    curtas e passa a produzir deleção. É o mesmo papel do *word insertion bonus* clássico.
+    """
+    feixe = {(): (0.0, NEG_INF, _EstadoLM())}
+    for quadro in log_probs:
+        candidatos = np.argpartition(quadro, -poda)[-poda:]
+        novo: dict[tuple[int, ...], list] = {}
+
+        def alvo(chave, estado):
+            if chave not in novo:
+                novo[chave] = [NEG_INF, NEG_INF, estado]
+            return novo[chave]
+
+        for prefixo, (pb, pnb, est) in feixe.items():
+            total = _soma_log(pb, pnb)
+            for tid in candidatos:
+                tid = int(tid)
+                p = float(quadro[tid])
+                if tid == blank:
+                    a = alvo(prefixo, est)
+                    a[0] = _soma_log(a[0], total + p)
+                    continue
+                if prefixo and tid == prefixo[-1]:
+                    a = alvo(prefixo, est)
+                    a[1] = _soma_log(a[1], pnb + p)
+                    e = alvo(prefixo + (tid,), est.estender(id2tok[tid], lm))
+                    e[1] = _soma_log(e[1], pb + p)
+                else:
+                    e = alvo(prefixo + (tid,), est.estender(id2tok[tid], lm))
+                    e[1] = _soma_log(e[1], total + p)
+
+        feixe = dict(
+            sorted(
+                ((k, (v[0], v[1], v[2])) for k, v in novo.items()),
+                key=lambda kv: -(_soma_log(kv[1][0], kv[1][1])
+                                 + alpha * kv[1][2].total + beta * kv[1][2].palavras),
+            )[:largura]
+        )
+
+    def final(kv):
+        (pb, pnb, est) = kv[1]
+        s, n = est.fechar(lm)
+        return _soma_log(pb, pnb) + alpha * s + beta * n
+
+    return list(max(feixe.items(), key=final)[0])
+
+
+def posteriores(n: int, split: str = "test") -> list[tuple[np.ndarray, str]]:
     """Roda o encoder UMA vez por utterance; devolve `(log_probs, referência)`.
 
     O custo desta função é o custo inteiro do experimento — tudo depois é aritmética sobre a
@@ -67,7 +166,13 @@ def posteriores_do_teste(n: int) -> list[tuple[np.ndarray, str]]:
     motor = Motor.carregar()
     fb = Fbank(FbankConfig(num_mel_bins=80))
     fora: list[tuple[np.ndarray, str]] = []
-    pf = pq.ParquetFile(find_test_parquet())
+    caminho = find_test_parquet()
+    if split != "test":
+        # O split de VALIDAÇÃO existe para isto: escolher alpha/beta sem olhar o test set.
+        # Varrer hiperparâmetro no conjunto onde o número vai ser publicado é seleção sobre o
+        # test set — o erro que o ADR-0005 registra em tau e que este projeto já pagou.
+        caminho = next(caminho.parent.glob(f"{split}-*.parquet"))
+    pf = pq.ParquetFile(caminho)
     for lote in pf.iter_batches(batch_size=16):
         d = lote.to_pydict()
         for audio, ref in zip(d["audio"], d["transcription"]):
@@ -103,16 +208,29 @@ def _wer(linhas) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--n", type=int, default=100, help="utterances de FLEURS test")
+    ap.add_argument("--n", type=int, default=100, help="utterances de FLEURS")
+    ap.add_argument("--split", default="test", choices=["test", "validation"],
+                    help="validation é onde alpha/beta se escolhem; test é onde se publica")
     ap.add_argument("--larguras", type=int, nargs="+", default=[2, 4, 8])
+    ap.add_argument("--lm", type=pathlib.Path, default=None,
+                    help="LM n-grama (.pkl) de probes/lm_ngram.py; sem isto roda só o CONTROLE")
+    ap.add_argument("--alpha", type=float, default=0.5, help="peso do LM na fusão rasa")
+    ap.add_argument("--beta", type=float, default=1.0,
+                    help="bônus por palavra — sem ele a fusão rasa enviesa para hipóteses curtas")
     ap.add_argument("--relatorio", type=pathlib.Path,
                     default=pathlib.Path("wiki/medicoes/e6-beam-controle.md"))
     a = ap.parse_args()
 
     motor = Motor.carregar()
-    print(f"  extraindo posteriores de {a.n} utterances (encoder roda UMA vez cada)…", flush=True)
-    quadros = posteriores_do_teste(a.n)
+    print(f"  extraindo posteriores de {a.n} utterances de {a.split} …", flush=True)
+    quadros = posteriores(a.n, a.split)
     print(f"  {len(quadros)} utterances · vocab {quadros[0][0].shape[1]}\n", flush=True)
+
+    lm = None
+    if a.lm:
+        from lm_ngram import NgramLM
+        lm = NgramLM.carregar(a.lm)
+        print(f"  LM: {lm!r}\n  alpha={a.alpha} beta={a.beta}\n", flush=True)
 
     base, ms_greedy = avaliar(quadros, lambda lp, t: ctc.greedy_text(lp, t), motor.id2tok)
     wer_base = _wer(base)
@@ -124,11 +242,12 @@ def main() -> int:
     for largura in a.larguras:
         # `beam_prefixo` já devolve o prefixo colapsado (sem blanks); só falta detokenizar —
         # com a MESMA função que o greedy usa, senão a diferença mediria detokenização.
-        cand, ms = avaliar(
-            quadros,
-            lambda lp, t, L=largura: ctc.detok_pieces(beam_prefixo(lp, L), t),
-            motor.id2tok,
-        )
+        if lm is None:
+            dec = lambda lp, t, L=largura: ctc.detok_pieces(beam_prefixo(lp, L), t)  # noqa: E731
+        else:
+            dec = lambda lp, t, L=largura: ctc.detok_pieces(  # noqa: E731
+                beam_prefixo_lm(lp, t, lm, L, a.alpha, a.beta), t)
+        cand, ms = avaliar(quadros, dec, motor.id2tok)
         # rows = (erros_base, erros_cand, palavras_ref) — o pareamento é por utterance
         b = paired_bootstrap([(bb[0], cc[0], bb[1]) for bb, cc in zip(base, cand)])
         lo, hi = b["abs_ci95"]
