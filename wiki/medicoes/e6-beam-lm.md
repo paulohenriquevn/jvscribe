@@ -178,3 +178,67 @@ contrato de evidência deste projeto, cometida na documentação e repetida por 
 
 **Correção proposta ao `CLAUDE.md`:** a linha "Beam search + LM no decode — 10–20% relativo
 `[LITERATURA]`" está errada para este sistema e deve passar a `[MEDIDO]` 4,7%.
+
+---
+
+# Adendo 2 — o LM estava comprando o ganho APAGANDO palavras
+
+O número agregado escondia o mecanismo. Perfilando **onde** o LM agiu, no test completo, régua
+corrigida, com o ponto original (α=0,1 · **β=0,0**):
+
+| ação | efeito |
+|---|---|
+| substituições | **−167** (consertou) |
+| inserções | **−119** (consertou) |
+| **deleções** | **+155 (CRIOU)** |
+
+Consertou 286 erros e criou 155. Deleções subiram **43%** (359 → 514). É exatamente o viés que o
+docstring de `beam_prefixo_lm` descreve: o termo do LM é soma de logaritmos negativos, então **mais
+palavras = pior score**, e sem bônus por palavra a fusão rasa enviesa para hipóteses curtas.
+
+**O β=0,0 foi escolhido por WER agregado, e o WER trata deleção e substituição como iguais.** Num
+call center não são: apagar um "não" inverte o sentido da frase.
+
+## O ponto de operação melhor estava no empate que eu não olhei
+
+`[MEDIDO]` validação n=200, régua corrigida, α=0,1:
+
+| decoder | WER | subs | deleções | inserções |
+|---|---|---|---|---|
+| greedy | 13,47% | 409 | 78 | 100 |
+| β=0,0 | 12,82% | 378 | **112** | 69 |
+| β=0,5 | 12,85% | 379 | 90 | 90 |
+| **β=1,0** | **12,78%** | 381 | **66** | 109 |
+| β=1,5 | 13,35% | 394 | 52 | 136 |
+
+**β=1,0 domina β=0,0**: WER menor **e** deleções abaixo até do greedy. A primeira varredura (n=120,
+só WER) via os dois como empatados; com o perfil de S/D/I à vista, não há empate.
+
+## Resultado final, com o ponto corrigido
+
+`[MEDIDO]` FLEURS test completo (n=919), régua corrigida, **α=0,1 · β=1,0 · largura 4 congelados
+na validação**:
+
+| decoder | WER | subs | deleções | inserções |
+|---|---|---|---|---|
+| greedy | 12,54% | 1.907 | 359 | 513 |
+| **beam + LM** | **12,03%** | 1.766 | **304** | 588 |
+
+**Δ = +0,52 p.p.**, IC95 [+0,31; +0,73], **4,1% relativo**. Deleções **−55** contra o greedy, em vez
+de +155 — um giro de 210 deleções ao custo de 0,07 p.p. de WER.
+
+## A lição de método
+
+O ganho de WER caiu de 0,59 para 0,52 p.p., e **este é o ponto melhor**. Otimizar o agregado
+escolheu um comportamento que o agregado não penaliza e o produto penalizaria. Foi olhar o
+mecanismo — não o número — que achou isso.
+
+Isso reforça o argumento do `evaluation-scientist` por uma métrica ponderada: sob WER puro, β=0,0 e
+β=1,0 parecem equivalentes; sob qualquer peso que reconheça que apagar palavra custa mais que
+trocá-la, não são.
+
+⚠️ **Contagem de configurações varridas na validação: 16 (α×β) + 12 (ordem×largura) + 12 (tamanho
+de corpus) + 3 (domínio) + 9 (viés de blank) + 5 (β) = 57.** Sob a hipótese nula estrita, varrer
+dezenas de configurações produz um "vencedor" aparente mesmo sem efeito nenhum. O número do test
+set não carrega esse viés — os hiperparâmetros foram congelados antes de tocá-lo — mas **o k tem de
+ser declarado**, e está declarado aqui.

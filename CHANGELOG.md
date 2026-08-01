@@ -68,6 +68,18 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   caiu de 26,8% para 18,5% (`2005` → `dois mil e cinco` fabrica 1 substituição **+ 3 inserções**).
   Composição corrigida, como fração do erro **total**: `real_word_hyp` 26,3% · `non_word_hyp` 24,6%
   · **inserção 18,5%** · `rare_ref` 17,7% · **deleção 12,9%**.
+- **E6 adendo 2 — o LM estava comprando o ganho APAGANDO palavras, e há ponto de operação melhor.**
+  Perfilando **onde** o LM agiu (test completo, régua corrigida, β=0,0): consertou 167 substituições
+  e 119 inserções, mas **criou 155 deleções** — 43% a mais que o greedy. O β=0,0 tinha sido escolhido
+  por **WER agregado**, e WER trata deleção e substituição como iguais; num call center não são,
+  porque apagar um "não" inverte o sentido. `[MEDIDO]` validação n=200: **β=1,0 domina β=0,0** — WER
+  menor (12,78% vs 12,82%) **e** deleções abaixo até do greedy (66 vs 78, contra 112 em β=0).
+  Ponto de operação corrigido, test completo: **12,54% → 12,03%**, Δ +0,52 p.p., IC95 [+0,31; +0,73],
+  **4,1% relativo**, com deleções **−55** em vez de +155 — giro de 210 deleções por 0,07 p.p. de WER.
+  O ganho agregado ficou **menor** e o ponto é **melhor**: otimizar o agregado tinha escolhido um
+  comportamento que o agregado não penaliza e o produto penalizaria.
+  **k declarado: 57 configurações varridas na validação** ao longo de E6–E8. O número do test não
+  carrega o viés de seleção (hiperparâmetros congelados antes), mas o k tem de ser declarado.
 - **E8b — viés de blank contra inserção: refutado, com o mecanismo visível.** `[MEDIDO]` validação
   n=200: o viés **funciona** como previsto — inserções caem de 100 para 58 — mas cobra em deleção
   (78 → 142) e substituição (409 → 457) mais do que economiza. **β=0 já é o ótimo** (13,47%); todo
