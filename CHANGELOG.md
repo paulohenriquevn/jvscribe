@@ -54,6 +54,20 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E12 — realçar o áudio antes do ASR PIORA** (`wiki/medicoes/e12-realce-de-audio-antes-do-asr-piora.md`).
+  `[MEDIDO]` NURC-SP `quality=low` (o recorte mais difícil), n=100: cru **50,20%** · pré-ênfase
+  50,36% · realce de agudos +12 dB 50,44% · **subtração espectral 65,92% (+15,72 p.p.)**. As três
+  pioram; a subtração espectral degrada **31% relativo**.
+  Não é a primeira vez: o `tta_feature_align_probe.py` (DISC-05) já medira **−24,6 p.p.** com a
+  mesma ideia no domínio das features. ⚠️ Aquele resultado vive **apenas num docstring**, citado de
+  segunda mão — resultado negativo dessa magnitude precisa estar na wiki, senão a ideia é
+  reproposta.
+  `[LITERATURA]` confirma o mecanismo: o realce troca uma degradação que o modelo **viu no treino**
+  por um artefato que ele **nunca viu**. Modelos ponta-a-ponta já são robustos a ruído natural.
+  O caminho que a literatura aponta é treinar realçador **junto** com o reconhecedor, ou treinar o
+  reconhecedor na condição degradada — os dois exigem GPU e mudam o modelo, não são
+  pré-processamento. Extensão de banda (BWE) segue `[DESCONHECIDO]` e é a única da família que
+  ainda vale investigar, porque ataca o fator que E11 mediu como causal.
 - **E11 — a banda é causa do gap de domínio, e é minoria** (`wiki/medicoes/e11-banda-e-causa-mas-e-minoria.md`).
   Perfil espectral por corpus `[MEDIDO]`: **a banda acompanha o WER, o SNR não** — LapsBM e NURC-high
   têm SNR quase igual (22,9 vs 21,2 dB) e WER de 9,7% contra 32,6%; o que os separa é banda 99% de
