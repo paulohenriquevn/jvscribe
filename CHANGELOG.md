@@ -37,6 +37,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **A régua contava acerto do modelo como erro — 2,07 p.p. do WER publicado eram artefato**
+  (`common/text.expandir_numeros`). `[MEDIDO]` 2026-07-31: **187 das 919** referências do FLEURS
+  test contêm **dígito** depois da régua canônica (`na casa dos 20 anos`); o modelo foi treinado em
+  fala e emite forma falada (`na casa dos vinte anos`); `normalize_for_wer_compare` preserva o
+  dígito e não faz ITN. Verificado no áudio, caso a caso: `5 e 100 dolares` → `cinco e cem
+  dolares`, `a c` → `antes de cristo`. **O modelo acerta e a régua reprova.**
+  FLEURS test completo (919), pareado: **14,83% → 12,54%**, Δ **+2,07 p.p.** com IC95
+  [+1,73; +2,42] **excluindo zero**.
+  Duas consequências que invalidam comparações já publicadas: (a) o número divulgado, **15,99%**,
+  vem do slice `test[0:100]`, que é uma **amostra alta** — o test set completo dá **14,83%**, e
+  duas amostras honestas de 100 utterances do mesmo conjunto variam de 12,4% a 17,5%; (b) o
+  **CORAA não tem um dígito sequer** em 106.620 palavras, então os 15,99% do FLEURS e os 23,31% do
+  CORAA **nunca foram comparáveis**.
+  A função é **aditiva, nunca substituta**: `normalize_for_wer_compare` fica intacta (12 chamadores
+  e toda a série histórica), com teste de regressão que proíbe alterá-la. Trocar régua no meio do
+  caminho é o defeito que este projeto já pagou três vezes.
 - **E7 — a quantização int8 não custou acurácia, e isso fecha uma porta**
   (`probes/quantizacao_probe.py`). Quando o dono relaxou o alvo de RTFx de 3× para 1,5×, a primeira
   pergunta da escada de parcimônia é se ainda vale rodar o modelo *comprimido*. Teste controlado

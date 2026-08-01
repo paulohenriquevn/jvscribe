@@ -112,3 +112,46 @@ def normalize_train_target(text: str) -> str:
     text = unicodedata.normalize("NFC", (text or "").lower().strip())
     text = re.sub(_TRAIN_KEEP, " ", text, flags=re.UNICODE)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def expandir_numeros(texto: str) -> str:
+    """Converte dígitos em forma FALADA — a régua adicional, nunca a substituta.
+
+    ⚠️ **Isto NÃO é uma melhoria de normalização. É o conserto de um defeito de medição.**
+
+    `[MEDIDO]` 2026-07-31: 187 das 919 referências do FLEURS test contêm dígito **depois** de
+    `normalize_for_wer_compare` (`na casa dos 20 anos`). O modelo foi treinado em fala e emite
+    forma falada (`na casa dos vinte anos`). A régua canônica preserva o dígito e não faz ITN,
+    então **conta o acerto como erro** — e a classe `número` marcava 99,0% de erro por artefato,
+    carregando 12,4% de toda a massa de erro publicada.
+
+    Custo do desalinhamento: **2,38 p.p.** do WER, IC95 pareado [1,97; 2,81].
+
+    A direção da conversão é escolha técnica defensável, não arbitrária: o WER de ASR deve medir
+    acurácia acústica e lexical, não formatação. Converter *falado → escrito* (ITN) é feature de
+    produto, a jusante; converter a referência para falado mede o que o reconhecedor faz. Por isso
+    a expansão se aplica aos **dois lados** — hipótese e referência — e nunca a um só.
+
+    **E o CORAA não tem um dígito sequer** em 106.620 palavras `[MEDIDO]`. Consequência que
+    invalida comparações já publicadas: os 15,99% do FLEURS e os 23,31% do CORAA **nunca foram
+    comparáveis** — um estava inflado por artefato e o outro não.
+
+    Convive com `normalize_for_wer_compare` em vez de substituí-la: a série histórica inteira foi
+    medida com a régua antiga, e trocar a régua no meio do caminho é o defeito que este projeto já
+    pagou três vezes. Publique as duas, lado a lado, sempre rotuladas.
+    """
+    from num2words import num2words
+
+    def _falar(m: "re.Match[str]") -> str:
+        try:
+            return num2words(int(m.group()), lang="pt_BR")
+        except (ValueError, NotImplementedError):
+            # Número que a lib recusa (grande demais, formato inesperado): devolve como veio.
+            # Engolir aqui seria pior — a alternativa é apagar o token e falsear a referência.
+            return m.group()
+
+    # `normalize_for_wer_compare` já removeu pontuação, então só restam dígitos contíguos.
+    return _RE_INTEIRO.sub(_falar, texto)
+
+
+_RE_INTEIRO = re.compile(r"\d+")
