@@ -54,6 +54,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   novo, e `FORCE=1` sobrescreve.
 
 ### Added
+- **E10 — busca por conjunto público PT-BR difícil: achado, e o rótulo "ruidoso" mentia**
+  (`wiki/medicoes/e10-busca-por-conjunto-desafiador-ptbr.md`). Varredura da API do HF por tag de
+  idioma (**205** datasets de áudio em PT, 33 com sinais de dificuldade), do catálogo
+  `falabrasil/speech-datasets` (que o HF não indexa) e do shared task SE&R 2022. Três candidatos
+  baixados e **medidos**, não só catalogados.
+  `[MEDIDO]` régua estrita: **LapsBM 9,71%** (rotulado "ambiente não-controlado" — é o **mais
+  fácil** de todos, abaixo do FLEURS) · **CodDef 11,28%** (jargão jurídico, também abaixo do
+  FLEURS) · FLEURS 12,75% · CORAA 22,94% · **NURC-SP 36,88%**.
+  **O que separa fácil de difícil neste modelo não é ruído — é espontaneidade.** Descartados antes
+  de baixar: dois "datasets" de fornecedor que não têm áudio (só README) e um de acesso manual.
+  **Recomendação: adotar NURC-SP**, com o recorte `quality=low` (**129 utterances, 11,6 min,
+  49,22% de WER**) como caso extremo — e a razão que quase ninguém checa: é **MIT**, permitindo uso
+  comercial, ao contrário do CORAA (CC-BY-NC-ND) e do TAGARELA (CC-BY-NC-SA) que sustentam boa
+  parte da nossa avaliação hoje e **proíbem uso comercial**.
+  ⚠️ Limitação bloqueante antes de virar alvo: a convenção de transcrição não foi auditada — se o
+  texto marcar hesitação/truncamento/sobreposição, parte do WER é anotação, não reconhecimento.
 - **E9 — o normalizador padrão da área pune modelos de forma falada, e só em não-inglês**
   (`wiki/medicoes/e9-vies-do-normalizador-contra-modelos-de-forma-falada.md`). `[MEDIDO]` chamando
   os normalizadores do Whisper direto (`transformers` 4.57.3): o **`EnglishTextNormalizer`**
