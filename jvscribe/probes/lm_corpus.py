@@ -46,30 +46,40 @@ def sentencas_do_teste() -> set[str]:
     return {normalizar(x) for x in t.column("transcription").to_pylist()}
 
 
-def coletar(alvo_palavras: int, proibidas: set[str]) -> tuple[list[str], int, int]:
-    """`(sentenças, palavras, quantas colidiram com o test set)`.
+def coletar(alvo_palavras: int, proibidas: set[str], destino: pathlib.Path) -> dict:
+    """Escreve as sentenças **incrementalmente** e devolve as contagens.
 
-    A colisão é **contada e descartada**, não só contada: deixar a sentença entrar depois de
-    detectá-la seria saber do vazamento e usá-lo assim mesmo.
+    A escrita é incremental porque acumular em lista morreu: 20M palavras em `list[str]` estouram
+    a RAM da máquina e o processo é morto pelo OOM killer **em silêncio**, sem stack trace e sem
+    arquivo. Streaming para disco mantém a memória constante e deixa o resultado parcial em disco
+    se algo interromper.
+
+    A colisão com o test set é **contada e descartada**, não só contada: deixar a sentença entrar
+    depois de detectá-la seria saber do vazamento e usá-lo assim mesmo.
     """
     from datasets import load_dataset
 
     ds = load_dataset("wikimedia/wikipedia", "20231101.pt", split="train", streaming=True)
-    fora, palavras, colisoes = [], 0, 0
-    for artigo in ds:
-        for bruta in _FIM_DE_FRASE.split(artigo["text"]):
-            s = normalizar(bruta)
-            n = len(s.split())
-            if not (MIN_PALAVRAS <= n <= MAX_PALAVRAS):
-                continue
-            if s in proibidas:
-                colisoes += 1
-                continue
-            fora.append(s)
-            palavras += n
-        if palavras >= alvo_palavras:
-            break
-    return fora, palavras, colisoes
+    palavras = sentencas = colisoes = 0
+    tipos: set[str] = set()
+    with destino.open("w", encoding="utf-8") as fh:
+        for artigo in ds:
+            for bruta in _FIM_DE_FRASE.split(artigo["text"]):
+                s = normalizar(bruta)
+                toks = s.split()
+                if not (MIN_PALAVRAS <= len(toks) <= MAX_PALAVRAS):
+                    continue
+                if s in proibidas:
+                    colisoes += 1
+                    continue
+                fh.write(s + "\n")
+                sentencas += 1
+                palavras += len(toks)
+                tipos.update(toks)
+            if palavras >= alvo_palavras:
+                break
+    return {"sentencas": sentencas, "palavras": palavras, "tipos": len(tipos),
+            "sentencas_do_teste_bloqueadas": colisoes}
 
 
 def main() -> int:
@@ -84,21 +94,18 @@ def main() -> int:
     print(f"  {len(proibidas)} sentenças de teste na lista de bloqueio\n"
           f"  coletando ~{a.palavras:,} palavras da Wikipédia pt…", flush=True)
 
-    sentencas, palavras, colisoes = coletar(a.palavras, proibidas)
     a.saida.parent.mkdir(parents=True, exist_ok=True)
-    a.saida.write_text("\n".join(sentencas), encoding="utf-8")
-
+    cont = coletar(a.palavras, proibidas, a.saida)
+    palavras, colisoes = cont["palavras"], cont["sentencas_do_teste_bloqueadas"]
+    sentencas = range(cont["sentencas"])          # só o tamanho é usado daqui para baixo
     meta = {
         "fonte": "wikimedia/wikipedia 20231101.pt (streaming)",
-        "sentencas": len(sentencas),
-        "palavras": palavras,
-        "tipos": len({w for s in sentencas for w in s.split()}),
-        "sentencas_do_teste_bloqueadas": colisoes,
+        **cont,
         "regua": "normalize_for_wer_compare + expandir_numeros",
     }
     a.saida.with_suffix(".meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
 
-    print(f"\n  {len(sentencas):,} sentenças · {palavras:,} palavras · {meta['tipos']:,} tipos")
+    print(f"\n  {cont['sentencas']:,} sentenças · {palavras:,} palavras · {cont['tipos']:,} tipos")
     print(f"  → {a.saida}")
     print(f"\n  VAZAMENTO: {colisoes} sentença(s) do FLEURS test apareceram no corpus "
           f"{'✅ nenhuma' if colisoes == 0 else '⚠️ e foram DESCARTADAS'}")

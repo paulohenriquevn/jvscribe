@@ -175,8 +175,12 @@ real-time).
    ataca também o DoD#3 (telefônico 8 kHz).
 2. **Checkpoint averaging** — `[MEDIDO]`, não mais estimativa: a média de 112k+124k dá WER
    **15,99%** contra 17,32% do checkpoint único, IC95% do delta [−2,25; −0,43] pp.
-3. **Beam search + LM no decode** — 10–20% relativo `[LITERATURA]`, sem tocar modelo nem dado.
-   O decode de hoje é greedy, o piso. **É também o que tornaria o FLToP aplicável.**
+3. **Beam search + LM no decode** — **4,7% relativo** `[MEDIDO]` (`wiki/medicoes/e6-beam-lm.md`),
+   não os 10–20% que esta linha afirmava. A faixa antiga era `[LITERATURA]` colhida de CTC
+   **nível-caractere** e de modelos treinados em minutos de áudio; quanto mais forte o modelo
+   acústico, menor o ganho do LM externo, e um vocabulário BPE já internaliza a parte que o
+   n-grama conserta de graça. Medido: 12,54% → 11,95% em FLEURS completo, IC95 [+0,37; +0,81].
+   Corpus, ordem do n-grama e largura de beam **saturaram** — mais de cada um não compra nada.
 
 Corpus: **8.972 h** disponíveis contra as 15.000–94.000 h que a receita de referência usa para
 monolíngues pequenos treinados do zero. Q-09 (acesso às ~76k h brutas do Cem Mil Podcasts) vale

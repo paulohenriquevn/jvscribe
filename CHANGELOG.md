@@ -14,6 +14,23 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Changed
+- **Corrigido no `CLAUDE.md`: beam+LM não rende 10–20% neste sistema, rende 4,7%** `[MEDIDO]`.
+  A linha antiga era `[LITERATURA]` herdada de regime **sem parentesco** com o nosso — verificado
+  em 2026-08-01: os ~30% do blog da HuggingFace são Wav2Vec2 **nível-caractere** com WER ~27% antes
+  do LM, e os ~80% do Apêndice C do paper do Wav2Vec2 são de um modelo treinado em **10 minutos**
+  de áudio rotulado; levantamentos de fusão rasa sobre modelos acústicos fortes reportam **~3%
+  típico**. Quanto mais forte o modelo acústico, menor o ganho do LM externo — e um vocabulário
+  **BPE** já internaliza a correção de não-palavra que o n-grama faz de graça num CTC de caractere.
+  Nossa própria composição do erro já indicava isso e ninguém leu assim: `non_word_hyp` é só 31,5%.
+  Isto é a falácia § 3 #2 do contrato de evidência cometida na documentação do projeto e repetida
+  no pré-registro. Os 4,7% medidos estão **acima** do típico, não abaixo.
+- **Ablações de E6: corpus, ordem e largura SATURARAM** (`wiki/medicoes/e6-beam-lm.md`, adendo).
+  `[MEDIDO]` na validação: corpus 0,5M→1,3M→2,5M→5,0M dá +0,34→+0,49→+0,71→**+0,71** p.p. (dobrar
+  de 2,5M para 5M rende **zero**); ordem 3 = ordem 4 (+0,71) e ordem **5 piora** (+0,60); largura 8
+  perde para largura 4 em **todas** as seis combinações — assinatura de LM mal calibrado, que
+  escolhe pior quando recebe mais candidatos. O teste de domínio (Wikipédia 5M contra FLEURS-train
+  63k) ficou **inconclusivo por confundimento** — 80× menos dado — e está registrado como
+  inconclusivo, não como refutação.
 - **A aritmética do orçamento de RTFx saiu de `common/diarizacao.py` para `common/cpu.py`**
   (`rtfx_minimo_do_diarizador` → `rtfx_minimo_do_estagio`). Capacidade da máquina é o domínio de
   `cpu`, e o AEC virou o segundo consumidor da mesma decisão de segurança. O re-export de
