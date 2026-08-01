@@ -92,6 +92,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Contra os 2,29 p.p. do artefato de dígito no FLEURS, é duas ordens abaixo. **Os 36,88% são erro
   de reconhecimento real**, e a recomendação de adotar o NURC-SP (E10) sobrevive à auditoria que
   poderia tê-la derrubado.
+- **E13 adendo — o corpus foi estabelecido: ~1.413 h, e a documentação erra por ~1,6×.**
+  A instância de treino existe com o disco preservado (`46106739`, RTX 3090, 600 GB) mas **não pôde
+  subir** — `"Required resources are currently unavailable"`; o start enfileirado foi cancelado para
+  não cobrar sem supervisão. A conta fechou **sem ela**, pela configuração no `training.log`:
+  `concatenate_cuts=False` · `duration_factor=1.0` · `enable_musan=False` ·
+  `enable_telephone_aug=False` · `on_the_fly_feats=False` — **nenhum mecanismo de duplicação
+  ligado**, e `info["frames"]` soma comprimentos reais sem padding. Logo as **1.412,6 h/época
+  medem o próprio manifesto**.
+  Documentado: 773,5–873,5 h. **Medido: ~1.413 h.** Pelo `download_tagarela_subset.py`
+  (5,086 h/shard), isso são ~224 shards de TAGARELA, não os 120 do exemplo.
+  **Consequência: toda projeção de escala usou o denominador errado.** O β recalculado cai de
+  0,326 para **0,254** `[ESTIMATIVA]` — **o dado escala PIOR do que se pensava**.
+  Duas descobertas colaterais da mesma config: **`use_fp16 = True`** (o artefato publicado foi
+  treinado em fp16 — não contradiz o `CLAUDE.md`, cujo alerta é sobre colapso *sob augmentação*, que
+  aqui estava desligada, mas não estava registrado) e **`init_modules = 'encoder'`**, confirmando o
+  bug de prefixo que deixou `encoder_embed.*` (22% do custo) **sem inicialização do checkpoint**.
 - **E12 adendo — BWE também cai, e a família de pré-processamento está fechada.** A extensão de
   banda era a exceção que restava, porque ataca o fator que E11 mediu como causal. Testada com
   **teto e piso conhecidos** (degradar o FLEURS e tentar recuperar): `[MEDIDO]` n=60 — teto

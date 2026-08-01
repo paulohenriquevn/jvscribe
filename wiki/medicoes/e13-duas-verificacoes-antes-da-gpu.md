@@ -140,3 +140,86 @@ recomendação de adotá-lo (E10) sobrevive à auditoria que poderia tê-la derr
   diferir entre splits, ainda que seja improvável no mesmo corpus.
 - **Remover repetição imediata dos dois lados é uma aproximação grosseira** de "ignorar gagueira":
   colapsa também repetições legítimas (`que que`, `já já`). O efeito medido é teto, não valor exato.
+
+---
+
+# Adendo — o corpus foi estabelecido, e a documentação erra por ~1,6×
+
+## Tentativa de acesso direto: bloqueada
+
+`[MEDIDO]` 2026-08-01. A instância de treino **existe e o disco está preservado** — id `46106739`,
+label `m5-mux-coraa-tagarela`, RTX 3090, 600 GB. Mas o start foi recusado:
+
+```
+Required resources are currently unavailable, state change queued.
+```
+
+O host não tem GPU livre. Após 9 minutos de polling, `intended_status` continuava `stopped`. O
+start enfileirado foi **cancelado** (`vastai stop instance 46106739`) para não ligar sem supervisão
+e cobrar. A verificação direta do manifesto segue pendente.
+
+## Mas a configuração no log fecha a conta
+
+A primeira linha do `training.log` registra o dict de params inteiro. `[MEDIDO]` da corrida que
+produziu o `checkpoint-124000`:
+
+| parâmetro | valor | por que importa |
+|---|---|---|
+| `max_duration` | **500** s | teto de áudio por batch |
+| `concatenate_cuts` | **False** | não junta cuts |
+| `duration_factor` | **1.0** | não estica |
+| `enable_musan` | **False** | sem mistura de ruído |
+| `enable_telephone_aug` | **False** | sem cadeia telefônica |
+| `enable_spec_aug` | True | mascaramento de **feature** — não muda comprimento |
+| `on_the_fly_feats` | False | features pré-computadas |
+
+**Nenhum mecanismo de duplicação está ligado.** E `info["frames"]` soma `feature_lens` **reais**
+(sem padding). Com `DynamicBucketingSampler`, uma época é **uma passada** sobre o `CutSet`.
+
+Logo, as **1.412,6 h apresentadas por época medem o próprio manifesto**:
+
+| | horas |
+|---|---|
+| `prep_tagarela.py` diz | ~500 (TAGARELA) |
+| `CHANGELOG` diz | ~600 (TAGARELA) |
+| + CORAA train | 273,5 |
+| **documentado (soma)** | **773,5 – 873,5** |
+| **MEDIDO do log** | **~1.413** |
+
+**A documentação erra por ~1,6×.** O modelo entregue viu aproximadamente **1.413 h**, não ~870.
+
+Pelo `download_tagarela_subset.py` (1764 shards ≈ 8.972 h → **5,086 h/shard**), 1.413 − 273,5 =
+1.139,5 h de TAGARELA correspondem a **~224 shards**, não aos 120 do exemplo do docstring.
+
+## Consequências
+
+**1. Toda projeção de escala usou o denominador errado.** O β de 0,326 saiu de dois pontos
+(161 h → 27,46% e "870 h" → 15,83%). Com o denominador corrigido:
+
+β = ln(27,46/15,83) / ln(1413/161) = **0,254** `[ESTIMATIVA]`, contra 0,326.
+
+**β menor significa que o dado escala PIOR do que se pensava** — cada dobra de corpus compra menos.
+A faixa de "4.000–20.000 h para 10%" precisa ser refeita sobre a base correta, e não a refaço aqui
+porque ela também mistura réguas (15,83% é régua antiga; 12,75% é a estrita).
+
+**2. Duas descobertas colaterais da mesma configuração:**
+
+- **`use_fp16 = True`.** O modelo entregue **foi treinado em fp16**. O `CLAUDE.md` afirma "os runs
+  usam `--use-fp16 0`" — não é contradição (o colapso de fp16 é *sob choque de augmentação*, e esta
+  corrida rodou com augmentação **desligada**), mas o fato de o artefato publicado ser fp16 não
+  estava registrado.
+- **`init_modules = 'encoder'`.** Confirma o bug já documentado: o prefixo `encoder` **não casa**
+  `encoder_embed.*`, então o frontend (1,0% dos params, 22,0% do custo) **não foi inicializado do
+  checkpoint**.
+
+## Limitações
+
+- **A conclusão de ~1.413 h supõe uma passada por época.** É o comportamento padrão do
+  `DynamicBucketingSampler` e nenhum flag de repetição está ligado, mas não foi verificado no
+  manifesto.
+- **A verificação direta continua pendente** e é a única que fecha a questão: subir a instância e
+  rodar uma soma de durações sobre `data/mux/cv-pt_cuts_train.jsonl.gz`. Custa minutos quando
+  houver GPU livre no host.
+- **O β recalculado é `[ESTIMATIVA]` de dois pontos** que diferem em muito mais que horas
+  (composição, época, cabeça de fonema, averaging). Serve para mostrar a **direção** do erro, não
+  para substituir a projeção.
