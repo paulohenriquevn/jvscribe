@@ -80,3 +80,81 @@ GPU e mudam o modelo — não são pré-processamento.
 - **Não testamos extensão de banda (BWE).** É a técnica que ataca diretamente o fator que E11
   mediu como causal. Continua `[DESCONHECIDO]`, e é a única desta família que eu ainda
   investigaria — com a expectativa temperada por tudo acima.
+
+---
+
+# Adendo — extensão de banda (BWE): a exceção que eu queria investigar, e ela também cai
+
+O corpo deste documento deixou BWE como `[DESCONHECIDO]` e como a única técnica da família que
+valia investigar, porque ataca **o fator que o E11 mediu como causal**. Foi testada.
+
+## Desenho: teto e piso conhecidos
+
+Testar BWE direto no NURC-SP não seria interpretável — não se sabe quanto seria "recuperar tudo".
+O desenho correto **degrada um sinal bom e tenta recuperá-lo**, porque aí os dois extremos são
+medidos:
+
+- **teto** = FLEURS íntegro (o que se recuperaria num mundo perfeito)
+- **piso** = FLEURS com passa-baixa a 1500 Hz (o perfil do NURC-low, medido em E11)
+- **tratamento** = piso + BWE
+
+## Evidência
+
+`[MEDIDO]` FLEURS n=60, greedy, régua estrita:
+
+| condição | WER |
+|---|---|
+| **TETO** — íntegro | **14,63%** |
+| **PISO** — passa-baixa 1500 Hz | **20,70%** |
+| piso + BWE por **espelhamento espectral** (decaimento 6 dB) | **40,26%** |
+| piso + BWE por **geração de harmônicos** (retificação de meia-onda) | **31,49%** |
+
+Nenhuma recupera. As duas **quase dobram** o WER em relação ao piso já degradado — o espelhamento
+sai 19,6 p.p. **abaixo** do sinal que ele deveria melhorar.
+
+## A leitura
+
+**Banda sintética é pior que banda ausente.**
+
+Isso não é acidente das duas implementações; é a mesma lei do corpo deste documento, na forma mais
+nítida que apareceu. Quando a banda alta some, os filtros mel correspondentes ficam **silenciosos**
+— um estado que o modelo encontra o tempo todo em fala real (fonemas surdos, pausas, canais
+estreitos) e trata com graça. Quando a banda alta é **fabricada**, esses filtros ficam **altos e
+errados** — energia que não corresponde a nenhum fonema. O modelo não tem defesa contra isso.
+
+Dito de outro modo: **o reconhecedor lida melhor com informação faltando do que com informação
+inventada.** Essa assimetria é a explicação unificada de E12 e deste adendo.
+
+## O que isto NÃO refuta
+
+⚠️ **BWE neural continua não testado.** Espelhamento e harmônicos fabricam banda alta plausível
+*espectralmente* e errada *foneticamente*. Um modelo neural treinado em fala real aprende a
+relação estatística verdadeira entre banda baixa e alta, e poderia fazer melhor. Este resultado
+**estreita** a questão, não a fecha.
+
+O que ele faz é mudar o custo-benefício, e três fatos pesam contra seguir:
+
+1. O estado da arte (AudioSR, NVSR, UniverSR) é **difusão ou vocoder neural**, pesado — e o E7 já
+   mostrou que orçamento extra de CPU não compra acurácia por vias óbvias.
+2. Esses modelos otimizam **qualidade perceptual**, e a própria literatura de ABE registra que
+   *"critérios perceptuais podem não ser ótimos para ASR"* — é literalmente a distinção que este
+   experimento acabou de exibir.
+3. A direção que a literatura aponta como funcional ([`arXiv:2501.02452`](https://arxiv.org/pdf/2501.02452))
+   é **treinar junto**, não encaixar pronto.
+
+## Consequência: a família de pré-processamento está fechada
+
+Somando o corpo e este adendo, com medição própria em cada caso:
+
+| técnica | resultado |
+|---|---|
+| pré-ênfase | +0,16 p.p. |
+| realce de agudos | +0,24 p.p. |
+| subtração espectral | **+15,72 p.p.** |
+| alinhamento afim de features (DISC-05) | **−24,6 p.p.** |
+| BWE por espelhamento | **+19,56 p.p.** sobre o piso |
+| BWE por harmônicos | **+10,79 p.p.** sobre o piso |
+
+**Seis técnicas, seis pioras.** O componente acústico do gap não se ataca antes do modelo. Resta
+atacá-lo **dentro** do treino — augmentação na condição degradada, ou treino conjunto — e os dois
+exigem GPU e mudam os pesos.

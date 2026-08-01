@@ -68,6 +68,22 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   reconhecedor na condição degradada — os dois exigem GPU e mudam o modelo, não são
   pré-processamento. Extensão de banda (BWE) segue `[DESCONHECIDO]` e é a única da família que
   ainda vale investigar, porque ataca o fator que E11 mediu como causal.
+- **E12 adendo — BWE também cai, e a família de pré-processamento está fechada.** A extensão de
+  banda era a exceção que restava, porque ataca o fator que E11 mediu como causal. Testada com
+  **teto e piso conhecidos** (degradar o FLEURS e tentar recuperar): `[MEDIDO]` n=60 — teto
+  (íntegro) **14,63%** · piso (passa-baixa 1500 Hz) **20,70%** · + BWE espelhamento **40,26%** ·
+  + BWE harmônicos **31,49%**. Nenhuma recupera; as duas **quase dobram** o WER sobre o piso já
+  degradado.
+  **Banda sintética é pior que banda ausente** — e isso unifica E12: quando a banda alta some, os
+  filtros mel ficam **silenciosos**, estado que o modelo encontra o tempo todo em fala real; quando
+  é fabricada, ficam **altos e errados**, energia que não corresponde a fonema nenhum. **O
+  reconhecedor lida melhor com informação faltando do que com informação inventada.**
+  Placar da família, tudo com medição própria: pré-ênfase +0,16 · realce de agudos +0,24 ·
+  subtração espectral +15,72 · alinhamento de features −24,6 · BWE espelho +19,56 · BWE harmônicos
+  +10,79. **Seis técnicas, seis pioras.**
+  ⚠️ BWE **neural** segue não testado e o resultado não o refuta — mas o estado da arte é difusão
+  pesada otimizada para **qualidade perceptual**, e a literatura de ABE já registra que critério
+  perceptual pode não ser ótimo para ASR.
 - **E11 — a banda é causa do gap de domínio, e é minoria** (`wiki/medicoes/e11-banda-e-causa-mas-e-minoria.md`).
   Perfil espectral por corpus `[MEDIDO]`: **a banda acompanha o WER, o SNR não** — LapsBM e NURC-high
   têm SNR quase igual (22,9 vs 21,2 dB) e WER de 9,7% contra 32,6%; o que os separa é banda 99% de
