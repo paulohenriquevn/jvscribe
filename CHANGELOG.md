@@ -68,6 +68,30 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   reconhecedor na condição degradada — os dois exigem GPU e mudam o modelo, não são
   pré-processamento. Extensão de banda (BWE) segue `[DESCONHECIDO]` e é a única da família que
   ainda vale investigar, porque ataca o fator que E11 mediu como causal.
+- **E13 — as duas verificações de custo zero antes da GPU**
+  (`wiki/medicoes/e13-duas-verificacoes-antes-da-gpu.md`).
+  **(1) A hipótese do replay 32× do CORAA cai no mecanismo:** `[FONTE-REPO]` `run_ft_codec.sh:13`
+  documenta `--use-mux` como **DEFERIDO, "inexistente neste recipe"** — o mux foi feito no nível do
+  manifesto (concatenação em disco), não por sampler com pesos uniformes. Sem sampler, não há o
+  oversampling que a hipótese descreve.
+  **Mas a verificação achou algo maior: o projeto não sabe quantas horas treinou.** `[MEDIDO]` do
+  `training.log`: **13.601 batches/época × 9.347 frames × 4 × 10 ms = 1.412,6 h apresentadas por
+  época** (o significado de `frames` foi confirmado em `train.py:853`, não suposto). Contra isso, a
+  documentação **se contradiz** — `prep_tagarela.py` diz "~500h", o `CHANGELOG` diz "~600h" — e o
+  `training.log` **não registra** contagem de cuts nem soma de durações. A razão apresentado/único
+  fica em 1,6–1,8× (não 3,2×), e não dá para distinguir entre repetição no manifesto, manifesto
+  maior que o documentado, ou erro na documentação.
+  ⚠️ Isto é **mais grave que a hipótese original**: toda projeção de escala do projeto (a faixa de
+  4.000–20.000 h para 10%, o β de 0,33, "o modelo viu ~870 h") usa um denominador **não
+  estabelecido**. Recuperar o manifesto e somar durações é pré-requisito de qualquer decisão de
+  escala. Anomalia registrada: a época 9 rodou **10.551** batches contra 13.601 das outras (−22%).
+  **(2) A convenção de transcrição do NURC-SP custa 0,18 p.p. — o alvo se sustenta.** `[MEDIDO]`
+  500 referências: **zero** colchetes, parênteses, chaves, marcas de truncamento, siglas e
+  **dígitos** — texto ortográfico limpo, e a expansão de número é no-op ali. Removendo dos dois
+  lados eventos não-fala (5 ocorrências em 250), fillers e repetição imediata: 37,13% → **36,95%**.
+  Contra os 2,29 p.p. do artefato de dígito no FLEURS, é duas ordens abaixo. **Os 36,88% são erro
+  de reconhecimento real**, e a recomendação de adotar o NURC-SP (E10) sobrevive à auditoria que
+  poderia tê-la derrubado.
 - **E12 adendo — BWE também cai, e a família de pré-processamento está fechada.** A extensão de
   banda era a exceção que restava, porque ataca o fator que E11 mediu como causal. Testada com
   **teto e piso conhecidos** (degradar o FLEURS e tentar recuperar): `[MEDIDO]` n=60 — teto
