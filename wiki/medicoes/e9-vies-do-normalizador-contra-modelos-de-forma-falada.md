@@ -80,3 +80,66 @@ acerto que o modelo teve. As duas, sempre rotuladas.
   (`whisper_normalizer`, o repositório original da OpenAI) não foram testadas.
 - Nada aqui diz respeito a acento, que é o outro eixo do `BasicTextNormalizer` e onde este projeto
   já pagou um defeito de régua separado.
+
+---
+
+# Adendo — a régua canônica erra nos DOIS sentidos, e o paper índico não cobre nem um
+
+## O que `arXiv:2409.02449v4` de fato diz
+
+Verificado em 2026-08-01. O paper trata de **outra falha**: o normalizador do Whisper remove
+caracteres da *mark class* do Unicode, destruindo matras e virama de escritas índicas. Achados:
+
+- **Não menciona numeral nem dígito** em lugar nenhum.
+- Conclui que línguas de **escrita latina são largamente não afetadas** pela falha que descreve.
+- Os autores declaram explicitamente que **não propõem novo algoritmo** de normalização.
+
+**Não há, portanto, "corrigir a avaliação conforme o paper"** — não existe procedimento descrito a
+aplicar, e o defeito que ele documenta não é o nosso.
+
+## O princípio que transfere, e nos incomoda
+
+O argumento central do paper é que **remover diacrítico infla artificialmente a melhora de WER**.
+A nossa régua canônica **remove acento**. Medido no test completo (n=919, greedy):
+
+| régua | WER |
+|---|---|
+| sem acento · com dígito — **a publicada** | 14,83% |
+| sem acento · forma falada | 12,54% |
+| com acento · com dígito | 15,14% |
+| **com acento · forma falada** | **12,75%** |
+
+**A remoção de acento nos favorece em +0,31 p.p.**, IC95 pareado [+0,24; +0,38] — reproduzindo o
+0,31 que o projeto já medira em n=100, de brinde como checagem.
+
+Logo a régua canônica erra nos dois sentidos: **pune 2,29 p.p.** no eixo do dígito e **premia 0,31
+p.p.** no eixo do acento. O número que este projeto vinha chamando de corrigido (12,54%) ainda
+embutia o prêmio.
+
+## Por que, em português, isto é pior que "perdoar grafia"
+
+Remover acento não perdoa apenas ortografia — **funde palavras distintas**:
+
+| par | são a mesma palavra sem acento | significam |
+|---|---|---|
+| `e` / `é` | `e` | "e" / "é" |
+| `pais` / `país` | `pais` | "pais" / "país" |
+| `esta` / `está` | `esta` | "esta" / "está" |
+| `avô` / `avó` | `avo` | "avô" / "avó" |
+
+Num call center, `é` virando `e` altera o sentido da frase. A régua que apaga essa diferença mede
+algo mais permissivo do que "o sistema entendeu o que foi dito".
+
+## Recomendação
+
+O número defensável para **acurácia de reconhecimento** é o da régua estrita: **com acento e forma
+falada nos dois lados**. As outras continuam existindo, com uso declarado:
+
+| régua | uso | WER (greedy) |
+|---|---|---|
+| sem acento · com dígito | comparabilidade com leaderboards de PT (enviesada, mas é a deles) | 14,83% |
+| **com acento · forma falada** | **decisão interna e afirmação de acurácia** | **12,75%** |
+
+⚠️ O número de beam+LM publicado neste projeto (**12,03%**) foi medido na régua *sem acento*. Na
+régua estrita ele fica em torno de **12,2%** `[ESTIMATIVA]`, aplicando o delta de acento medido no
+greedy — **não medido diretamente**, e portanto não citável como resultado.

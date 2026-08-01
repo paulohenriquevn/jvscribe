@@ -68,6 +68,15 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   **Consequência de processo:** todo WER deste projeto passa a sair em **par** — régua canônica
   (comparabilidade externa, mesmo enviesada) e régua com forma falada (decisão interna). Citar só
   uma esconde ou infla.
+- **E9 adendo — a régua canônica erra nos DOIS sentidos.** `arXiv:2409.02449v4` foi lido e **não
+  descreve o nosso defeito**: trata de remoção de *mark class* do Unicode em escritas índicas, não
+  menciona dígito, conclui que escrita latina é largamente não afetada, e os autores declaram que
+  **não propõem algoritmo novo** — não há "corrigir conforme o paper". Mas o princípio dele (remover
+  diacrítico infla WER) transfere, e nossa régua remove acento. `[MEDIDO]` n=919 greedy: sem acento
+  +com dígito **14,83%** · sem acento+forma falada **12,54%** · com acento+com dígito **15,14%** ·
+  **com acento+forma falada 12,75%**. A remoção de acento **nos favorece +0,31 p.p.**, IC95
+  [+0,24; +0,38]. Em português isso não perdoa só grafia — **funde palavras distintas** (`e`/`é`,
+  `pais`/`país`, `esta`/`está`). O número defensável de acurácia passa a ser **12,75%**.
 - **E8 — o split substituição/deleção/inserção, medido pela primeira vez neste projeto**
   (`wiki/medicoes/e8-composicao-do-erro-na-regua-corrigida.md`). `[MEDIDO]` FLEURS test completo
   (n=919), régua corrigida: **substituição 68,6% · deleção 12,9% · inserção 18,5%**.
