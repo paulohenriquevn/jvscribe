@@ -14,6 +14,23 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Demo web da transcrição ao vivo** (`realtime/web_demo.py` + `web_demo.html`,
+  `tests/test_web_demo.py`). Uma página com o diálogo rotulado (ATENDENTE = mic · CLIENTE =
+  loopback), os RNF-01/02/03 medidos ao vivo, e o **aviso de carga**: acima do limiar os vereditos
+  de tempo aparecem como **indeterminados**, porque reprovar e não-medir são resultados diferentes
+  (`asr-evidence-discipline` § 5).
+  **É camada de apresentação, não um segundo motor** — `Transcricao`, `MetricasRNF`,
+  `aplicar_backpressure` e `rotular` vêm de `live_transcribe` por reuso. Duplicar o laço faria a
+  demo mostrar um sistema que não é o entregue.
+  **Servida por `http.server` da stdlib.** O degrau 4 da escada (reusar dependência instalada)
+  **falhou na prática**: o `fastapi` deste ambiente está quebrado por incompatibilidade com o
+  `starlette` (`Router.__init__() got an unexpected keyword argument 'on_startup'`). O degrau 2
+  resolve e entrega o que a demo precisa: **rodar com `python3` puro, sem instalação** — requisito
+  real num projeto onde o dono já relatou não conseguir instalar dependência em produção.
+  Transporte por **SSE**: `EventSource` é nativo do navegador, sem aperto de mão dos dois lados.
+  ⚠️ A captura é do **servidor** (`parec`), não do navegador, e o host padrão é `127.0.0.1` — o
+  áudio não sai da máquina. Capturar pelo navegador mudaria o caminho acústico (resample e AEC do
+  Chrome) e a demo deixaria de representar o sistema.
 - **Equivalência do fbank validada nas três lacunas que faltavam** (`tests/test_fbank_equivalente.py`,
   de 5 para **12 testes**). A primeira versão cobria só 16 kHz, caminho de lote e áudio
   bem-comportado — não autorizava a troca. `[MEDIDO]`: **8 kHz** (o domínio de produção) frames
