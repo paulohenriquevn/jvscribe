@@ -8,6 +8,8 @@ timestamp: 2026-07-31T00:00:00Z
 
 # ADR-0005 — Onde investir contra o erro de transcrição
 
+
+> ⚠️ **A aposta desta ADR foi medida em 2026-08-01 e rendeu menos que o previsto.** O beam + LM entrega **4,7% relativo** `[MEDIDO]` ([`e6-beam-lm`](../medicoes/e6-beam-lm.md)), não os 10–20% de `[LITERATURA]` que sustentavam a decisão — e a citação herdada vinha de um regime sem parentesco (CTC nível-caractere, modelos treinados em minutos de áudio). **A direção da decisão continua correta** (o LM é o único remédio para `real_word_hyp`); a magnitude, não.
 - Status: aceito
 - Data: 2026-07-31
 - Decisor: dono do projeto

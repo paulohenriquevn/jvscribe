@@ -29,12 +29,22 @@ ficam fora.
 
 ## O estado, em uma tabela
 
+⚠️ **Em 2026-08-01 a régua foi consertada e o conjunto foi corrigido.** Os 15,99% que este índice
+anunciava vinham do slice `test[0:100]`, que é uma **amostra alta** — e a régua contava acerto do
+modelo como erro. Todo WER agora sai **em par**, com a régua declarada
+([`e9`](medicoes/e9-vies-do-normalizador-contra-modelos-de-forma-falada.md)).
+
 | | valor | condição |
 |---|---|---|
-| WER | **15,99%** | FLEURS pt_br `test[0:100]`, greedy CTC, máquina ociosa |
-| CER | **7,30%** | idem |
-| RTFx | **40,0×** | i7 híbrido, ONNX int8 |
+| WER — comparabilidade externa | **14,83%** | FLEURS test **completo** (919), greedy, régua canônica (sem acento, com dígito) |
+| **WER — acurácia de reconhecimento** | **12,75%** | idem, régua estrita (com acento, forma falada nos dois lados) |
+| WER com beam + LM | **12,03%** | idem, régua sem acento — na estrita fica ~12,2% `[ESTIMATIVA]` |
+| RTFx | **40,0×** | i7 híbrido, ONNX int8, caminho de lote |
 | Publicado | `paulohenriquevn/jvscribe` | HuggingFace, privado |
+
+> O número histórico de **15,99%** (`test[0:100]`, régua canônica) continua válido **como aquilo que
+> era**: uma amostra de 100 utterances medida com a régua antiga. Duas amostras honestas de 100
+> utterances do mesmo conjunto variam de 12,4% a 17,5% — por isso o slice foi aposentado.
 
 ## As três coisas que a intuição erra aqui
 

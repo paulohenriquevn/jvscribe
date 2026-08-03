@@ -8,6 +8,8 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Benchmarks públicos (reprodutíveis) — modelo M5 entregue
 
+
+> ⚠️ **Superado em 2026-08-01.** Os 15,83% saem de `test[0:100]`, que é uma **amostra alta**: o test completo (919) dá **14,83%** na mesma régua, e **12,75%** na régua estrita. O slice foi aposentado. Ver [`e9`](e9-vies-do-normalizador-contra-modelos-de-forma-falada.md).
 Medido com `jvscribe/batch/batch_transcribe.py` + `jvscribe/batch/eval_public_hf.py`
 (ONNX int8, CPU, greedy). Todo número `[MEDIDO]`.
 

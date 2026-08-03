@@ -1,7 +1,7 @@
 ---
 type: Artefato de modelo
 title: jvscribe-ptbr-zipformer-ctc-64m
-description: O modelo publicado — WER 15,99% em FLEURS pt_br, RTFx 40×, int8 em CPU.
+description: O modelo publicado — WER 12,75% em FLEURS completo (régua estrita), RTFx 40×, int8 em CPU.
 resource: https://huggingface.co/paulohenriquevn/jvscribe
 tags: [modelo, entregavel, huggingface, wer]
 timestamp: 2026-07-31T00:00:00Z
@@ -19,7 +19,12 @@ máquina com load average < 1.
 
 | | valor |
 |---|---|
-| WER | **15,99%** |
+| WER (régua antiga, `test[0:100]`) | **15,99%** |
+| **WER (régua estrita, test completo)** | **12,75%** |
+> ⚠️ **Superado em 2026-08-01.** Este número usa a régua antiga (sem acento, com dígito na
+> referência) e/ou o slice `test[0:100]`. Na régua estrita e no test completo o modelo mede
+> **12,75%**. Ver [`e9`](../medicoes/e9-vies-do-normalizador-contra-modelos-de-forma-falada.md).
+
 | CER | **7,30%** |
 | RTFx | **40,0×** |
 

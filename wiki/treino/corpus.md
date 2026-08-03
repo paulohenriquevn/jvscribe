@@ -31,7 +31,10 @@ Todas atacam o **mesmo** overfitting:
    graça. Bônus: ataca também o WER telefônico 8 kHz.
 2. **Checkpoint averaging** — `[MEDIDO]`, não mais estimativa: a média de 112k+124k dá WER
    **15,99%** contra 17,32% do checkpoint único, IC95% do delta [−2,25; −0,43] pp.
-3. **Beam search + LM no decode** — 10–20% relativo `[LITERATURA]`, sem tocar modelo nem dado.
+3. **Beam search + LM no decode** — **4,7% relativo** `[MEDIDO]` em 2026-08-01
+   ([`e6-beam-lm.md`](../medicoes/e6-beam-lm.md)), **não** os 10–20% que esta linha afirmava. A
+   faixa antiga era `[LITERATURA]` colhida de CTC nível-caractere e de modelos treinados em
+   minutos de áudio — falácia § 3 #2. Corpus, ordem e largura de beam **saturaram**.
    O decode de hoje é greedy, o piso. **É também o que tornaria o FLToP aplicável** —
    ver [../otimizacao/o-que-nao-se-aplica.md](../otimizacao/o-que-nao-se-aplica.md).
 

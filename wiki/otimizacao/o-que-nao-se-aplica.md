@@ -28,8 +28,9 @@ Mas:
 **Nosso `ctc_output` custa 0,3%** e o decode é greedy (`argmax` do numpy). Por Amdahl, speedup
 infinito de 0,3% rende ~0.
 
-> FLToP passa a valer **se migrarmos para beam search + LM** — que é uma alavanca de WER
-> (10–20% relativo, `[LITERATURA]`), não de latência. Ver [../treino/corpus.md](../treino/corpus.md).
+> FLToP passa a valer **se migrarmos para beam search + LM** — que é uma alavanca de WER de
+> **4,7% relativo** `[MEDIDO]` ([`e6-beam-lm.md`](../medicoes/e6-beam-lm.md)), não os 10–20%
+> que aqui se afirmava, e não de latência. Ver [../treino/corpus.md](../treino/corpus.md).
 
 ## Blank layer-skipping — `arXiv:2305.11558` + recipe do icefall
 

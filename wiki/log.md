@@ -3,13 +3,40 @@ type: Log
 title: Histórico do projeto
 description: Ordem cronológica das decisões e medições que produziram o estado atual.
 tags: [log, historico]
-timestamp: 2026-07-31T00:00:00Z
+timestamp: 2026-08-01T00:00:00Z
 ---
 
 # Histórico
 
 Ordem cronológica. Detalhe de cada item no conceito linkado; mudanças de código no
 `CHANGELOG.md` do repositório.
+
+## 2026-08-01 — a régua estava errada, e isso moveu tudo
+
+O dia começou perseguindo 10% de WER e terminou descobrindo que **o instrumento mentia nos dois
+sentidos**. Nada no modelo mudou; o que mudou foi o que sabemos sobre ele.
+
+- **A régua contava acerto do modelo como erro.** 187 das 919 referências do FLEURS trazem
+  **dígito** e o modelo emite forma falada — ele acerta, a régua reprova. Custo: **2,29 p.p.**
+  E ela **premia** 0,31 p.p. no eixo oposto, ao apagar acento (que em português **funde palavras
+  distintas**: `e`/`é`, `pais`/`país`). O padrão da área tem o mesmo defeito, **e só em não-inglês** —
+  [e9](medicoes/e9-vies-do-normalizador-contra-modelos-de-forma-falada.md).
+- **O `test[0:100]` foi aposentado.** É amostra alta: o test completo dá 14,83% contra os 15,99%
+  publicados, e duas amostras honestas de 100 variam de 12,4% a 17,5%.
+- **Beam + LM entrega 4,7%, não 10–20%** — e a citação herdada vinha de CTC nível-caractere e de
+  modelos treinados em minutos de áudio. Corpus, ordem do n-grama e largura de beam **saturaram**.
+  O LM comprava ganho **apagando palavras**; o ponto de operação foi corrigido —
+  [e6](medicoes/e6-beam-lm.md).
+- **O split S/D/I foi medido pela primeira vez.** Os "três terços" nunca foram terços do erro — são
+  terços das substituições (68,6%). **Inserção é 18,5%** e ninguém tinha olhado — [e8](medicoes/e8-composicao-do-erro-na-regua-corrigida.md).
+- **Seis técnicas de pré-processamento, seis pioras.** Banda sintética é pior que banda ausente: o
+  reconhecedor lida melhor com informação **faltando** do que com informação **inventada** —
+  [e12](medicoes/e12-realce-de-audio-antes-do-asr-piora.md).
+- **NURC-SP entra como conjunto de dificuldade** — 36,9% (49,2% no recorte ruim), licença **MIT**,
+  e sobreviveu à auditoria de convenção que poderia tê-lo derrubado —
+  [e10](medicoes/e10-busca-por-conjunto-desafiador-ptbr.md), [e13](medicoes/e13-duas-verificacoes-antes-da-gpu.md).
+- **O corpus de treino é ~1.413 h, não ~870.** A documentação erra por 1,6×, e com isso **toda
+  projeção de escala usou o denominador errado** — [e13](medicoes/e13-duas-verificacoes-antes-da-gpu.md).
 
 ## 2026-07-31 — M6 em medição
 

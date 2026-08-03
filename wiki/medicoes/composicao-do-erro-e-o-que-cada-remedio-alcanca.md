@@ -8,6 +8,8 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Composição do erro — e o que cada remédio alcança `[MEDIDO]` / `[LITERATURA]`
 
+
+> ⚠️ **Superado em parte por [`e8`](e8-composicao-do-erro-na-regua-corrigida.md).** Os três terços aqui foram medidos em **n=100** e com a **régua defeituosa** (que contava acerto como erro em número). Re-medidos em n=919 com a régua corrigida, eles são terços das **substituições** — 68,6% do erro — e `rare_ref` cai de 34,2% para 25,8%. O raciocínio abaixo permanece auditável; os números foram substituídos.
 Data: 2026-07-31 · modelo `models/current/model.int8.onnx` (o entregue) · decode greedy ·
 i7-1355U.
 
