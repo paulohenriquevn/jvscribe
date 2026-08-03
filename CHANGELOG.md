@@ -14,6 +14,21 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **`mic_transcribe` não tinha backpressure — e o sintoma era "não transcreve nada"**
+  (`realtime/mic_transcribe.py`, `tests/test_mic_backpressure.py`). Ele fazia `audio_q.get()` num
+  laço bloqueante e processava **todo** chunk. Com a CPU saturada a fila crescia sem limite:
+  `[MEDIDO]` **401% de CPU e 3,0 GB de RAM**, decodificando áudio de **minutos atrás** — do lado do
+  usuário, indistinguível de mudez.
+  **O `live_transcribe` já tinha a proteção** desde o soak que mediu o atraso subir de 392 ms para
+  18.798 ms e ficar lá. Este arquivo ficou de fora da correção: **mesmo defeito em dois lugares,
+  consertado num só.** Agora `aplicar_backpressure` é **reusado** de `live_transcribe`, não copiado,
+  e há teste guardando o reuso (`__module__ == "live_transcribe"`) — porque foi a divergência entre
+  os dois arquivos que causou o defeito.
+  A conta do atraso foi extraída para `atraso_da_fila()` para ser testável; era ela que faltava.
+- **Texto de leitura para avaliação controlada** (`data/eval/leitura/referencia.txt`). Cada linha
+  exercita uma classe de erro medida: **dígitos** (o artefato de régua de 2,29 p.p.), pares mínimos
+  de **acento** (`é`/`e`, `país`/`pais`, `está`/`esta`), **OOV** de domínio (`Bradesco`, `PIX`,
+  `SELIC`, `CPF` — 83,6% de taxa de erro) e uma **negação** cuja perda inverte o sentido.
 - **Os guards de error-handling do projeto pegaram a demo web, e o código foi corrigido** —
   não isentado. Três violações reais: `except Exception` largo ao criar a sessão (engoliria
   `NameError`/`AttributeError` junto com "modelo ausente"), e `except: pass` sem fallback explícito

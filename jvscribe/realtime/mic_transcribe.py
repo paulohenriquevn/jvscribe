@@ -25,6 +25,9 @@ import argparse, queue, sys, time
 import numpy as np
 import sounddevice as sd
 
+# REUSO, não cópia: a mesma regra do caminho de 2 canais.
+from live_transcribe import aplicar_backpressure
+
 import pathlib
 
 # `common/` é o shared kernel. Um humano rodando este script direto só tem o diretório dele
@@ -44,6 +47,15 @@ from streaming import (  # noqa: E402,F401
 from ctc import BLANK, WORD_START  # noqa: E402,F401
 
 DIM, RESET, CLR = "\033[2m", "\033[0m", "\033[K"
+
+
+def atraso_da_fila(chunks_na_fila: int, amostras_por_chunk: int) -> float:
+    """Quanto áudio (s) está esperando para ser processado.
+
+    Extraído do laço para ser testável: era esta conta que faltava, e sem ela o processo
+    acumulava a fila inteira em vez de descartar o que envelheceu.
+    """
+    return chunks_na_fila * (amostras_por_chunk / SR)
 
 
 def main():
@@ -82,6 +94,7 @@ def main():
         pending, buffered = [], 0
         line_words = []            # palavras finais na linha de exibição atual
         last_change = time.time()
+        descartado_total = 0.0
         while True:
             c = audio_q.get()
             pending.append(c)
@@ -90,6 +103,19 @@ def main():
                 continue
             chunk = np.concatenate(pending)
             pending, buffered = [], 0
+
+            # BACKPRESSURE — sem isto, o laço que fica para trás NUNCA recupera.
+            # `live_transcribe` já tinha; este arquivo ficou de fora, e o sintoma engana:
+            # com a CPU saturada a fila cresce sem limite, a RAM sobe (medido: 3,0 GB) e o
+            # texto que sai é de MINUTOS atrás — indistinguível de "não transcreve nada".
+            # Num sistema ao vivo, áudio velho vale menos que áudio novo.
+            atraso_s = atraso_da_fila(audio_q.qsize(), len(chunk))
+            chunk, descartadas = aplicar_backpressure(chunk, atraso_s)
+            if descartadas:
+                descartado_total += descartadas / SR
+                sys.stderr.write(f"[backpressure] {descartado_total:.1f}s descartado — "
+                                 f"a CPU nao acompanha\n")
+                sys.stderr.flush()
 
             newly, tentative = dec.update(chunk)
             if newly:
