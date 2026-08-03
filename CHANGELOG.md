@@ -14,6 +14,14 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Os guards de error-handling do projeto pegaram a demo web, e o código foi corrigido** —
+  não isentado. Três violações reais: `except Exception` largo ao criar a sessão (engoliria
+  `NameError`/`AttributeError` junto com "modelo ausente"), e `except: pass` sem fallback explícito
+  em `_enfileirar` e `_sse`. Agora: captura estreita em `(OSError, ValueError, RuntimeError,
+  KeyError)` — defeito de programação **estoura alto**, como manda `error-handling` § 2;
+  `_enfileirar` devolve `bool` dizendo se descartou (perda silenciosa é o que ela existe para
+  evitar, então não pode ser silenciosa sobre a própria perda); e `_sse` termina com `return`
+  explícito, porque aba fechada é término **normal**, não falha.
 - **Demo web da transcrição ao vivo** (`realtime/web_demo.py` + `web_demo.html`,
   `tests/test_web_demo.py`). Uma página com o diálogo rotulado (ATENDENTE = mic · CLIENTE =
   loopback), os RNF-01/02/03 medidos ao vivo, e o **aviso de carga**: acima do limiar os vereditos

@@ -155,20 +155,29 @@ class Sessao:
             "alvos": {"rtfx": ALVO_RTFX, "p99_ms": ALVO_P99_MS, "backlog_pct": ALVO_BACKLOG_PCT},
         })
 
-    def _enfileirar(self, ev: dict) -> None:
+    def _enfileirar(self, ev: dict) -> bool:
         """Descarta o evento mais ANTIGO quando a fila enche.
 
         Mesma lógica do backpressure do áudio: numa demo ao vivo, o que acabou de ser dito vale
         mais que o que foi dito há dez segundos. Bloquear aqui travaria o laço de captura.
+
+        Devolve `True` se o evento entrou, `False` se foi descartado — perda silenciosa é o que
+        esta função existe para evitar, então ela não pode ser silenciosa sobre a própria perda.
         """
         try:
             self.eventos.put_nowait(ev)
+            return True
         except queue.Full:
-            try:
-                self.eventos.get_nowait()
-                self.eventos.put_nowait(ev)
-            except (queue.Empty, queue.Full):
-                pass
+            pass
+        try:
+            self.eventos.get_nowait()          # abre espaço jogando fora o mais ANTIGO
+            self.eventos.put_nowait(ev)
+        except (queue.Empty, queue.Full):
+            # Corrida com o leitor do SSE: outra thread mexeu na fila entre as duas operações.
+            # O fallback é DESCARTAR este evento, e ele é devolvido como False em vez de sumir
+            # em silêncio — quem chamar pode contar quantos caíram.
+            return False
+        return True
 
 
 class Servidor(ThreadingHTTPServer):
@@ -241,7 +250,11 @@ class Rotas(BaseHTTPRequestHandler):
             return
         try:
             s = Sessao(**self.server.args_sessao)
-        except Exception as exc:                      # falha de modelo/vocabulário é fatal e tipada
+        except (OSError, ValueError, RuntimeError, KeyError) as exc:
+            # Estreito de propósito: modelo/vocabulário ausente ou incompatível é falha ESPERADA
+            # e vira erro tipado na tela. `except Exception` engoliria também defeito de
+            # programação (NameError, AttributeError), que deve estourar alto — `error-handling`
+            # § 2. Se a demo quebrar por bug meu, quero o stack trace, não um JSON educado.
             self._json({"ok": False, "erro": f"{type(exc).__name__}: {exc}"}, 500)
             return
         self.server.sessao = s
@@ -272,7 +285,10 @@ class Rotas(BaseHTTPRequestHandler):
                 self.wfile.write(linha.encode())
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
-            pass                                      # aba fechada: fim normal, não erro
+            pass
+        # Aba fechada é término NORMAL desta rota, não falha: o `return` explícito diz isso em
+        # vez de deixar o fluxo escorrer pelo fim da função como se nada tivesse acontecido.
+        return
 
 
 def main() -> int:
