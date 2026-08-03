@@ -13,6 +13,50 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+- **`kaldi-native-fbank` substitui o `lhotse` sem perda — e um teste trava a configuração**
+  (`tests/test_fbank_equivalente.py`). O `lhotse` arrasta **695 MB de torch** só para extrair fbank
+  e não instala no ambiente de produção. `[MEDIDO]` com a config casada, em áudio real: **contagem
+  de frames idêntica**, `|diff|` médio **3×10⁻⁶**, máximo 1,3×10⁻³; WER n=50 de 13,769% (lhotse)
+  contra 13,375% (knf) — a diferença vem de **empates no argmax** virados por perturbação de 1e-4,
+  e o **sinal do delta é arbitrário**, não uma vantagem.
+  ⚠️ **O risco não é a biblioteca, são os defaults.** Três parâmetros do lhotse divergem do padrão
+  Kaldi que o knf adota: `snip_edges` (False vs True), `high_freq` (−400 vs 0) e `dither` (0,0 vs
+  1,0). E há uma quarta armadilha de **escala**: Kaldi convenciona int16, lhotse usa float [−1,1] —
+  passar int16 desloca todo o log-mel por `2·ln(32768) = 20,79` `[MEDIDO]`. Qualquer um dos quatro
+  passa **em silêncio**: o pipeline roda, produz texto plausível e o WER degrada sem sintoma — o
+  mesmo modo de falha do vocabulário trocado. Os 5 testes travam `opcoes_de_producao()` e **falham
+  de propósito** se alguém usar o default do Kaldi.
+- **E16 — relaxar o RTFx para 1× NÃO compra qualidade** (`wiki/medicoes/e16-o-que-1x-de-rtfx-compra.md`).
+  Todo lever de decode que consumiria o orçamento extra já está **refutado ou saturado**: fp32, beam
+  sozinho, largura 8, corpus de LM >2,5M, ordem >3, seis técnicas de realce, e o viés de blank sob o
+  canal alvo. O que 1× reabriria é a aposta de especialização do `CLAUDE.md`. `[MEDIDO]` mesma CPU,
+  mesmo áudio: **jvscribe 64M a 16,7×** contra **faster-whisper small (244M) a 0,7×** — **mesmo a 1×
+  um modelo de prateleira não cabe**, por margem de 24×. A aposta sobrevive.
+  ⚠️ A comparação de **WER** contra o Whisper foi **injusta e não é publicada**: os segmentos do
+  NURC-SP têm 2–4 palavras e o Whisper é desenhado para janelas de 30 s — alucina ou devolve vazio.
+  **Achado colateral — degradações compõem de forma super-aditiva:** o mesmo canal custa **+4 p.p.**
+  em FLEURS lido, **+19,2** no NURC `quality=high` e **+27,0** no `quality=low`. Somar "custo do
+  canal" ao WER espontâneo **subestima**, e mais quanto pior o áudio base.
+- **E15 — o viés de blank tem sinal OPOSTO em áudio fácil e difícil**
+  (`wiki/medicoes/e15-o-vies-de-blank-e-dependente-do-dominio.md`). No NURC-SP `quality=low`,
+  **deleção é 26% do erro contra 12,9% no FLEURS**. `[MEDIDO]` n=60: β=0 dá 54,02%; **β≈+0,7 dá
+  51,71% (−2,32 p.p.)**, com inserções caindo de 102 para 38. **E o sinal inverte:** no FLEURS β=0
+  era o ótimo e viés positivo **piorava**.
+  ⚠️ **A validação em held-out DERRUBOU a recomendação sob o canal alvo:** no `quality=high` com o
+  canal do spec, β=+0,7 **piora** 0,71 p.p. O ganho era específico da degradação analógica do
+  NURC-SP e **não generaliza para telefonia** — exatamente a ressalva que o artefato declarava.
+- **E14 — o spec do dataset alvo, decomposto fator a fator**
+  (`wiki/medicoes/e14-o-spec-do-dataset-alvo-decomposto.md`). Simulação fiel do canal de produção
+  (8 kHz, 300–3400 Hz, G.711 μ-law, pico 0,95 / RMS baixo, speech ratio, ruído de linha), reusando
+  `audio.channel.apply_band` e `audio.codecs.apply_codec(…, "g711u")`.
+  `[MEDIDO]`: banda **+0,54** · **G.711 μ-law +0,00** · ganho **+0,36** · speech ratio **−0,93
+  (AJUDA)** · ruído 20 dB **+4,86**. **O codec custa ZERO** e **o silêncio ajuda** — o CTC trata
+  silêncio nativamente e o padding dá quadros de acomodação. **O canal inteiro custa <1 p.p. somado.**
+  ⚠️ Dois defeitos do simulador, encontrados e corrigidos: o ruído era somado **depois** do filtro de
+  banda (o hum de 60 Hz nunca era filtrado) e a primeira corrida atribuiu **+18,77 p.p.** ao ruído.
+  Medido limpo: **+4,86** — fator de quase 4×.
+
 ### Changed
 - **Corrigido no `CLAUDE.md`: beam+LM não rende 10–20% neste sistema, rende 4,7%** `[MEDIDO]`.
   A linha antiga era `[LITERATURA]` herdada de regime **sem parentesco** com o nosso — verificado
