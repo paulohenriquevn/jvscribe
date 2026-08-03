@@ -39,6 +39,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [e12-realce-de-audio-antes-do-asr-piora.md](e12-realce-de-audio-antes-do-asr-piora.md) | Seis técnicas de realce, seis pioras; banda sintética é pior que ausente |
 | [e13-duas-verificacoes-antes-da-gpu.md](e13-duas-verificacoes-antes-da-gpu.md) | O corpus é ~1.413 h; a documentação erra 1,6× |
 | [e15-o-vies-de-blank-e-dependente-do-dominio.md](e15-o-vies-de-blank-e-dependente-do-dominio.md) | O viés de blank tem sinal OPOSTO em áudio fácil e difícil — −2,3 p.p. no difícil |
+| [e16-o-que-1x-de-rtfx-compra.md](e16-o-que-1x-de-rtfx-compra.md) | Relaxar o RTFx para 1× não compra qualidade — e Whisper small nem cabe |
 | [reprodutibilidade.md](reprodutibilidade.md) | O artefato publicado transcreve **e** treina |
 | [benchmarks-publicos.md](benchmarks-publicos.md) | FLEURS, CORAA, telefônico — com comando de reprodução |
 
