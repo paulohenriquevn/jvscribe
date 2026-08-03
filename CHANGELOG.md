@@ -14,6 +14,12 @@ e o versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Added
+- **Equivalência do fbank validada nas três lacunas que faltavam** (`tests/test_fbank_equivalente.py`,
+  de 5 para **12 testes**). A primeira versão cobria só 16 kHz, caminho de lote e áudio
+  bem-comportado — não autorizava a troca. `[MEDIDO]`: **8 kHz** (o domínio de produção) frames
+  idênticos e `|diff|` máx **0,00055**; **extração incremental em hops de 0,5 s — o caminho AO VIVO —
+  é BIT-EXATA** contra a extração de uma vez; e cinco casos de borda (silêncio digital **0,00000**,
+  áudio de 20 ms, offset DC, clipado, amplitude 1e-5) todos com contagem de frames idêntica.
 - **`kaldi-native-fbank` substitui o `lhotse` sem perda — e um teste trava a configuração**
   (`tests/test_fbank_equivalente.py`). O `lhotse` arrasta **695 MB de torch** só para extrair fbank
   e não instala no ambiente de produção. `[MEDIDO]` com a config casada, em áudio real: **contagem

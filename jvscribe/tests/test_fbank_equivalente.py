@@ -105,3 +105,56 @@ def test_default_do_kaldi_diverge_e_o_teste_pega(sinal, campo, errado):
     n = min(len(K), len(ref))
     divergiu = K.shape != ref.shape or np.abs(K[:n] - ref[:n]).max() > 0.01
     assert divergiu, f"{campo}={errado} deveria divergir do lhotse e não divergiu"
+
+
+# ── As lacunas que a primeira versão deste teste NÃO cobria ───────────────────────────────
+# Foram escritas depois de o dono perguntar "você tem 95% de certeza?". A resposta era NÃO: a
+# evidência cobria só 16 kHz, caminho de lote e áudio bem-comportado. Estes casos fecham isso.
+
+
+def test_equivalente_tambem_em_8_khz():
+    """O domínio de PRODUÇÃO é 8 kHz — testar só em 16 kHz não autorizava a troca."""
+    from lhotse import Fbank, FbankConfig
+    x = (np.random.default_rng(11).standard_normal(8000 * 2) * 0.05).astype(np.float32)
+    o = opcoes_de_producao()
+    o.frame_opts.samp_freq = 8000
+    f = knf.OnlineFbank(o)
+    f.accept_waveform(8000, x.tolist())
+    f.input_finished()
+    K = np.array([f.get_frame(i) for i in range(f.num_frames_ready)], dtype=np.float32)
+    L = np.asarray(Fbank(FbankConfig(num_mel_bins=80, sampling_rate=8000)).extract(x, 8000),
+                   dtype=np.float32)
+    assert K.shape == L.shape
+    assert np.abs(K - L).max() < 0.01
+
+
+def test_extracao_incremental_e_bit_exata():
+    """O motor AO VIVO alimenta o fbank em hops — não de uma vez.
+
+    `[MEDIDO]` alimentar em hops de 0,5 s produz saída **bit-exata** contra a extração de uma
+    vez. Se isto quebrar, o caminho de tempo real diverge do de lote sem nenhum sintoma visível.
+    """
+    x = (np.random.default_rng(13).standard_normal(16000 * 3) * 0.05).astype(np.float32)
+    de_uma_vez = extrair(x)
+    f = knf.OnlineFbank(opcoes_de_producao())
+    for i in range(0, len(x), 8000):
+        f.accept_waveform(16000, x[i:i + 8000].tolist())
+    f.input_finished()
+    em_hops = np.array([f.get_frame(i) for i in range(f.num_frames_ready)], dtype=np.float32)
+    assert em_hops.shape == de_uma_vez.shape
+    assert np.abs(em_hops - de_uma_vez).max() == 0.0, "streaming divergiu do lote"
+
+
+@pytest.mark.parametrize("nome,gera", [
+    ("silêncio digital", lambda r: np.zeros(16000, np.float32)),
+    ("muito curto (20 ms)", lambda r: (r.standard_normal(320) * 0.05).astype(np.float32)),
+    ("offset DC forte", lambda r: (r.standard_normal(16000) * 0.05 + 0.4).astype(np.float32)),
+    ("clipado", lambda r: np.clip(r.standard_normal(16000) * 3, -1, 1).astype(np.float32)),
+    ("amplitude minúscula", lambda r: (r.standard_normal(16000) * 1e-5).astype(np.float32)),
+])
+def test_casos_de_borda(nome, gera):
+    """Sinais que a fala real produz e que o teste com ruído gaussiano não exercitava."""
+    x = gera(np.random.default_rng(17))
+    K, L = extrair(x), referencia(x)
+    assert K.shape == L.shape, f"{nome}: contagem de frames divergiu"
+    assert np.abs(K - L).max() < 0.01, f"{nome}: divergência de {np.abs(K - L).max():.5f}"
