@@ -48,7 +48,7 @@ teórica está errada neste modelo e o pré-registro do LM precisa ser reescrito
 
 **Predição:** WER 15,99% → **12,8%–14,4%** (ganho de 1,6 a 3,2 p.p.), IC95 do delta excluindo zero.
 
-**Proveniência da faixa:** `[LITERATURA]` — é a faixa que o CLAUDE.md registra para beam+LM, e é
+**Proveniência da faixa:** `[LITERATURA]` — é a faixa que o projeto registrava para beam+LM, e é
 **predição herdada, não medida aqui**. Se cair fora, o erro é da transferência de literatura para
 este modelo/língua, e isso é resultado publicável.
 
@@ -82,7 +82,7 @@ que não há vazamento.
 ## O que esta fase NÃO decide
 
 - **Nada sobre tempo real.** Tudo aqui é caminho de lote. Ao vivo o RTFx medido é 3,58× contra um
-  RNF-01 de 3×, e `asr-evidence-discipline` § 4 é explícita: benchmark de componente não transfere.
+  RNF-01 de 3×, e a disciplina de evidência é explícita: benchmark de componente não transfere.
 - **Nada sobre call center.** FLEURS é leitura de notícias. O regime do produto é 8 kHz espontâneo,
   e o WER lá é `[DESCONHECIDO]`.
 - **O ponto de operação.** Escolher largura de beam e peso do LM olhando o resultado no mesmo

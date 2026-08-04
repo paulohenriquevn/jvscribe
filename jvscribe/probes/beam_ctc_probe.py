@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E4 — beam search CTC: **custo antes de ganho**.
 
-Protocolo: `knowledge-base/plans/portao-de-confianca-plan.md` § Phase E4.
+Protocolo: fase E4 do pré-registro do portão de confiança.
 
 A ordem é invertida de propósito. `real_word_hyp` é **36,6%** do erro — o maior bloco, e o único
 que nenhuma outra fase toca — mas se o beam não couber no RNF-07 (RTFx ≥ 6×), o ganho é

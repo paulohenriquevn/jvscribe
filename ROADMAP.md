@@ -46,7 +46,7 @@ margem).
 
 > Items in this list are off-limits for V1. To reconsider, write a new roadmap revision — do not silently expand scope.
 >
-> Note: "versionamento de modelo" foi removido de **Plataforma de frota** em 2026-07-30, quando M9 entrou (governança do artefato canônico DENTRO deste repo; distribuição BYOD, telemetria e monitoramento em produção seguem fora de escopo). Ver CHANGELOG.
+> Note: "versionamento de modelo" foi removido de **Plataforma de frota** em 2026-07-30, quando M9 entrou (governança do artefato canônico DENTRO deste repo; distribuição BYOD, telemetria e monitoramento em produção seguem fora de escopo).
 
 ## Constraints
 
@@ -69,8 +69,8 @@ atendentes reais em BYOD durante 4 semanas consecutivas, sem intervenção manua
 
 > Critério é de **paridade, não superioridade**. O argumento econômico é substituir
 > ~$47.500/mês de API por compute marginal zero — empatar em qualidade a custo zero
-> já vence. As condições de campo alinham com `rules/dogfood-golden-rule.md`, que
-> exige status `running` (uso sustentado real), não `wired`.
+> já vence. As condições de campo exigem uso sustentado real (`running`), não
+> apenas instalado e configurado (`wired`).
 
 **North-star metric (tracked post-launch):** **Horas de áudio transcritas
 localmente por mês** — com **taxa de correção por minuto transcrito** como métrica
@@ -88,9 +88,9 @@ de saúde acompanhante.
 
 > Each milestone has a checkbox in its header. Flip `[ ]` → `[x]` as you complete it. Status lives in this document; no external tracker required.
 >
-> Cada milestone declara os **agents** responsáveis (`.claude/agents/README.md`) e,
-> quando aplicável, a **skill** de ciclo que o conduz (`CLAUDE.md § Roteamento`).
-> Todos operam sob `.claude/rules/asr-evidence-discipline.md` — número sem rótulo de
+> Cada milestone declara os **agents** responsáveis e, quando aplicável, a **skill**
+> de ciclo que o conduz. Todos operam sob a disciplina de evidência do projeto
+> ([`wiki/disciplina/`](wiki/disciplina/index.md)) — número sem rótulo de
 > proveniência não conta como evidência.
 
 ### M0 — [x] Walking skeleton
@@ -154,10 +154,9 @@ via ciclo de descoberta formal — não por acumulação de argumentos.
 
 **Definition of done:**
 
-- [ ] Blueprint avaliando os cinco candidatos (Moonshine-like AED, Zipformer+CTC, FastConformer+CTC, Paraformer/NAR, LC-BiMamba/SSM) contra os oito critérios já fixados em `PRD.md` § 8.1
-- [ ] ADR registrando a escolha **e as alternativas descartadas com o motivo**
+- [ ] Blueprint avaliando os cinco candidatos (Moonshine-like AED, Zipformer+CTC, FastConformer+CTC, Paraformer/NAR, LC-BiMamba/SSM) contra os oito critérios fixados **antes** da avaliação
+- [ ] ADR registrando a escolha **e as alternativas descartadas com o motivo** ([ADR 0001](wiki/decisoes/0001-finalistas-de-arquitetura.md))
 - [ ] **Dois finalistas** nomeados para o piloto comparativo
-- [ ] `PRD.md` atualizado para referenciar o blueprint em vez de fixar arquitetura
 
 **Dependencies:** M1 (sem régua não há comparação).
 
@@ -296,7 +295,7 @@ sem pontuação.
 - [ ] **~20 atendentes reais**, em BYOD heterogêneo, por **4 semanas consecutivas**
 - [ ] **Sem intervenção manual** — nenhum restart ou ajuste por operador durante o período
 - [ ] WER ≤ 25% mantido sobre amostragem auditada do tráfego real
-- [ ] Evidência de dogfood registrada conforme `rules/dogfood-golden-rule.md`, com status `running`
+- [ ] Evidência de dogfood registrada com status `running` (uso sustentado real), não `wired`
 
 **Dependencies:** M5, M6, M7.
 
@@ -311,7 +310,7 @@ sem pontuação.
 
 ### M9 — [x] Governança de artefato e reprodutibilidade
 
-> Added 2026-07-30 by `/roadmap-feature` (slug: `governanca-artefato-reprodutibilidade`). See CHANGELOG `[Unreleased] § Added`.
+> Added 2026-07-30 by `/roadmap-feature` (slug: `governanca-artefato-reprodutibilidade`).
 
 **Objective:** Fechar as lacunas de integridade e reprodutibilidade encontradas na auditoria
 de system design de 2026-07-30, de modo que os números do projeto sejam comparáveis entre si
@@ -330,11 +329,11 @@ modelo é ambíguo.
 - [x] **`JVSCRIBE_MODEL_DIR`** — eliminado o caminho absoluto de `jvscribe/batch/eval_public_hf.py:15`
 - [x] **`jvscribe/common/`** com `ctc.py` e `text.py`, consolidando as 7 implementações de colapso CTC e as 5 `normalize_ptbr`; guarda de layout alterada de "nenhum import cross-pipeline" para "cross-pipeline apenas a partir de `common/`"
 - [~] **Conformidade CTC cross-language** — **NÃO APLICÁVEL** desde a remoção do runtime Rust (2026-07-30): não há segunda linguagem a conferir. Substituído por `tests/test_ctc_equivalence.py`, que compara o kernel contra uma referência independente e PROÍBE que as cópias voltem. O golden do fingerprint de vocabulário (medido pelo Rust) sobrevive congelado em `test_make_model_card.py`
-- [x] **`.gitignore` corrigido** — linhas 57-58 (`*.wav`, `*.f32`) removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` e `crates/macaw-audio/tests/fixtures/` deixaram de ser ignoradas
-- [~] **CI verde** — `pytest jvscribe/tests` verde em runner limpo. `cargo test --workspace` **NÃO APLICÁVEL** (sem crates desde 2026-07-30); `scripts/tests` não existe mais (pasta reorganizada)
-- [x] **`LICENSE` Apache-2.0** na raiz. `rust-toolchain.toml` **NÃO APLICÁVEL** (sem Rust)
-- [x] **Grupo A da lista de remoção executado** — 89.874 linhas de dumps/código sem caller, conforme `system-design-output/target_architecture.md` § 4; Grupo B **arquivado, não apagado**
-- [x] **README e citações mortas** — tabela "Como navegar" apontando para o que existe; sweep das 50 citações a `PRD.md`/`knowledge-base/` em 34 arquivos; endpoint `/m1` de `app.rs:501` corrigido ou removido (hoje engole ENOENT com `unwrap_or_default()`)
+- [x] **`.gitignore` corrigido** — as linhas que ignoravam `*.wav` e `*.f32` removidas; `git check-ignore --no-index` confirma que as fixtures determinísticas de `tests/fixtures/` deixaram de ser ignoradas
+- [~] **CI verde** — `pytest jvscribe/tests` verde em runner limpo. O lado Rust saiu do escopo com a remoção do runtime (2026-07-30)
+- [x] **`LICENSE` Apache-2.0** na raiz
+- [x] **Grupo A da lista de remoção executado** — 89.874 linhas de dumps/código sem caller, conforme a auditoria de system design de 2026-07-30; Grupo B **arquivado, não apagado**
+- [x] **README e citações mortas** — tabela "Como navegar" apontando para o que existe; sweep das 50 citações mortas em 34 arquivos; endpoint `/m1` morto do runtime Rust corrigido
 
 **Dependencies:** M5 (o artefato de modelo a canonizar precisa existir; M5 está `[~]` — 2/3 DoDs, com o telefônico deferido, e o export já existe).
 
@@ -344,7 +343,7 @@ modelo é ambíguo.
 
 1. O fail-fast de `vocab_size` **quebra fluxos que hoje passam em silêncio** com o modelo errado — vai falhar alto em scripts que ninguém sabia estarem quebrados, e o custo aparece de uma vez
 2. O CI **expõe a quantidade real de testes que fazem SKIP** sem ambiente; o número pode ser desconfortável e forçar decisão sobre fixtures versionadas
-3. Unificar as 7 cópias do colapso CTC pode **mudar sutilmente o resultado de alguma pipeline**, invalidando um número já publicado no CHANGELOG ou no paper
+3. Unificar as 7 cópias do colapso CTC pode **mudar sutilmente o resultado de alguma pipeline**, invalidando um número já publicado no paper
 4. Mover o artefato para `models/current/` **quebra todo script com caminho hard-coded** — o inventário de caminhos precisa vir antes da mudança
 
 **Why now (from grill Q1):**
@@ -355,8 +354,8 @@ tamanhos diferentes (502 vs 503 linhas), e que existem 5 funções `normalize_pt
 semânticas incompatíveis — o que torna WERs de pipelines diferentes não comparáveis entre si.
 O gatilho é M6: ele vai medir os cinco critérios de RNF sobre um runtime cujo artefato de
 modelo é ambíguo e cuja suíte não roda em lugar nenhum além da máquina do dono. Medir antes
-de fechar essas lacunas produz número que não transfere — exatamente a falácia que
-`.claude/rules/asr-evidence-discipline.md` § 3 nomeia.
+de fechar essas lacunas produz número que não transfere — exatamente a falácia que a
+disciplina de evidência do projeto nomeia ([`wiki/disciplina/`](wiki/disciplina/index.md)).
 
 ---
 
@@ -382,7 +381,7 @@ Peers documentados em `wiki/referencias/` com commit fixado — as citações `[
 This roadmap is a living document but NOT a freeform scratchpad. To modify:
 
 - **Marking progress:** flip the checkbox in the milestone header. No commit message ceremony required.
-- **Adjusting a milestone's DoD:** edit in place, note the date in CHANGELOG.md.
+- **Adjusting a milestone's DoD:** edit in place, note the date in `wiki/log.md`.
 - **Adding a milestone post-M8:** the project has outgrown its initial scope — write a new roadmap revision (e.g. `ROADMAP-v2.md`) rather than inflating this one.
 - **Removing a milestone:** mark it `~~M3 — [-] name (cancelled YYYY-MM-DD — reason)~~` rather than deleting. The history matters.
 
@@ -390,9 +389,9 @@ This roadmap is a living document but NOT a freeform scratchpad. To modify:
 
 > Any of the 7 grill dimensions left as TBD at inception time:
 
-- **Nenhuma das 7 dimensões ficou em aberto.** Cinco foram herdadas de `PRD.md` e do grill de 15 perguntas em `knowledge-base/grills/asr-ptbr-cpu-realtime-grill.md`; duas foram resolvidas nesta sessão.
+- **Nenhuma das 7 dimensões ficou em aberto.** Cinco foram herdadas do grill de 15 perguntas que precedeu este roadmap; duas foram resolvidas nesta sessão.
 
-Questões técnicas em aberto **não** são dimensões do grill, mas bloqueiam milestones e vivem em `PRD.md` § 11:
+Questões técnicas em aberto **não** são dimensões do grill, mas bloqueiam milestones:
 
 | # | Questão | Bloqueia |
 |---|---|---|

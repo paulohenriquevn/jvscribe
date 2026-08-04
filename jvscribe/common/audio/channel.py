@@ -1,13 +1,13 @@
 """Augmentação telefônica on-the-fly em memória (M3 — T1.1, ADR-1).
 
-Cadeia G.711 do canal de call center brasileiro (PRD § 4/§ 7.1), toda em RAM —
+Cadeia G.711 do canal de call center brasileiro (canal de call center do projeto), toda em RAM —
 NUNCA materializa WAV em disco (DoD item 3):
 
   1. resample 16k→8k        (scipy.signal.resample_poly — com anti-aliasing)
   2. passa-banda 300-3400 Hz (scipy.signal.butter SOS ordem 4 — numericamente estável)
   3. G.711 A-law round-trip  (audioop.lin2alaw/alaw2lin — encode→decode)
 
-Não usa sox/subprocess/tempfile, ao contrário de `scripts/telephone_augment.sh` (M1),
+Não usa sox/subprocess/tempfile, ao contrário de `common/audio/augment.sh` (M1),
 que é a referência DSP. Aplicável como transform on-the-fly num dataloader.
 Blueprint m3-corpus § Corner 4/Q2 (`[FONTE-REPO]` scipy+audioop; o `Narrowband`
 nativo do lhotse não cobre A-law nem banda).

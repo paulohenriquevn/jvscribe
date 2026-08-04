@@ -59,7 +59,7 @@ Contra o que se apresenta 1.412,6 h? A documentação **se contradiz**:
 | fonte | TAGARELA |
 |---|---|
 | `jvscribe/finetune/prep_tagarela.py:6` | "~500h" |
-| `CHANGELOG.md:1338` | "Subset ~600h baixado na instância" |
+| registro de mudanças do treino | "Subset ~600h baixado na instância" |
 
 Somando o CORAA (273,5 h), o mux único seria **773,5 h ou 873,5 h** — razão apresentado/único de
 **1,8× ou 1,6×**, e **não os 3,2× da hipótese**.
@@ -204,7 +204,7 @@ porque ela também mistura réguas (15,83% é régua antiga; 12,75% é a estrita
 
 **2. Duas descobertas colaterais da mesma configuração:**
 
-- **`use_fp16 = True`.** O modelo entregue **foi treinado em fp16**. O `CLAUDE.md` afirma "os runs
+- **`use_fp16 = True`.** O modelo entregue **foi treinado em fp16**. O registro do projeto afirma "os runs
   usam `--use-fp16 0`" — não é contradição (o colapso de fp16 é *sob choque de augmentação*, e esta
   corrida rodou com augmentação **desligada**), mas o fato de o artefato publicado ser fp16 não
   estava registrado.

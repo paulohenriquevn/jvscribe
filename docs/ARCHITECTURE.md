@@ -215,7 +215,7 @@ de duração parecida evita preencher uma matriz majoritariamente com zeros.
         └────────► Transcricao (turnos) ◄──────┘
                       │
                       ▼
-              MetricasRNF → veredito contra PRD § 6
+              MetricasRNF → veredito contra os critérios de real-time (RNF)
 ```
 
 #### Por que não há diarização
@@ -329,6 +329,5 @@ estado faz. Isso é treino com `--causal 1`, não ajuste de runtime.
 | Profile por operador e prior art | `wiki/medicoes/m6-profile-por-operador.md` |
 | Medição de RNF ao vivo | `wiki/medicoes/m6-rnf-ao-vivo.md` |
 | Reprodutibilidade do artefato | `wiki/medicoes/reprodutibilidade.md` |
-| Como retomar o treino | `models/current/finetune/README.md` |
-| Model card | `models/current/README.md` |
-| Requisitos RF/RNF | `PRD.md` § 5, § 6 |
+| Como retomar o treino | `wiki/treino/retomar-o-treino.md` |
+| Critérios de real-time (RNF) | `ROADMAP.md` § Success criteria |

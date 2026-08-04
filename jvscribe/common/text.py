@@ -24,7 +24,7 @@ duas semânticas opostas sob o mesmo nome. Os nomes atuais dizem o contrato; est
 garante que só exista um lugar onde procurá-los.
 
 Determinístico: mesma entrada, mesma saída — o WER precisa ser reprodutível
-(`.claude/rules/testing.md` § 6).
+(determinismo exigido pelos testes).
 
 ## Fora de escopo (YAGNI, deliberado)
 

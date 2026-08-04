@@ -9,7 +9,8 @@ timestamp: 2026-07-31T00:00:00Z
 # E2 — correção pós-decode com portão `[MEDIDO]`
 
 Data: 2026-07-31 · `git ca436e1` → E2 · FLEURS pt_br, n=100 · i7-1355U.
-Fase E2 de [`portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md).
+Fase E2 do protocolo pré-registrado do portão de confiança
+([`post-decode-budget.md`](../../docs/paper/post-decode-budget.md) § 8).
 Bruto: [`dados-brutos/e2-correcao-n100-tau1.0.md`](dados-brutos/e2-correcao-n100-tau1.0.md).
 
 ## Hipótese

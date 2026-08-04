@@ -1,5 +1,5 @@
 """Patch determinístico: cabeça de fonema auxiliar no Zipformer-CTC (M4 fase 3 —
-task #20, PRD §8.1: "supervisão fonética auxiliar em camada intermediária,
+task #20, requisito de arquitetura: "supervisão fonética auxiliar em camada intermediária,
 agnóstica ao decoder"). Regra 9 — NÃO reescreve o loop/loss/model do icefall; edita
 in-place `zipformer/{zipformer.py,model.py,train.py}` com substrings exatas
 (assert count==1, senão falha alto) e valida compilação — mesmo idioma de
@@ -28,12 +28,12 @@ Design (documentado para auditoria — não é fork ambíguo, é mecanismo já e
    cumsum após stack 2 = 6 = exatamente 50% → aux_ctc_layer_idx=2 (dim 256).
    Grounded em Lee & Watanabe 2021 (Intermediate Loss Regularization for
    CTC-based ASR) — colocação em ~metade da profundidade é a prática padrão da
-   literatura de "self-conditioned/intermediate CTC" citada no PRD §8.1.
+   literatura de "self-conditioned/intermediate CTC" citada nos requisitos de arquitetura.
 
 3. `AsrModel` (model.py) ganha uma 2ª cabeça CTC (`phoneme_output`, linear +
    log-softmax) lendo `self.encoder.aux_ctc_output`. Existe só quando
    `phoneme_vocab_size>0` — produção (`phoneme_vocab_size=0`, default) não
-   instancia a cabeça: zero custo, zero mudança de comportamento (PRD §8.1: "Na
+   instancia a cabeça: zero custo, zero mudança de comportamento (requisito de arquitetura: "Na
    inferência é removida... custo em produção é exatamente zero").
 
 4. `train.py::compute_loss` faz lookup de fonemas por TEXTO (mesmo idioma do
@@ -185,7 +185,7 @@ def patch_model_py(zipformer_dir: Path = ZIPFORMER_DIR) -> None:
             "        else:\n"
             "            assert attention_decoder is None\n"
             "\n"
-            "        # M4 fase 3 -- cabeca de fonema auxiliar (PRD Sec.8.1). So existe\n"
+            "        # M4 fase 3 -- cabeca de fonema auxiliar (requisito de arquitetura). So existe\n"
             "        # durante o treino; producao usa phoneme_vocab_size=0 (default) =\n"
             "        # zero custo, zero mudanca de comportamento.\n"
             "        self.use_phoneme_ctc = phoneme_vocab_size > 0\n"
@@ -298,7 +298,7 @@ def patch_train_py(zipformer_dir: Path = ZIPFORMER_DIR) -> None:
             "        \"--use-phoneme-ctc\",\n"
             "        type=str2bool,\n"
             "        default=False,\n"
-            "        help=\"M4 fase 3 (PRD Sec.8.1): se True, adiciona cabeca CTC\"\n"
+            "        help=\"M4 fase 3 (requisito de arquitetura): se True, adiciona cabeca CTC\"\n"
             "        \" de fonema auxiliar em camada intermediaria (custo zero em\"\n"
             "        \" producao -- so existe durante o treino).\",\n"
             "    )\n"

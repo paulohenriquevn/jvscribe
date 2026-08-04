@@ -7,7 +7,7 @@ A aposta é **especialização**: um modelo que só faz PT-BR telefônico cabe e
 de milhões de parâmetros onde um multilíngue de 600M não fecha tempo real em CPU.
 
 Escopo deste repositório: **o modelo** e **o motor de inferência**. Plataforma de
-frota, compliance LGPD e UI ficam fora (`PRD.md` § 3.2).
+frota, compliance LGPD e UI ficam fora ([`ROADMAP.md`](ROADMAP.md) § Scope).
 
 ---
 
@@ -116,13 +116,12 @@ stream à sua source, e `sounddevice` não expõe monitor sources.
 |---|---|
 | [`docs/CALIBRATION.md`](docs/CALIBRATION.md) | **Runbook de calibração** — o que é portável entre CPUs e o que precisa ser remedido |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Como o modelo e o motor funcionam** — grafo, stacks, custo por operador, pipelines de lote e tempo real |
-| [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
-| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
+| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done, escopo, restrições e questões abertas |
 | [`wiki/medicoes/`](wiki/medicoes/) | Toda medição, com hipótese, evidência e limitações separadas |
-| [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
+| [`wiki/log.md`](wiki/log.md) | Histórico do projeto em ordem cronológica |
 | [`wiki/`](wiki/index.md) | **Base de conhecimento** em Open Knowledge Format — modelo, motor, treino, otimização, medições e decisões |
 | [`wiki/decisoes/`](wiki/decisoes/index.md) | ADRs — o que foi travado, com racional e alternativas |
-| [`.claude/rules/asr-evidence-discipline.md`](.claude/rules/asr-evidence-discipline.md) | Contrato de evidência — todo número carrega rótulo de proveniência |
+| [`wiki/disciplina/`](wiki/disciplina/index.md) | Contrato de evidência — todo número carrega rótulo de proveniência |
 
 ## Disciplina de evidência
 

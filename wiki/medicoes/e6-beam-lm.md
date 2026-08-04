@@ -89,8 +89,8 @@ composição multiplicativa; a soma nunca é defensável sem medir a configuraç
   **não transfere** sem medição própria, e um LM de Wikipédia é pior candidato ainda para fala
   espontânea de atendimento.
 - **Caminho de lote.** Os 29 ms/utt são decode sobre posterior pronta, em máquina ociosa. Ao vivo
-  há dois canais, subprocessos de captura e reprocessamento de janela: `asr-evidence-discipline`
-  § 4 — benchmark de componente não transfere para o sistema.
+  há dois canais, subprocessos de captura e reprocessamento de janela — a disciplina de
+  evidência (§ 4): benchmark de componente não transfere para o sistema.
 - **Uma corrida por configuração.** O pareamento por utterance elimina a variância entre
   condições, que é o que sustenta o IC; não substitui repetição para afirmar magnitude fina.
 - **16 configurações varridas na validação.** O melhor ponto em validação carrega viés de seleção;
@@ -176,7 +176,7 @@ acústico forte. O erro não foi do experimento — foi da predição, que herdo
 `[LITERATURA]` medida em arquitetura sem parentesco com a nossa. Isso é a falácia § 3 #2 do próprio
 contrato de evidência deste projeto, cometida na documentação e repetida por mim ao pré-registrar.
 
-**Correção proposta ao `CLAUDE.md`:** a linha "Beam search + LM no decode — 10–20% relativo
+**Correção do registro do projeto:** a linha "Beam search + LM no decode — 10–20% relativo
 `[LITERATURA]`" está errada para este sistema e deve passar a `[MEDIDO]` 4,7%.
 
 ---

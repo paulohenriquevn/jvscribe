@@ -8,6 +8,12 @@ timestamp: 2026-07-31T00:00:00Z
 
 # M6 early — critérios de real-time no modelo atual (Zipformer-CTC small int8)
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual** — inclusive
+> o runtime Rust, removido em 2026-07-30. Ficam preservados como registro de *como* o número
+> foi produzido: reescrevê-los para os caminhos de hoje documentaria um comando que nunca
+> foi executado.
+
 ---
 
 > ## ⚠️ Reetiquetagem obrigatória (2026-07-30)
@@ -16,7 +22,7 @@ timestamp: 2026-07-31T00:00:00Z
 >
 > Todos vieram de `bench_rtfx.py`, que mede **só a inferência ONNX**. O produto entrega
 > `fbank → inferência → decode CTC`, e a conta de ponta a ponta é outra. Somar ou comparar as
-> duas é a falácia § 3 #11 da `asr-evidence-discipline.md` — "comparar RTFx de componente com
+> duas é a falácia da disciplina de evidência — "comparar RTFx de componente com
 > orçamento de pipeline".
 >
 > Medição do **pipeline completo** na mesma máquina (i7-1355U), mesma clip de 17,76 s,

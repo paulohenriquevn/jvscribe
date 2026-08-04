@@ -2,7 +2,7 @@
 
 Fecha os DoDs que ficaram parciais no primeiro baseline:
 - **pt-BR** (não pt-PT): FLEURS pt_br (Google, CC-BY) é português BRASILEIRO, fala
-  lida com transcrição HUMANA (NÃO pseudo-label; PRD § 7.3).
+  lida com transcrição HUMANA (NÃO pseudo-label — invariante do projeto).
 - **cadeia de augmentação ponta-a-ponta** (CV-2): FLEURS é 16 kHz limpo → aplica
   `telephone_augment.sh` (16k→8k + banda 300-3400 + G.711 a-law) para gerar o test
   set 8 kHz proxy — exatamente o desenho original do plano (Fase 4 depende da Fase 2).

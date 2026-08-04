@@ -8,6 +8,12 @@ timestamp: 2026-07-31T00:00:00Z
 
 # M4 — deliverable final: Zipformer-CTC medium (64M) + cabeça de fonema
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual** — inclusive
+> o runtime Rust, removido em 2026-07-30. Ficam preservados como registro de *como* o número
+> foi produzido: reescrevê-los para os caminhos de hoje documentaria um comando que nunca
+> foi executado.
+
 **Data:** 2026-07-28 · **Corpus:** MLS-PT ~161h train, FLEURS held-out test (919 cuts,
 21.471 palavras) · **Recipe:** icefall real `zipformer/train.py` + patch de fonema
 `training/prep_phoneme_head.py` (Regra 9) · **Hardware:** vast.ai RTX 3090 · **Decode:**

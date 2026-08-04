@@ -62,5 +62,5 @@ faixa dinâmica dos ativações muda — o efeito da calibração pode ser outro
 - **n=100, uma corrida, FLEURS.** Leitura de notícias, banda larga. O regime do produto é call
   center 8 kHz espontâneo, onde o WER medido é bem pior e o efeito da quantização é `[DESCONHECIDO]`.
 - **RTFx aqui é de lote, com features pré-extraídas.** Ao vivo há dois canais, subprocessos de
-  captura e reprocessamento de janela — `asr-evidence-discipline` § 4: benchmark de componente não
+  captura e reprocessamento de janela — a disciplina de evidência (§ 4): benchmark de componente não
   transfere para o sistema.

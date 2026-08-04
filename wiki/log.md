@@ -8,8 +8,7 @@ timestamp: 2026-08-01T00:00:00Z
 
 # Histórico
 
-Ordem cronológica. Detalhe de cada item no conceito linkado; mudanças de código no
-`CHANGELOG.md` do repositório.
+Ordem cronológica. Detalhe de cada item no conceito linkado.
 
 ## 2026-08-01 — a régua estava errada, e isso moveu tudo
 

@@ -102,9 +102,8 @@ def _resample_to(samples: np.ndarray, sr_from: int, sr_to: int) -> np.ndarray:
     `make_telephone_test.py::_resample` (o glue de volta a 16 kHz do
     experimento de M4); mantido local e pequeno aqui em vez de extraído como
     um 3º import compartilhado — ~4 linhas, sem lógica de domínio/DSP, baixo
-    risco de divergência (`parsimony-ladder.md` rung 5 + tensão DRY-vs-KISS de
-    `CLAUDE.md`: "se eliminar duplicação cria uma abstração que ninguém
-    entende, prefira a duplicação"; o conhecimento de domínio — banda+A-law —
+    risco de divergência (tensão DRY-vs-KISS: "se eliminar duplicação cria uma
+    abstração que ninguém entende, prefira a duplicação"; o conhecimento de domínio — banda+A-law —
     não está duplicado, só um one-liner de reamostragem)."""
     if sr_from == sr_to:
         return samples

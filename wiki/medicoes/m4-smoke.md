@@ -8,6 +8,11 @@ timestamp: 2026-07-31T00:00:00Z
 
 # M4 — Smoke de treino: evidência [MEDIDO] e a lição de overfitting
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual**. Ficam
+> preservados como registro de *como* o número foi produzido: reescrevê-los para os caminhos
+> de hoje documentaria um comando que nunca foi executado.
+
 **Data:** 2026-07-25 · **Infra:** vast.ai RTX 3090 (imagem oficial `k2fsa/icefall:torch2.4.1-cuda12.1`) · **Custo:** ~$0,35 (instância ~1,5 h a $0,179/h)
 
 ## O que o smoke PROVOU (evidência real)
@@ -25,7 +30,7 @@ FLEURS pt_br (curl HTTP) → manifests Lhotse + fbank → BPE 256 → **treino Z
 
 **A "melhoria de ~57% relativo" no validation é overfitting puro, NÃO evidência de que a supervisão fonética ajuda.** No held-out (o único WER honesto), ambos os modelos são inúteis (~95%+) e a cabeça de fonema é **até pior**. Com 386 utts (~1 h de áudio), modelo de 6,1M e 30 épocas, o modelo **memorizou** o treino — e a supervisão fonética (mais sinal) ajudou a memorizar mais, não a generalizar.
 
-Isto é exatamente a armadilha que `asr-evidence-discipline.md` existe para pegar: **WER de treino ≠ WER de generalização** (§ 2 — conclusão não pode exceder a evidência). Avaliar no held-out (feito por rigor) evitou reportar uma conclusão falsa sedutora.
+Isto é exatamente a armadilha que a disciplina de evidência existe para pegar: **WER de treino ≠ WER de generalização** (§ 2 — conclusão não pode exceder a evidência). Avaliar no held-out (feito por rigor) evitou reportar uma conclusão falsa sedutora.
 
 ## Conclusão honesta
 

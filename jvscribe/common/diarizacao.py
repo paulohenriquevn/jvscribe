@@ -1,8 +1,8 @@
 """Diarização opcional — e o orçamento que decide se ela cabe.
 
 **O padrão continua sendo não ter diarização.** No caso 1:1 — o dominante — o microfone **é** o
-atendente e o loopback **é** o cliente, por construção da captura: custo zero, acurácia 100%
-(`CLAUDE.md`). Este módulo não revoga esse desenho; ele destrava os casos que a captura por canal
+atendente e o loopback **é** o cliente, por construção da captura: custo zero, acurácia 100%.
+Este módulo não revoga esse desenho; ele destrava os casos que a captura por canal
 genuinamente não resolve:
 
 | caso | onde o canal falha |
@@ -11,7 +11,7 @@ genuinamente não resolve:
 | supervisor entra na ligação | três falantes, dois canais (é o M7 do `ROADMAP.md`) |
 | duas pessoas do lado do cliente | o loopback carrega duas vozes |
 
-⚠️ **O orçamento é aritmético e não é intuitivo.** Taxas somam pelo **inverso** (`PRD.md` § 6,
+⚠️ **O orçamento é aritmético e não é intuitivo.** Taxas somam pelo **inverso** (RNF-01..05,
 racional do RNF-07): um ASR a 3× somado a uma diarização a 3× dá **1,5×**, não 3×. Com o RTFx ao
 vivo medido em 2026-07-31 — **3,58×** — um diarizador precisaria rodar a **18,5×** para o pipeline
 ficar em ≥3×.

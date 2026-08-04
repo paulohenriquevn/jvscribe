@@ -8,9 +8,14 @@ timestamp: 2026-07-31T00:00:00Z
 
 # M5 — Resultados finais (fine-tune espontâneo PT-BR)
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual**. Ficam
+> preservados como registro de *como* o número foi produzido: reescrevê-los para os caminhos
+> de hoje documentaria um comando que nunca foi executado.
+
 Deliverable de M5: **Zipformer-CTC medium (64M) + cabeça de fonema**, fine-tunado em
 CORAA+TAGARELA, quantizado int8, medido **no hardware-alvo (notebook CPU, ONNX Runtime)**.
-Todo número carrega rótulo de proveniência (`.claude/rules/asr-evidence-discipline.md § 1`).
+Todo número carrega rótulo de proveniência ([disciplina de evidência](../disciplina/rotulos-de-proveniencia.md)).
 
 ## Modelo entregue
 
@@ -46,8 +51,7 @@ fronteira de época (o WER degrada dentro da época = overfitting ao pseudo-rót
 |---|---|---|---|---|---|---|---|---|
 | WER | 42,5 | 36,5 | 33,7 | 32,6 | 29,1 | 28,5 | 25,96 | **24,73** |
 
-Config vencedora (após diagnóstico registrado no `CLAUDE.md § Contexto que evita erros
-repetidos`): base-lr **0,03** (não
+Config vencedora (após o diagnóstico do colapso registrado abaixo): base-lr **0,03** (não
 0,0001, que prendia o head fresco no prior de blank → WER 100%), fp16, max-dur 500, 10 épocas,
 eager-load + num-workers 2, encoder do M4 + heads frescos (bpe.model do M4 perdido).
 
@@ -61,7 +65,7 @@ eager-load + num-workers 2, encoder do M4 + heads frescos (bpe.model do M4 perdi
   (warm-start + augmentação on-the-fly) **FALHOU** `[MEDIDO]`: colapsou o modelo para near-blank
   (WER ~98% em wideband e telefônico; `ctc_output.norm` 245→108) por LR alto (0,006 vs ~0,0045
   recomendado) + choque de augmentação a 100% sobre um modelo convergido. Caminho corrigido em
-  `knowledge-base/discoveries/blueprints/m5-8khz-telephone-wer-blueprint.md`.
+  no blueprint de WER telefônico 8 kHz de M5.
   **Caveats do 40,13%** (direciona, não conclui — § 3 #12): 9 min → IC largo; 2 interlocutores
   no mono; granularidade de 30s; máscaras de PII contam como erro.
   ⚠️ **RESSALVA DE RÉGUA (2026-07-31, revisão de código):** os 40,13% saíram de uma

@@ -1,6 +1,6 @@
 """Prova (parcial) de ausência de vazamento de locutor entre os splits do CORAA-v1.1.
 
-Invariante PRD §7.3 / falácia §3 #10: vazamento de locutor entre train e test invalida
+Invariante do projeto / falácia §3 #10: vazamento de locutor entre train e test invalida
 todo resultado a jusante. Esta é a PROVA POR SCRIPT exigida — não a afirmação do paper.
 
 O metadado do CORAA NÃO traz coluna speaker_id. Mas o `file_path` de cada segmento

@@ -9,7 +9,8 @@ timestamp: 2026-07-31T00:00:00Z
 # E4 — o custo do beam `[MEDIDO]`
 
 Data: 2026-07-31 · `git 38687d2` → E4 · FLEURS, 1 locução de 6,8 s · i7-1355U.
-Fase E4 de [`portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md).
+Fase E4 do protocolo pré-registrado do portão de confiança
+([`post-decode-budget.md`](../../docs/paper/post-decode-budget.md) § 8).
 
 ## Hipótese
 
@@ -50,7 +51,7 @@ principal a explorar a alavanca dos 36,6%, e não se sustenta: 15 ms sobre 134 m
 ## O que esta medição NÃO diz — e o caveat é grande
 
 ⚠️ **Isto é benchmark de componente no caminho de LOTE. O RNF-01 vive no tempo real.**
-`.claude/rules/asr-evidence-discipline.md` § 4: *benchmark de componente não transfere para o
+A disciplina de evidência (§ 4): *benchmark de componente não transfere para o
 sistema* — e este projeto já pagou por isso com a afinidade de CPU (25% melhor isolada, 46% pior
 no pipeline).
 

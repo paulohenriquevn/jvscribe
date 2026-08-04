@@ -9,6 +9,6 @@ cuja resposta errada invalida todo WER medido depois.
 | `tagarela_coraa_leak_check.py` | há vazamento cruzado entre os dois corpora? |
 | `tagarela_noise_audit.py` | quanto ruído de pseudo-rótulo entrou no mux? |
 
-`PRD.md` § 7.3: pseudo-label nunca entra no test set — mede concordância com o professor,
+Invariante: pseudo-label nunca entra no test set — mede concordância com o professor,
 não acurácia. Estes scripts são o que torna essa invariante verificável.
 """

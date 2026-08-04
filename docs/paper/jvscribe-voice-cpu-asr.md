@@ -119,8 +119,8 @@ reusable negative-result lesson.
 
 | Constraint | Value | Rationale |
 |---|---|---|
-| RTFx (ASR component, isolated) | **≥ 6×** on a reference i7-1355U (15 W) | The full pipeline (ASR + diarization + …) sums by the *inverse* of rates; ASR alone at 3× would leave no budget. `[REPO]` PRD §6 |
-| Latency tail | p99, not mean | mean hides the tail that breaks the product `[REPO]` PRD §6 |
+| RTFx (ASR component, isolated) | **≥ 6×** on a reference i7-1355U (15 W) | The full pipeline (ASR + diarization + …) sums by the *inverse* of rates; ASR alone at 3× would leave no budget. `[REPO]` real-time requirement |
+| Latency tail | p99, not mean | mean hides the tail that breaks the product `[REPO]` real-time requirement |
 | Sustained load | ≥ 10 min soak, concurrent softphone active | a 30 s benchmark measures turbo, not steady state, on a 15 W chip |
 | Hardware | CPU only, no GPU, no network | product requirement |
 
@@ -488,11 +488,11 @@ A distilled checklist for anyone building a CPU-real-time specialized ASR:
 
 Released, tested artifacts (159 unit tests total):
 
-- **`training/batch/batch_transcribe.py`** — folder → transcripts, ffmpeg decode (any format), energy-VAD
+- **`jvscribe/batch/batch_transcribe.py`** — folder → transcripts, ffmpeg decode (any format), energy-VAD
   segmentation, batched ONNX inference, parallel decode; 7 tests incl. an end-to-end smoke.
-- **`training/batch/eval_public_hf.py`** — reproducible public benchmark (FLEURS pt_br) with WER + RTFx.
-- **`training/eval/measure_realcodec.py`, `training/eval/measure_callcenter.py`** — honest telephone WER harnesses.
-- **`scripts/corpus/codec_pool.py`** — realistic codec-pool augmentation (G.711 via audioop; GSM/Opus
+- **`jvscribe/batch/eval_public_hf.py`** — reproducible public benchmark (FLEURS pt_br) with WER + RTFx.
+- **`jvscribe/eval/measure_realcodec.py`, `jvscribe/eval/measure_callcenter.py`** — honest telephone WER harnesses.
+- **`jvscribe/common/audio/codecs.py`** — realistic codec-pool augmentation (G.711 via audioop; GSM/Opus
   via ffmpeg / torchaudio `AudioEffector` in-process for throughput).
 - **`models/…/mic_transcribe.py`** — real-time mic demo (LocalAgreement-2 pseudo-streaming over the
   non-causal model).
@@ -500,7 +500,7 @@ Released, tested artifacts (159 unit tests total):
   `--init-modules`.
 
 The finalist decision, the ablations, and the telephone investigation are recorded with commands and
-per-run numbers in `training/results/` and the discovery blueprints, under an ADR trail
+per-run numbers in `wiki/medicoes/` and the discovery blueprints, under an ADR trail
 (`0001`–`0003`).
 
 ---
@@ -542,8 +542,8 @@ matter of real telephone data, not of a cleverer loss.
 - Vu, Zeng, Xu, Chng (2019). *Audio Codec Simulation based Data Augmentation for Telephony Speech Recognition.* APSIPA.
 - Li, Yu, Huang, Gong (2013). *Improving Wideband Speech Recognition Using Mixed-Bandwidth Training Data.* ICASSP.
 - Macháček, Dabre, Bojar (2023). *Turning Whisper into Real-Time Transcription System.* ACL demo (whisper_streaming).
-- Internal: ADRs `0001`–`0003`; result records under `training/results/`; discovery blueprints under
-  `knowledge-base/discoveries/blueprints/`; evidence-discipline rule `.claude/rules/asr-evidence-discipline.md`.
+- Internal: ADRs `0001`–`0003` under `wiki/decisoes/`; result records under `wiki/medicoes/`;
+  evidence discipline under `wiki/disciplina/`.
 
 ---
 

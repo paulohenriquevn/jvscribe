@@ -8,6 +8,12 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Eval do Runtime Rust — WER + RTFx através do caminho de produção
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual** — inclusive
+> o runtime Rust, removido em 2026-07-30. Ficam preservados como registro de *como* o número
+> foi produzido: reescrevê-los para os caminhos de hoje documentaria um comando que nunca
+> foi executado.
+
 **Data:** 2026-07-26 · **Máquina:** i7-1355U de referência · **Modelo:** `model.int8.onnx` (Zipformer-CTC small 22M, int8) · **Harness:** `training/scripts/eval_runtime_wer.py`
 
 Responde "dá pra testar o runtime? qual a qualidade?". Antes desta sessão só havia

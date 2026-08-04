@@ -9,7 +9,8 @@ timestamp: 2026-07-31T00:00:00Z
 # E1 — o portão de confiança `[MEDIDO]`
 
 Data: 2026-07-31 · `git dbff0ea` → E1 · FLEURS pt_br, n=100 · i7-1355U, load 1,25.
-Fase E1 de [`portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md).
+Fase E1 do protocolo pré-registrado do portão de confiança
+([`post-decode-budget.md`](../../docs/paper/post-decode-budget.md) § 8).
 Bruto: [`dados-brutos/e1-curva-do-portao-n100.md`](dados-brutos/e1-curva-do-portao-n100.md).
 
 ## Hipótese

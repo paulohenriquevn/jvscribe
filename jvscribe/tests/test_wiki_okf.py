@@ -1,6 +1,6 @@
 """Conformidade do bundle `wiki/` com o Open Knowledge Format (OKF v0.1).
 
-A wiki substitui a `knowledge-base/`: é onde o conhecimento do projeto vive, em formato
+A wiki é onde o conhecimento do projeto vive, em formato
 portátil — markdown com frontmatter YAML, um conceito por arquivo, links markdown normais.
 
 Estes testes existem porque documentação sem guarda apodrece em silêncio. O README deste
@@ -41,7 +41,7 @@ pytestmark = pytest.mark.skipif(not WIKI.is_dir(), reason="bundle wiki/ ausente"
 
 
 def test_o_bundle_nao_esta_vazio():
-    assert len(_docs()) >= 10, "um bundle com menos de 10 conceitos não substitui a knowledge-base"
+    assert len(_docs()) >= 10, "um bundle com menos de 10 conceitos não é uma base de conhecimento"
 
 
 def test_todo_documento_tem_frontmatter():

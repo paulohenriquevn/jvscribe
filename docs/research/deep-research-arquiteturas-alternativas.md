@@ -1,17 +1,17 @@
 # Deep Research — Arquiteturas Alternativas e Prior Art
 
-> 2026-07-24 · Companion de `PRD.md` e `sota-techniques-asr-ptbr-cpu.md`
+> 2026-07-24 · Companion de `sota-techniques-asr-ptbr-cpu.md`
 > Escopo: arquiteturas fora do eixo Conformer/Zipformer, runtimes CPU, modelos edge,
 > e o problema de escala de dados.
 
 ---
 
-## Sumário — o que muda no PRD
+## Sumário — o que muda nos requisitos
 
 | # | Achado | Impacto |
 |---|---|---|
 | **1** | **A tese monolíngue está publicada e validada** — e com **27M**, não 80M | 🟢 Confirma a estratégia; o alvo de tamanho pode cair 3× |
-| **2** | **O corpus é pequeno demais** — a receita de referência usa 15-94k h/língua; temos 8,9k | 🔴 **Risco maior que qualquer outro do PRD** |
+| **2** | **O corpus é pequeno demais** — a receita de referência usa 15-94k h/língua; temos 8,9k | 🔴 **Risco maior que qualquer outro registrado** |
 | **3** | **SSM/Mamba bate Conformer em WER *e* RTF, com inferência de tempo constante** | 🟡 Superior no papel, **bloqueado no ONNX** — destravado pelo runtime próprio |
 | **4** | Mamba suporta 739 min de áudio contínuo vs 5 min do Conformer | 🟡 Relevante para chamadas longas |
 | **5** | `tract` (Rust puro, Sonos) tem gestão de streaming embutida | 🟢 Alternativa ao `ort` que não estava no radar |
@@ -92,7 +92,7 @@ Medium Streaming, com **245M**, supera o **Whisper Large v3 (1,5B, 7,44% WER)** 
 | Tiny Streaming | 34M | 34 ms | **69 ms** | 237 ms |
 | Whisper Large v3 | 1,5B | 11.286 ms | 16.919 ms | inviável |
 
-**Isto reescreve a análise de viabilidade do PRD.** Até aqui, todo o
+**Isto reescreve a análise de viabilidade dos requisitos.** Até aqui, todo o
 dimensionamento dependia de uma extrapolação a partir de um benchmark em servidor
 EPYC de 32 núcleos. Agora existe medição em **CPU x86 desktop**:
 
@@ -102,7 +102,7 @@ EPYC de 32 núcleos. Agora existe medição em **CPU x86 desktop**:
 
 **Consequências diretas:**
 
-1. **O teto de tamanho é maior do que assumimos.** O PRD fixou ~80M com base numa
+1. **O teto de tamanho é maior do que assumimos.** Os requisitos fixaram ~80M com base numa
    estimativa pessimista. A evidência sugere que **123-245M cabem** num desktop x86
    — e mais parâmetros compram WER.
 2. **O risco R1 (BYOD fraco) encolhe muito.** Tiny Streaming roda em **Raspberry Pi 5
@@ -112,12 +112,12 @@ EPYC de 32 núcleos. Agora existe medição em **CPU x86 desktop**:
    30 s e ausência de cache.
 
 ⚠ "Latência de transcrição ao vivo" **não é RTFx** — é o tempo até o texto aparecer.
-São métricas complementares; o projeto precisa das duas. A do PRD (RNF-01) continua
+São métricas complementares; o projeto precisa das duas. A do requisito (RNF-01) continua
 a ser medida.
 
-#### Capacidades — todos os requisitos do PRD atendidos
+#### Capacidades — todos os requisitos atendidos
 
-| Requisito do PRD | Moonshine |
+| Requisito | Moonshine |
 |---|---|
 | RF-01 streaming | ✅ *"incremental addition of audio over time"*, com cache do encoding e de parte do estado do decoder |
 | RF-06 timestamps por palavra | ✅ suportado |
@@ -236,11 +236,11 @@ frame, estado de tamanho fixo**. Implementar isso à mão em Rust é direto — 
 difícil é expressá-lo no grafo estático do ONNX.
 
 > **Consequência estratégica:** a decisão de escrever motor de inferência próprio em
-> Rust (PRD § 8.2) deixa de ser apenas otimização de performance. Ela **destrava uma
+> Rust deixa de ser apenas otimização de performance. Ela **destrava uma
 > classe inteira de arquiteturas que o ecossistema ONNX bloqueia** — e essa classe é
 > justamente a que tem inferência de tempo constante, ideal para streaming em CPU.
 >
-> Isso inverte a ordem recomendada no PRD: se o alvo for SSM, o `ort` **não** é o
+> Isso inverte a ordem recomendada nos requisitos: se o alvo for SSM, o `ort` **não** é o
 > caminho de menor esforço para o encoder — ele é um beco sem saída.
 
 **Ressalva honesta:** todos os RTFs acima foram medidos em **GPU** (RTX 6000 Ada).
@@ -281,7 +281,7 @@ mais maduro em deploy CPU que localizamos:
 O último ponto merece atenção: **16 streams concorrentes em 4 vCPU** é a evidência
 mais forte que encontramos de que ASR real-time em CPU comum funciona em escala de
 produção. E o **2-pass streaming** (passe rápido em streaming + refinamento) é um
-padrão arquitetural que o PRD não considera.
+padrão arquitetural que os requisitos não consideram.
 
 ⚠ Números do FunASR vêm de documentação do projeto, não de paper revisado por pares.
 Tratar como indicativo até reproduzir.
@@ -308,7 +308,7 @@ próprio" sem escrever tudo do zero.
 
 ### 5.1 Elevar o risco de dados a bloqueante nível 1
 
-O PRD lista R1 (hardware BYOD) como risco principal. **Com a evidência do Moonshine,
+Os requisitos listam R1 (hardware BYOD) como risco principal. **Com a evidência do Moonshine,
 o volume de corpus passa à frente.** 8,9k h contra 15-94k h da receita de referência,
 num regime sem transfer learning que a própria fonte identifica como o que *mais*
 precisa de dados.
@@ -320,7 +320,7 @@ entre um modelo utilizável e um que decepciona.
 
 ### 5.2 Abrir a faixa de tamanho — para baixo **e para cima**
 
-O PRD fixou ~80M a partir de uma estimativa pessimista extrapolada de servidor. Os
+Os requisitos fixaram ~80M a partir de uma estimativa pessimista extrapolada de servidor. Os
 benchmarks do repositório Moonshine, em **CPU x86 desktop**, mostram que a faixa
 viável é bem mais larga do que supúnhamos:
 
@@ -352,7 +352,7 @@ com risco contido.
 
 ### 5.4 Reordenar a decisão de runtime
 
-O PRD recomenda `ort` primeiro. **Isso vale para Zipformer/Conformer, não para SSM.**
+Os requisitos recomendam `ort` primeiro. **Isso vale para Zipformer/Conformer, não para SSM.**
 Avaliar `tract` em paralelo: Rust puro, streaming embutido, e liberdade para
 implementar operadores que o ONNX não expressa.
 

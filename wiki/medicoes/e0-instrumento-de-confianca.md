@@ -9,7 +9,8 @@ timestamp: 2026-07-31T00:00:00Z
 # E0 — o instrumento de confiança `[MEDIDO]`
 
 Data: 2026-07-31 · `git 50fd6a9` → E0 · modelo `models/current/model.int8.onnx` · i7-1355U.
-Fase E0 de [`portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md).
+Fase E0 do protocolo pré-registrado do portão de confiança
+([`post-decode-budget.md`](../../docs/paper/post-decode-budget.md) § 8).
 
 ## Hipótese
 

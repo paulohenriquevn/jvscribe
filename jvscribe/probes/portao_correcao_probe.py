@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Portão de confiança e correção pós-decode — o experimento das fases E1/E2.
 
-Protocolo: [`knowledge-base/plans/portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md).
+Protocolo: pré-registro do portão de confiança (`docs/paper/post-decode-budget.md` § 8).
 
 Vive em `probes/` de propósito (ADR D2 do protocolo): o domínio declarado desta pipeline é
 **hipótese de pesquisa que pode dar nulo**, e o teto medido do caminho de correção é ~8% dos

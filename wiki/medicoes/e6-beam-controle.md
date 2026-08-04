@@ -52,7 +52,7 @@ adiciona uma consulta por extensão de prefixo.
 - **FLEURS é leitura de notícias.** O regime do produto é call center 8 kHz espontâneo, onde o WER
   medido é bem pior (CORAA 23,31%). Nada aqui transfere para lá sem medição própria.
 - **Caminho de lote.** O ms/utt é decode sobre posterior já pronta, em máquina ociosa. Ao vivo o
-  RTFx é 3,58× contra um RNF-01 de 3× — `asr-evidence-discipline` § 4: benchmark de componente não
+  RTFx é 3,58× contra um RNF-01 de 3× — a disciplina de evidência (§ 4): benchmark de componente não
   transfere para o sistema.
 - **Nada aqui diz respeito ao LM.** A etapa 2 é outro experimento, com outro risco dominante — o
   vazamento do test set pelo corpus de treino do LM.

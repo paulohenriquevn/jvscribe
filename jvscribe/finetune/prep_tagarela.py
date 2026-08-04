@@ -29,7 +29,7 @@ vinheta de podcast), este script aplica um FILTRO DETERMINÍSTICO de alucinaçã
 (`is_hallucinated_text` + bound de char/segundo) — NÃO precisa de votos humanos nem 2º
 transcritor (F3 da revisão). Os defaults são conservadores (docstring das constantes).
 
-INVARIANTE ESTRUTURAL (PRD §7.3 / falácia §3 #10): este script SÓ escreve o split
+INVARIANTE ESTRUTURAL (invariante do projeto / falácia §3 #10): este script SÓ escreve o split
 `train` — não existe flag `--split dev` ou `--split test`. TAGARELA é pseudo-label;
 NUNCA pode entrar no anchor de eval. A ausência da opção É a garantia (não uma checagem
 em runtime que pode ser burlada por flag).
@@ -172,7 +172,7 @@ def build_split(parquet_dir: Path, wav_dir: Path, limit: int | None):
     nº de canais do FLAC → treinava só o canal 0 de podcasts estéreo) e BOUNDA a RAM
     (o `recs` guarda referências de arquivo, não os bytes FLAC de todo o subset).
 
-    Filtros de inclusão (escritos ANTES de rodar, PRD §7.3):
+    Filtros de inclusão (escritos ANTES de rodar, invariante do projeto):
       - accent != pt-br            → fora do escopo PT-BR
       - texto vazio pós-normalize  → sem alvo
       - is_hallucinated_text(texto)→ loop de alucinação do Whisper (F3)

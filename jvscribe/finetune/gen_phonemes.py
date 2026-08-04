@@ -1,6 +1,6 @@
 """Gera alvos fonéticos para a cabeça auxiliar do Zipformer-CTC (M4 fase 3 — task #20).
 
-A supervisão fonética que o PRD §8.1 exige ("camada intermediária do encoder,
+A supervisão fonética que os requisitos exigem ("camada intermediária do encoder,
 agnóstica ao decoder") NÃO existe pronta na recipe do icefall — este script constrói
 os alvos: G2P PT-BR (phonemizer+espeak-ng, [FONTE-REPO] cobertura/determinismo
 medidos em Q-08 do blueprint m4-pilot) → sequência de fonemas por utterance →

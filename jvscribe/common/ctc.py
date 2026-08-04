@@ -1,7 +1,7 @@
 """Colapso CTC greedy — implementação única para todas as pipelines (M9/T3.1).
 
 Consolida o que estava replicado em `batch/batch_transcribe.py`, `batch/decode_onnx_local.py`,
-`eval/measure_callcenter.py`, `eval/measure_realcodec.py` e `scripts/tta_feature_align_probe.py`.
+`eval/measure_callcenter.py`, `eval/measure_realcodec.py` e `probes/tta_feature_align_probe.py`.
 
 A consolidação só foi feita DEPOIS de medir a equivalência (`jvscribe/tests/test_ctc_equivalence.py`):
 o laço de colapso é idêntico entre as cópias; o que divergia era a **detokenização** — quatro
@@ -83,7 +83,7 @@ def greedy_palavras(
     A confiança sai de graça: o `argmax` já percorre o eixo do vocabulário, e o segundo colocado
     custa uma partição parcial no mesmo passo. Nenhum modelo extra, nenhuma memória extra.
 
-    ⚠️ **A invariante que fecha o risco R4** (`knowledge-base/plans/portao-de-confianca-plan.md`)
+    ⚠️ **A invariante que fecha o risco R4** (protocolo do portão de confiança)
     é verificável e está em `tests/test_ctc_palavras.py`::
 
         [p.texto for p in greedy_palavras(x)] == greedy_text(x).split()

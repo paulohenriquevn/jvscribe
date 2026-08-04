@@ -78,7 +78,7 @@ def main() -> int:
     modelo = a.model or default_model_path()
     tokens = a.tokens or default_sibling("tokens.txt")
     # Fail-fast do par (modelo, vocabulário): trocar o tokens.txt produz português PLAUSÍVEL
-    # e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3). Validar aqui é o que separa
+    # e errado, sem erro nenhum (fato medido deste projeto). Validar aqui é o que separa
     # "transcrição ruim inexplicável" de um erro que diz o que aconteceu.
     validar_par_modelo_vocabulario(pathlib.Path(modelo).parent, tokens_path=tokens)
 

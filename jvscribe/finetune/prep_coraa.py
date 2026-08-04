@@ -16,7 +16,7 @@ Reuso (Regra 9 — sem duplicar):
 Layout de entrada esperado (após `unzip {split}.zip` no --audio-root):
   {audio-root}/{split}/sp/{idx}_sp_.wav   (o file_path do CSV é relativo ao audio-root)
 
-INVARIANTE (PRD §7.3): este script usa APENAS a transcrição humana do CSV do CORAA.
+INVARIANTE DO PROJETO: este script usa APENAS a transcrição humana do CSV do CORAA.
 NUNCA gera pseudo-label. O split test é o anchor de eval espontâneo de M5.
 
 Splits oficiais do CORAA (paper arXiv:2110.15731, Tab.4) [LITERATURA]:
@@ -146,7 +146,7 @@ def main():
     # guarda-corpo do invariante: filtro de voto proibido no anchor de eval
     if args.min_net_votes is not None and any(s in ("dev", "test") for s in args.splits):
         sys.exit("[coraa] ERRO: --min-net-votes altera o split oficial; proibido em dev/test "
-                 "(anchor de eval de M5, PRD §7.3). Rode dev/test sem o filtro.")
+                 "(anchor de eval de M5, invariante do projeto). Rode dev/test sem o filtro.")
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     audio_root = Path(args.audio_root)

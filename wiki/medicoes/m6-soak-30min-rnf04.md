@@ -44,7 +44,7 @@ canônico `models/current/model.int8.onnx`, alimentado no ritmo do relógio de p
 
 ## Conclusão
 
-**O veredito de RNF-04 é `[INDETERMINADO]`, não "falhou".** `asr-evidence-discipline.md` § 5 é
+**O veredito de RNF-04 é `[INDETERMINADO]`, não "falhou".** A disciplina de evidência (§ 5) é
 explícito: máquina sob carga não mede. Três observações sustentam que o número reflete
 contenção e não temperatura:
 

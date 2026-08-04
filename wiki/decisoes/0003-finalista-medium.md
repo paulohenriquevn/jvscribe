@@ -71,10 +71,10 @@ fonética permanecem os do ADR 0002 — muda-se **exclusivamente** o tamanho.
 
 Salvo indicado, todos os RTFx: i7-1355U de referência, int8, `taskset -c 0,2` (2 P-cores físicos,
 RNF-06), soak de 10 min/run, ambos os modelos SEM cabeça de fonema (isola o eixo TAMANHO). Fonte:
-`training/results/soak-small-vs-medium-results.md`. Acurácia herdada do ADR 0002 /
-`training/results/m4-decision-161h-results.md`.
+[`m4-soak-small-vs-medium.md`](../medicoes/m4-soak-small-vs-medium.md). Acurácia herdada do ADR 0002 /
+[`m4-piloto-fleurs.md`](../medicoes/m4-piloto-fleurs.md).
 
-| Critério (PRD § 8.1) | Evidência | Rótulo |
+| Critério de decisão | Evidência | Rótulo |
 |---|---|---|
 | 1 — RTFx sob carga (bloqueante, RNF-07 ≥ 6×, RNF-05 carga) | **Estressor concorrente (load1 24-33): small median 11,0× / min 7,1× · medium median 10,8× / min 7,6× → EMPATE**, ambos ≥ 6× com folga. A vantagem do small evapora quando a CPU satura (gargalo vira contenção, não o modelo) — refuta a hipótese (a) e (b) | `[MEDIDO]` |
 | 1 — RTFx isolado (janelas limpas, load1 ≤ 6, áudio 10s) | small **74,1×** median (min 56,2×, 14/19 janelas) · medium **64,3×** median (min 60,4×, 7/19 janelas) → small só **1,15× mais rápido**, não 2× | `[MEDIDO]` |
@@ -108,7 +108,7 @@ desempate migra para o eixo primário do projeto — acurácia — onde o medium
 
 ### Zipformer-CTC `large` (147M) — rejeitado (retornos decrescentes já medidos no ADR 0002)
 - **Large empata com medium em acurácia** `[MEDIDO]`: WER 28,87% ≈ 28,86% e CER 11,14% ≈ 10,94% —
-  **2,3× mais parâmetros, ganho zero** (regime data-bound, tese R9 do PRD: o corpus de 161h é o
+  **2,3× mais parâmetros, ganho zero** (regime data-bound, tese R9 do projeto: o corpus de 161h é o
   gargalo, não a capacidade). Este ADR não re-abre o eixo superior da curva; o large já fora rejeitado
   no ADR 0002 e nada na nova evidência de soak o reabilita.
 - Caveat herdado do ADR 0002: large decodado avg=9 (`epoch-20.pt` apagado no conserto do crash de
@@ -134,7 +134,7 @@ desempate migra para o eixo primário do projeto — acurácia — onde o medium
   que transfira (a cabeça é auxiliar, +0,07% params, sai do grafo ONNX de decode → RTFx-neutra), mas
   isso é **`[ESTIMATIVA]`, não `[MEDIDO]`** no medium — ver Consequências (pendência criada).
 - **Não prova equivalência batch≡streaming nem o WER causal** — pendência de M4-fase-3/M6, de-riscada
-  por construção no blueprint `m6-streaming-causal-blueprint.md` (herdada do ADR 0002).
+  por construção no blueprint de streaming causal de M6 (herdada do ADR 0002).
 
 ## Consequências
 
@@ -148,9 +148,8 @@ desempate migra para o eixo primário do projeto — acurácia — onde o medium
 - **Tiering como trabalho futuro do `hardware-validation-engineer`:** medium como default, small como
   fallback em CPUs abaixo de um piso a ser definido quando a frota real (Q-01) for caracterizada. Não é
   escopo deste ADR; o **default único, hoje, é o medium**.
-- **`PRD.md` § 8.1 e `CLAUDE.md`** devem passar a referenciar o ADR 0003 e registrar o tamanho como
-  `medium` (supersede parcial do 0002) — a atualização é **proposta ao dono** do PRD, não reescrita por
-  este agent (`asr-evidence-discipline.md` § 5).
+- **O tamanho passa a ser `medium`** (supersede parcial do ADR 0002), e este ADR é a referência
+  para ele.
 - **M5 herda o alvo revisado**: augmentação telefônica + dados sobre o Zipformer-CTC **medium**.
 - **M6 herda o `medium` para o trabalho causal/streaming** (treino `--causal 1`, WER por chunk, p99 sob carga).
 - **Risco de ancoragem mitigado:** a hipótese foi escrita antes de olhar o resultado do soak, com número
@@ -183,13 +182,12 @@ desempate migra para o eixo primário do projeto — acurácia — onde o medium
 
 ## Referências
 
-- Soak RNF-04 + carga RNF-05 (a evidência nova que reverte a decisão): `training/results/soak-small-vs-medium-results.md`
-- JSONs por janela do soak: `training/results/soak-runs/{small,medium}-{idle,load}.json`
-- Piloto de decisão M4 (acurácia, head-to-head, curva WER×tamanho): `training/results/m4-decision-161h-results.md`
-- Eval do runtime Rust (WER, RTFx, int8 lossless): `training/results/runtime-eval-findings.md`
-- Ablação da cabeça de fonema (−4,63% rel, medida no small): `training/results/m4-phoneme-ablation-results.md`
-- ADR que este supersede parcialmente (eixo tamanho): `knowledge-base/adrs/0002-m4-architecture-finalist.md`
-- ADR de finalistas de M2: `knowledge-base/adrs/0001-m2-architecture-finalists.md`
-- Blueprint de streaming causal: `knowledge-base/discoveries/blueprints/m6-streaming-causal-blueprint.md`
-- 8 critérios de decisão + candidatos: `PRD.md` § 8.1
-- Disciplina de evidência: `.claude/rules/asr-evidence-discipline.md` (§ 0, § 1, § 2, § 3 #3/#4/#5/#9, § 4)
+- Soak RNF-04 + carga RNF-05 (a evidência nova que reverte a decisão): [`m4-soak-small-vs-medium.md`](../medicoes/m4-soak-small-vs-medium.md)
+- JSONs por janela do soak: [`dados-brutos/`](../medicoes/dados-brutos/index.md) — `{small,medium}-{idle,load}.json`
+- Piloto de decisão M4 (161 h): os números estão nas tabelas acima; o registro de resultado
+  completo **não foi migrado** para este repositório. Smoke em FLEURS: [`m4-piloto-fleurs.md`](../medicoes/m4-piloto-fleurs.md)
+- Eval do runtime Rust (WER, RTFx, int8 lossless): [`runtime-rust-int8-vs-fp32.md`](../medicoes/runtime-rust-int8-vs-fp32.md)
+- Ablação da cabeça de fonema no medium: [`m4-cabeca-de-fonema-no-medium.md`](../medicoes/m4-cabeca-de-fonema-no-medium.md)
+- ADR que este supersede parcialmente (eixo tamanho): [`0002-zipformer-ctc-small.md`](0002-zipformer-ctc-small.md)
+- ADR de finalistas de M2: [`0001-finalistas-de-arquitetura.md`](0001-finalistas-de-arquitetura.md)
+- Disciplina de evidência: [`wiki/disciplina/`](../disciplina/index.md)
