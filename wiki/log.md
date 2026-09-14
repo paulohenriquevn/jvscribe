@@ -10,6 +10,24 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (tarde) — M10/T1b e T2: latência compra capacidade, e a régua pública entra
+
+- **53% do custo do encoder é pago POR INVOCAÇÃO** e some quando o chunk cresce. Dobrar a
+  latência de 560 ms para 1,12 s dá **+50% de RTFx** (2,77× → 4,15× agregado, IC95% conclusivo)
+  **e** melhora o WER — não é trade-off, é Pareto —
+  [m10-t1b-latencia-e-teto](medicoes/m10-t1b-latencia-e-teto.md).
+- **O teto de parâmetros é função da latência**: 145M a 320 ms, **237M a 560 ms**, **376M a
+  1,12 s**. O modelo pode crescer 3,7× a 5,9× sobre os 64M atuais, conforme o orçamento escolhido.
+- **O teto de 174M de T1 estava errado** — aquele ajuste comparou dois modelos com chunks
+  diferentes e atribuiu toda a diferença ao tamanho. Corrigido para 237M a 560 ms.
+- **A régua do Open ASR Leaderboard entra como terceira régua** (`normalize_for_leaderboard`):
+  preserva acento e converte dígito para forma falada, ao contrário das duas internas —
+  [m10-t2-regua-publica](medicoes/m10-t2-regua-publica.md).
+- **T2 mede 6,06% contra os 5,80% publicados.** O critério de ±0,15 p.p. era inalcançável por
+  construção: exportar para ONNX custa mais WER que isso. O offset é de artefato e fica declarado.
+- **A escolha da coluna de referência do FLEURS vale 2,19 p.p.** — `transcription` contra
+  `raw_transcription`, quase toda a diferença em inserção.
+
 ## 2026-09-14 — M10/T1: o teto de CPU medido, e o Nemotron vira professor
 
 - **O teto de parâmetros é ~174M**, não linear: há **68 ms por segundo de áudio** de custo fixo

@@ -10,6 +10,13 @@ timestamp: 2026-09-14T00:00:00Z
 
 # T1 — o teto de parâmetros em 2 P-cores `[MEDIDO]`
 
+> ⚠️ **O teto de 174M deste documento foi corrigido para 237M por
+> [`m10-t1b-latencia-e-teto.md`](m10-t1b-latencia-e-teto.md).** O `b` derivado aqui comparou o
+> FastConformer com chunk de 480 ms contra o Nemotron com chunk de 560 ms — duas variáveis
+> mudaram e toda a diferença foi atribuída ao tamanho do modelo. Com o chunk controlado, o custo
+> marginal cai de 0,567 para 0,172 ms/s por milhão. As conclusões qualitativas abaixo (custo não
+> linear, piso fixo, 600M reprova o RNF-01) permanecem; o número do teto não.
+
 Data: 2026-09-14 · **i7-1355U** (2 P-cores a 5,0 GHz com HT + 8 E-cores, 12 lógicos, AVX-VNNI,
 sem AVX-512) · `taskset -c 0-3` em todas as medições · ONNX Runtime CPU, int8, greedy ·
 `sherpa-onnx` 1.13.8.

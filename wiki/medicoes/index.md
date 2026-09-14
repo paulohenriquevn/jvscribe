@@ -23,7 +23,9 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m6-topologia-de-cpu.md](m6-topologia-de-cpu.md) | CPU híbrida, `perf`, e o limite do instrumento |
 | [m6-rnf-ao-vivo.md](m6-rnf-ao-vivo.md) | Os critérios de real-time sobre o pipeline completo |
 | [m6-soak-30min-rnf04.md](m6-soak-30min-rnf04.md) | O primeiro soak de 30 min — sem vazamento, estado limitado, RNF-04 indeterminado por carga |
-| [m10-t1-teto-de-cpu.md](m10-t1-teto-de-cpu.md) | O teto é ~174M, não linear — há 68 ms/s de custo fixo que nenhum modelo menor remove |
+| [m10-t1-teto-de-cpu.md](m10-t1-teto-de-cpu.md) | O teto em 2 P-cores — o número foi corrigido por m10-t1b |
+| [m10-t1b-latencia-e-teto.md](m10-t1b-latencia-e-teto.md) | 53% do custo do encoder é pago por invocação: latência compra capacidade |
+| [m10-t2-regua-publica.md](m10-t2-regua-publica.md) | 6,06% contra 5,80% publicado — o offset é de artefato, não de régua |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |
