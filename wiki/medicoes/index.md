@@ -26,6 +26,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m10-t1-teto-de-cpu.md](m10-t1-teto-de-cpu.md) | O teto em 2 P-cores — o número foi corrigido por m10-t1b |
 | [m10-t1b-latencia-e-teto.md](m10-t1b-latencia-e-teto.md) | 53% do custo do encoder é pago por invocação: latência compra capacidade |
 | [m10-t2-regua-publica.md](m10-t2-regua-publica.md) | 6,06% contra 5,80% publicado — o offset é de artefato, não de régua |
+| [m10-t3-quanto-corpus-pt-existe.md](m10-t3-quanto-corpus-pt-existe.md) | YODAS pt tem 262 h, não 15–25 mil; o volume está no parlamento europeu |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |

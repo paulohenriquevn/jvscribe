@@ -10,6 +10,18 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — T3/Q-12: o corpus aberto em PT é menor e do domínio errado
+
+- **YODAS-Granary pt tem 262 h**, não as 15–25 mil que o plano estimava. Medido por duas vias
+  independentes que concordam em 1%; o card do dataset erra por ~8× —
+  [m10-t3-quanto-corpus-pt-existe](medicoes/m10-t3-quanto-corpus-pt-existe.md).
+- **91% do volume de Granary pt está no VoxPopuli** — parlamento europeu, fala preparada — e é a
+  única fonte cujo `duration` não existe (`'None'` em 2,28M linhas), logo `[ESTIMATIVA]`.
+- **Só ~1.200 h são medidas E de domínio razoável** (ytc 959 h + YODAS 262 h), e o YODAS tem
+  mediana de 0,98 s por segmento — quase palavra isolada, de baixa utilidade para chunk de 1120 ms.
+- **A premissa de T3 está refutada.** Chegar a 25.000 h de dado útil para call center brasileiro
+  exige fonte que este inventário não encontrou.
+
 ## 2026-09-14 (noite) — RNF-02 revisado: 500 ms → 1,6 s, e o modelo pode ir a 376M
 
 O dono fixou o orçamento de latência em **1120 ms de chunk** depois de ver a curva medida. A
