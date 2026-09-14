@@ -218,6 +218,46 @@ Três coisas que o path entrega:
    modelo a esperar artefatos que o áudio real do call center não terá. **Não é bloqueante, mas
    precisa ser verificado antes do treino de escala**: existe versão não-realçada?
 
+## O realce por vocoder: medido, e a conclusão inverte a preocupação `[MEDIDO]`
+
+Não existe versão não-realçada. O paper (§3.5) diz que o Vocos foi **repurposed como denoiser**,
+treinado num dataset privado para remover ruído de fundo, hiss e reverberação leve; o que eles
+publicam para reprodutibilidade é **o denoiser**, não o áudio cru.
+
+Perfil espectral, metodologia do `e11` com a remoção de DC que aquela medição registrou como
+indispensável (mediana por corpus):
+
+| corpus | banda 90% | **banda 99%** | SNR proxy | energia > 7 kHz |
+|---|---|---|---|---|
+| **TAGARELA** (denoised) | 822 Hz | **3.080 Hz** | 4,4 dB | 0,04% |
+| FLEURS pt (natural) | 774 Hz | **5.276 Hz** | 8,7 dB | 0,21% |
+| `leitura` (atendimento simulado) | 946 Hz | 1.988 Hz | 7,4 dB | 0,00% |
+
+**O TAGARELA tem 42% menos banda que o FLEURS**, e cinco vezes menos energia acima de 7 kHz. O
+vocoder cortou o topo do espectro — é o que um denoiser neural faz, porque é lá que mora o ruído
+que ele foi treinado a remover.
+
+**E isso aproxima o corpus do alvo, não o afasta.** Colocando na régua do `e11`, que mediu banda
+como a causa acústica do gap de domínio:
+
+```
+leitura 1.988 Hz  <  TAGARELA 3.080 Hz  <  LapsBM 4.405 Hz  <  FLEURS 5.276 Hz
+   (alvo)              (corpus)                                  (o que temos hoje)
+```
+
+O canal telefônico corta em ~3.400 Hz. **O TAGARELA cai praticamente em cima disso**, enquanto o
+FLEURS está 55% acima. Treinar em áudio cuja banda já se parece com a do alvo é vantagem, não
+defeito — e explica por que o `e12` não se aplica aqui: aquela medição testou **realce aplicado na
+inferência**, criando divergência entre treino e teste. Aqui o realce está no **treino**, e move o
+corpus *na direção* do domínio de teste.
+
+**O risco que permanece, e não é medido por este instrumento:** o vocoder pode ter introduzido
+artefatos sintéticos que o modelo aprenda a esperar. Perfil espectral agregado não os enxerga.
+Separar "banda menor porque podcast" de "banda menor porque vocoder" exigiria o áudio cru, que não
+existe publicamente. **A mitigação é a cadeia de augmentação que o M3 já construiu** — devolver
+ruído e reverberação ao áudio limpo restaura variabilidade acústica e reduz a chance de o modelo
+se especializar no artefato.
+
 ## Limitações
 
 1. **O VoxPopuli é `[ESTIMATIVA]`.** A taxa de 2,5 palavras/s é típica de fala preparada, mas não

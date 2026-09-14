@@ -10,6 +10,18 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — T3: o realce do TAGARELA aproxima o corpus do alvo
+
+- **Não existe versão não-realçada** — o paper publica o *denoiser*, não o áudio cru.
+- **Medido**: o TAGARELA tem banda99 de **3.080 Hz** contra 5.276 Hz do FLEURS. O vocoder cortou o
+  topo, e o canal telefônico corta em ~3.400 Hz — **o corpus cai praticamente em cima do alvo**,
+  enquanto o FLEURS está 55% acima.
+- **O `e12` não se aplica aqui**: aquela medição testou realce na INFERÊNCIA, criando divergência
+  entre treino e teste. Aqui o realce está no TREINO e move o corpus *na direção* do teste.
+- **O risco remanescente** é artefato de vocoder que o modelo aprenda a esperar — invisível ao
+  perfil espectral agregado. Mitigação: a cadeia de augmentação do M3, devolvendo ruído e
+  reverberação.
+
 ## 2026-09-14 (noite) — T3: o TAGARELA é ~1,9× maior do que o card declara
 
 - **~17.000 h medidas**, IC95% [13.661; 20.269], contra 8.972 h anunciadas. Duas vias convergem:
