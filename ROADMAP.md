@@ -63,9 +63,20 @@ margem).
 
 **V1 ship criterion (measurable):** **WER ≤ 25%** no test set de call center PT-BR
 8 kHz, **com os cinco critérios de real-time atendidos** (RTFx sustentado ≥ 3×,
-latência p99 ≤ 500 ms, backlog zero em 99,9% das amostras, estabilidade térmica
+latência p99 ≤ **1,6 s**, backlog zero em 99,9% das amostras, estabilidade térmica
 ≥ 80% aos 30 minutos, tudo medido sob carga concorrente), sustentado por **~20
 atendentes reais em BYOD durante 4 semanas consecutivas, sem intervenção manual**.
+
+> **Revisão de 2026-09-14 — RNF-02 passou de 500 ms para 1,6 s, por decisão do dono.**
+> A medição de [`m10-t1b`](wiki/medicoes/m10-t1b-latencia-e-teto.md) mostrou que latência e
+> qualidade **não** se opõem nesta arquitetura: 53% do custo do encoder é pago por invocação,
+> então chunk maior melhora RTFx **e** WER ao mesmo tempo. Fixando o chunk em **1120 ms**, o
+> teto de parâmetros sobe de 237M para **376M** — 5,9× o modelo atual — e o WER de referência
+> cai de 5,65% para 5,48%. O novo alvo vem da latência efetiva `chunk · (1 + 1/RTFx)`: com
+> RTFx de 3× por canal, 1,12 · (1 + 1/3) ≈ 1,49 s, e 1,6 s dá margem.
+> O que se perde está declarado: **1,6 s é texto confirmado**, não exibição parcial. Se o
+> piloto de M8 mostrar que o atendente precisa de retorno visual mais rápido, a saída é exibir
+> hipótese instável antes de confirmar — não voltar o chunk, que custaria capacidade do modelo.
 
 > Critério é de **paridade, não superioridade**. O argumento econômico é substituir
 > ~$47.500/mês de API por compute marginal zero — empatar em qualidade a custo zero

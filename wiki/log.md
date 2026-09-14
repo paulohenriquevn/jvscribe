@@ -10,6 +10,19 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — RNF-02 revisado: 500 ms → 1,6 s, e o modelo pode ir a 376M
+
+O dono fixou o orçamento de latência em **1120 ms de chunk** depois de ver a curva medida. A
+revisão está registrada no `ROADMAP.md` § Success criteria, com o que se ganha e o que se perde.
+
+- **Ganho**: teto de parâmetros sobe de 237M para **376M** (5,9× os 64M atuais) e o WER de
+  referência cai de 5,65% para 5,48%.
+- **Perda declarada**: 1,6 s é latência de **texto confirmado**. Se M8 mostrar que o atendente
+  precisa de retorno mais rápido, a saída é exibir hipótese instável antes de confirmar — não
+  encolher o chunk, que custaria capacidade do modelo.
+- **Consequência para M10**: T4 e T5 passam a dimensionar o encoder na faixa de 250–350M, com
+  chunk de 1120 ms, em vez dos 120–150M que o plano assumia.
+
 ## 2026-09-14 (tarde) — M10/T1b e T2: latência compra capacidade, e a régua pública entra
 
 - **53% do custo do encoder é pago POR INVOCAÇÃO** e some quando o chunk cresce. Dobrar a
