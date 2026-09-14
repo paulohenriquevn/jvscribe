@@ -27,8 +27,13 @@ Ordem cronológica. Detalhe de cada item no conceito linkado.
   escolheu, re-rotulando com professor adaptado.
 - **Escala e licença estão em lados opostos**: o TAGARELA é `CC-BY-NC-SA-4.0`. Só com licença
   comercialmente limpa, o pt-BR cai de ~10.200 h para ~1.660 h.
-- **A meta de 25.000 h não se sustenta** com fontes abertas em pt-BR. Ou se revisa para ~10.000 h,
-  ou Q-09 (Cem Mil Podcasts) deixa de ser risco e vira pré-requisito.
+- **Q-09 respondida, e fecha uma porta.** O *Cem Mil Podcasts* é o **Spotify Podcast Dataset em
+  português** (mesmos autores do "100,000 Podcasts", COLING 2020) e o canal de distribuição saiu do
+  ar. Ir à fonte bruta não afrouxa a licença — aperta. **O TAGARELA é o acesso mais permissivo que
+  existe àquele áudio**, e já está em casa. Q-09 deixa de ser risco dominante e vira restrição
+  conhecida no `ROADMAP.md`.
+- **A meta de 25.000 h não se sustenta** com fontes abertas em pt-BR. O teto realista é ~10.200 h,
+  dos quais 8.130 h dependem de aceitar `CC-BY-NC-SA-4.0`.
 
 ## 2026-09-14 (noite) — RNF-02 revisado: 500 ms → 1,6 s, e o modelo pode ir a 376M
 

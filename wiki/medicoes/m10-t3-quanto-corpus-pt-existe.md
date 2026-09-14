@@ -136,6 +136,36 @@ seis vezes menor.**
 O TAGARELA traz ainda uma coluna `accent`, que permite estratificar por sotaque — algo que nenhuma
 outra fonte oferece e que o teste de call center vai exigir.
 
+## Q-09 respondida — a fonte bruta é do Spotify, e o acesso está fechado
+
+O `ROADMAP.md` marca Q-09 — acesso às ~76.000 h brutas do *Cem Mil Podcasts* — como **risco
+dominante de M3**. A cadeia foi rastreada até a origem:
+
+1. O card e o paper do TAGARELA (`arXiv:2603.15326`, ICASSP 2026) declaram que o corpus foi
+   **"collected from the Cem Mil Podcasts repository"**, descrito como *"a massive corpus offering
+   over 76,000 hours of diverse, multi-dialect Portuguese audio"*, entregue como **áudio bruto com
+   transcrição automática de qualidade variável**.
+2. A referência [8] do paper é: Garmash, Tanaka, Clifton, Correia, Jat, Zhu, Jones e Karlgren
+   (2023), *"Cem mil podcasts: a spoken Portuguese document corpus…"*, CLEF / LNCS,
+   DOI `10.1007/978-3-031-42448-9_5`.
+3. **Clifton, Jones e Karlgren são os autores de *"100,000 Podcasts: A Spoken English Document
+   Corpus"*** (COLING 2020) — o Spotify Podcast Dataset. O Cem Mil Podcasts é o análogo português,
+   do mesmo grupo.
+4. **O canal de distribuição não responde.** `podcastsdataset.byspotify.com` devolve resposta
+   vazia; `research.atspotify.com/datasets/` redireciona para o blog de engenharia, sem página de
+   datasets.
+
+**Consequência:** ir à fonte bruta não afrouxa a licença — aperta. O TAGARELA
+(`CC-BY-NC-SA-4.0`) é **o acesso mais permissivo que existe àquele áudio**, e já está em casa. As
+76.000 h não são uma alavanca disponível; são o corpus do qual alguém já extraiu, curou e
+publicou os 12% que o projeto pode usar.
+
+Q-09 deixa de ser risco em aberto e passa a ser **restrição conhecida**: o teto de pt-BR em
+podcast é o TAGARELA, não o Cem Mil Podcasts.
+
+> Não verifiquei se existe canal de solicitação individual ao Spotify Research, nem se o corpus
+> circula por acordo institucional. O que está verificado é que **a via pública saiu do ar**.
+
 ## Limitações
 
 1. **O VoxPopuli é `[ESTIMATIVA]`.** A taxa de 2,5 palavras/s é típica de fala preparada, mas não

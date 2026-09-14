@@ -406,7 +406,7 @@ Questões técnicas em aberto **não** são dimensões do grill, mas bloqueiam m
 
 | # | Questão | Bloqueia |
 |---|---|---|
-| Q-09 | Acesso ao corpus bruto *Cem Mil Podcasts* (~76k h) | **M3 — risco dominante** |
+| ~~Q-09~~ | ~~Acesso ao corpus bruto *Cem Mil Podcasts* (~76k h)~~ — **RESPONDIDA em 2026-09-14**: é o Spotify Podcast Dataset em português e o canal público saiu do ar. O TAGARELA é o acesso mais permissivo que existe àquele áudio ([medição](wiki/medicoes/m10-t3-quanto-corpus-pt-existe.md)) | — |
 | Q-10 | Arquitetura: encoder, decoder e tamanho | M2, M4 |
 | Q-01 | Piso real de hardware da frota BYOD | M8 |
 | Q-08 | Qual G2P PT-BR e com que taxa de erro | M4 |
