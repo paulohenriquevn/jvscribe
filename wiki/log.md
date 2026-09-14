@@ -10,6 +10,20 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 — M10/T1: o teto de CPU medido, e o Nemotron vira professor
+
+- **O teto de parâmetros é ~174M**, não linear: há **68 ms por segundo de áudio** de custo fixo
+  que nenhum modelo menor remove, o que limita o RTFx agregado a 14,7× nesta máquina mesmo com
+  encoder de tamanho zero — [m10-t1-teto-de-cpu](medicoes/m10-t1-teto-de-cpu.md).
+- **`nemotron-3.5-asr-streaming-0.6b` reprova o RNF-01** em 2 P-cores: 1,22× por canal com dois
+  canais, contra o alvo de 3×. Entra no M10 como professor e régua, não como produto.
+- **Um FastConformer de ~115M passa**: 3,75× por canal. A faixa de 120–150M é a que sustenta o
+  crescimento do modelo que o M10 assume.
+- **Dois canais não custam overhead** — o agregado é indistinguível do de um canal nos dois
+  modelos (IC95% cruza zero). O número a vigiar é sempre o por-canal.
+- **`num_threads=4` é metade de `num_threads=2`** em 2 P-cores, com IC95% [−1,147; −0,987].
+  Confirma por medição a heurística de `common/cpu.py`.
+
 ## 2026-08-01 — a régua estava errada, e isso moveu tudo
 
 O dia começou perseguindo 10% de WER e terminou descobrindo que **o instrumento mentia nos dois
