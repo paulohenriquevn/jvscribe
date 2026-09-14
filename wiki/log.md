@@ -10,6 +10,18 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — Q-14 e RNF-04: sem degradação térmica, mas o teto cai para 294M
+
+- **30 minutos contínuos, degradação de 2,4%.** A queda vista em T1 e T2 **não era térmica** — era
+  carga concorrente. **RNF-04 passa pela primeira vez** no projeto
+  — [m10-q14](medicoes/m10-q14-soak-sustentado.md).
+- **Mas o regime sustentado custa 20,6% a mais** que a rajada curta com que T1b mediu. O teto a
+  1120 ms cai de **376M para 294M**; a 560 ms, de 237M para 182M.
+- **A faixa-alvo do encoder passa de 250–350M para 250–280M**, deixando folga para RNF-05, que
+  segue não exercitado.
+- **O Nemotron 600M reprova o RNF-01 mesmo a 1120 ms**: 1,72× por canal contra o alvo de 3×.
+  Confirma o ADR-003 — professor, não produto.
+
 ## 2026-09-14 (noite) — T3: o realce do TAGARELA aproxima o corpus do alvo
 
 - **Não existe versão não-realçada** — o paper publica o *denoiser*, não o áudio cru.

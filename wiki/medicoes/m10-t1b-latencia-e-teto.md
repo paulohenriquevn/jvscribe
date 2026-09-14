@@ -10,6 +10,11 @@ timestamp: 2026-09-14T12:00:00Z
 
 # T1b — o custo por invocação, e a correção do teto `[MEDIDO]`
 
+> ⚠️ **Os tetos deste documento vêm de rajadas curtas.** O soak de 30 min
+> ([`m10-q14`](m10-q14-soak-sustentado.md)) mediu que o regime sustentado custa **20,6% a mais**,
+> o que derruba o teto a 1120 ms de **376M para 294M**. A decomposição do custo e a conclusão de
+> que latência compra capacidade permanecem; os valores absolutos de teto foram revisados.
+
 Data: 2026-09-14 · i7-1355U, `taskset -c 0-3`, `num_threads=2`, int8, greedy, 2 canais ·
 `sherpa-onnx` 1.13.8.
 
@@ -113,8 +118,9 @@ diferem em **mais de uma variável** e atribuir toda a diferença a uma delas.
 3. **O vocabulário difere** entre os dois modelos (1.025 contra 13.088 tokens), e o joiner é
    invocado a cada passo. Parte do `β` atribuído ao tamanho do modelo é, na verdade, tamanho de
    vocabulário — o que torna o teto **conservador** para um monolíngue PT-BR.
-4. **RNF-04 e RNF-05 seguem não exercitados**: sem soak de 30 min e sem carga concorrente. O
-   sinal de degradação com uso prolongado registrado em T1 não foi diagnosticado.
+4. ~~RNF-04 e RNF-05 seguem não exercitados~~ — **RNF-04 foi medido** em
+   [`m10-q14`](m10-q14-soak-sustentado.md) e passa; o sinal de degradação era carga concorrente,
+   não térmica. **RNF-05 (carga concorrente) continua não exercitado.**
 5. **Acima de 1120 ms não há artefato publicado**, então a linha de 2240 ms é extrapolação do
    modelo, não medição.
 
@@ -125,4 +131,6 @@ do chunk corta pela metade o termo `(α + β·P)/T`, que responde por mais da me
 encoder, e ainda melhora o WER porque o modelo vê mais contexto antes de decidir.
 
 Para o M10 isso significa que **o tamanho do modelo e o orçamento de latência são uma decisão
-só**, e não duas. A 1,12 s de chunk o teto é de 376M — quase seis vezes o modelo atual de 64M.
+só**, e não duas. A 1,12 s de chunk o teto é de 376M em rajada — e **294M no regime sustentado**,
+que é o número que deve dimensionar o treino ([`m10-q14`](m10-q14-soak-sustentado.md)). Ainda são
+4,6× o modelo atual de 64M.

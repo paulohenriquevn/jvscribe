@@ -10,8 +10,8 @@
 | decisão | valor | origem |
 |---|---|---|
 | Orçamento de latência | **chunk 1120 ms**, RNF-02 p99 ≤ 1,6 s | decisão do dono, `ROADMAP.md` |
-| Teto de parâmetros | **376M** a 1120 ms | [`m10-t1b`](../../wiki/medicoes/m10-t1b-latencia-e-teto.md) |
-| Faixa-alvo do encoder | **250–350M** | ADR-001 + o teto acima |
+| Teto de parâmetros | **294M** a 1120 ms (sustentado) | [`m10-q14`](../../wiki/medicoes/m10-q14-soak-sustentado.md) |
+| Faixa-alvo do encoder | **250–280M** | ADR-001 + o teto acima |
 | Corpus principal | **TAGARELA**, risco `NC/SA` aceito | [ADR-0006](../../wiki/decisoes/0006-tagarela-como-corpus-principal.md) |
 | Corpus disponível | **~15.600 h de pt-BR** | [`m10-t3`](../../wiki/medicoes/m10-t3-quanto-corpus-pt-existe.md) |
 | Régua de avaliação | `normalize_for_leaderboard` | [`m10-t2`](../../wiki/medicoes/m10-t2-regua-publica.md) |
@@ -101,7 +101,7 @@ Duas trilhas, protocolo idêntico, subset controlado (~1.500 h, 3 sementes):
 
 - **Trilha A** — Nemotron-3.5 0.6B com full-parameter fine-tune monolíngue PT-BR, preservando
   cache-aware e prompt conditioning. Receita publicada em `arXiv:2607.18912`.
-- **Trilha B** — Zipformer2 causal dimensionado a ~300M, com CR-CTC.
+- **Trilha B** — Zipformer2 causal dimensionado a ~270M, com CR-CTC.
 
 **Gate:** vencedor com IC95% pareado que não cruze zero (`common/stats.py`), BSF ≤ 1,3, e RTFx
 dentro do teto medido em 2 P-cores — **não extrapolado da GPU**.

@@ -35,7 +35,9 @@ tempo(T, P) [ms por segundo de áudio] = (7,69 + 0,19509·P)/T + (29,53 + 0,1721
 
 `T` em segundos, `P` em milhões de parâmetros. Erro de previsão ≤ 1,4% sobre 5 pontos medidos.
 
-**Teto a 1120 ms: 376M parâmetros** — 5,9× o modelo atual de 64M.
+**Teto a 1120 ms: 294M parâmetros** no regime sustentado (376M em rajada curta — o sustentado é o
+que dimensiona). Faixa-alvo revisada para **250–280M**, 4,4× o modelo atual
+([`m10-q14`](../../wiki/medicoes/m10-q14-soak-sustentado.md)).
 
 ---
 
@@ -59,7 +61,7 @@ tempo(T, P) [ms por segundo de áudio] = (7,69 + 0,19509·P)/T + (29,53 + 0,1721
 > custo de T5 foi subestimado na mesma proporção.
 
 **Diagnóstico vigente:** o fine-tune de M5 faz **overfitting**, não underfitting. A capacidade do
-encoder não era o gargalo — dado era. Com o teto agora em 376M, a capacidade deixa de ser
+encoder não era o gargalo — dado era. Com o teto agora em 294M, a capacidade deixa de ser
 restrição e o gargalo volta inteiro para o corpus.
 
 ---
@@ -70,10 +72,10 @@ restrição e o gargalo volta inteiro para o corpus.
 |---|---|---|---|
 | G1 | Quanto modelo cabe em 2 P-cores | T1 · T1b | ✅ fechado |
 | G2 | "SOTA" não afirmável na régua interna | T2 | ✅ fechado |
-| G3 | Corpus de 1.413 h contra 15–94 k da receita | **T3** | ⏳ |
+| G3 | Corpus de 1.413 h contra 15–94 k da receita | **T3** | 🔶 inventário fechado, ingestão pendente |
 | G4 | Overfitting ao ruído de pseudo-rótulo genérico | T3 · T4 | ⏳ |
 | G5 | Arquitetura não-causal; RNF-02 não fecha por construção | T4 · T5 | ⏳ |
-| G6 | Modelo preso em 64M | T4 · T5 | ✅ desbloqueado (teto 376M) |
+| G6 | Modelo preso em 64M | T4 · T5 | ✅ desbloqueado (teto 294M sustentado) |
 | G7 | Call center a 40,13%; augmentação alcança 1/6 | T6 | ⏳ |
 | G8 | Motor assume janela deslizante | T7 | ⏳ |
 | G9 | Nenhuma afirmação verificável por terceiro | T8 | ⏳ |
@@ -87,14 +89,15 @@ restrição e o gargalo volta inteiro para o corpus.
 
 ### ADR-001 — O alvo de inferência continua CPU; o crescimento é financiado pela latência
 **Status: confirmado por medição.** T1b mostrou que o crescimento não vem de "otimizar o motor",
-e sim de aceitar latência: 53% do custo do encoder é pago por invocação. A 1120 ms o teto é 376M.
+e sim de aceitar latência: 53% do custo do encoder é pago por invocação. A 1120 ms o teto é **294M**
+no regime sustentado (`m10-q14`).
 **Alternativas rejeitadas:** abandonar CPU (destrói o argumento econômico do `ROADMAP.md` §
 Problem); travar em 64M (o diagnóstico de overfitting era sobre 1.413 h, não sobre 25.000).
 
 ### ADR-002 — A arquitetura é decidida por bake-off medido
 Duas trilhas sob protocolo idêntico em T4: **A** — Nemotron-3.5 com full-parameter fine-tune
 monolíngue PT-BR, preservando cache-aware e prompt conditioning; **B** — Zipformer2 causal
-escalado a ~300M, com CR-CTC.
+escalado a ~270M, com CR-CTC.
 **Alternativas rejeitadas:** só A (descarta o domínio de icefall de M4/M5); só B (descarta um
 backbone que já entrega 5,80% em pt); decidir por benchmark de terceiros (`disciplina/o-que-nao-transfere`).
 
@@ -117,11 +120,11 @@ Conforme `arXiv:2505.16972`. **Alternativa rejeitada:** misturar e medir o WER f
 qualidade do sintético com razão de mistura.
 
 ### ADR-006 — Latência de 1120 ms, decidida pelo dono
-**Ganho:** teto de 376M e WER de referência 5,48% contra 5,65% a 560 ms.
+**Ganho:** teto de 294M sustentado (376M em rajada) e WER de referência 5,48% contra 5,65% a 560 ms.
 **Perda declarada:** 1,6 s é latência de **texto confirmado**. Se M8 mostrar que o atendente
 precisa de retorno mais rápido, a saída é exibir hipótese instável antes de confirmar — não
 encolher o chunk, que custaria capacidade.
-**Alternativas rejeitadas:** 560 ms (teto de 237M); 2240 ms (extrapolação sem artefato medível).
+**Alternativas rejeitadas:** 560 ms (teto de 182M sustentado); 2240 ms (extrapolação sem artefato medível).
 
 ---
 
@@ -131,23 +134,26 @@ encolher o chunk, que custaria capacidade.
 
 #### Why this step
 `e13` mediu que o modelo viu ~1.413 h. A receita de referência usa 15–94 mil. Com o teto agora em
-376M, capacidade deixou de ser a restrição e o corpus é o gargalo inteiro. Mas mais pseudo-rótulo
+294M, capacidade deixou de ser a restrição e o corpus é o gargalo inteiro. Mas mais pseudo-rótulo
 do mesmo tipo reproduz o overfitting de M5 — a correção de ordem vem do StreamHear: **adaptar o
 professor ao domínio antes de rotular**.
 
 #### Passos
-1. **Medir Q-12**: quantas horas de pt o YODAS-Granary realmente tem. O card reporta 5,9M
-   amostras e 1,5 TB, mas não publica horas.
-2. Inventariar e ingerir: YODAS-Granary pt (CC-BY-3.0), `nvidia/Granary` pt (CC-BY-4.0),
-   MLS pt, Common Voice pt, mais os existentes (CORAA, TAGARELA, NURC-SP, LapsBM).
+1. ~~Medir Q-12~~ — ✅ **feito**: o pt-BR disponível é **~15.600 h**, quase todo no TAGARELA
+   ([`m10-t3`](../../wiki/medicoes/m10-t3-quanto-corpus-pt-existe.md)). YODAS pt tem 262 h, não
+   15–25 mil; VoxPopuli é 3,8% brasileiro.
+2. Baixar 520–832 shards do TAGARELA via volume vast.ai
+   ([plano de treino](m10-treino-vastai.md)). Somar `ytc` (927 h) e YODAS (250 h) como braço de
+   licença limpa.
 3. Adaptar cada professor do ensemble a PT-BR espontâneo **antes** de gerar pseudo-rótulo.
 4. Estender `corpus/pseudo_label.py` para ensemble e `corpus/agreement_filter.py` para
    concordância tripla.
 5. Rodar o braço de controle sem filtro (ADR-004).
 
 #### Acceptance criteria
-- [ ] Q-12 respondida com número medido, não estimado
-- [ ] Manifesto com **≥ 25.000 h**, cada shard com licença e proveniência de rótulo
+- [x] Q-12 respondida com número medido, não estimado
+- [ ] Manifesto com **5.000–8.000 h** (a meta de 25.000 h foi refutada: não existe tanto pt-BR
+      aberto), cada shard com licença e proveniência de rótulo
 - [ ] Auditoria de vazamento: nenhuma utterance dos test sets no treino
 - [ ] Invariante travada por teste: pseudo-rótulo nunca entra no test set
 - [ ] Braço de controle preparado
@@ -167,7 +173,8 @@ protocolo seria trocar uma convicção por outra.
 #### Acceptance criteria
 - [ ] Vencedor com IC95% pareado do delta **não cruzando zero** (`common/stats.py`)
 - [ ] BSF medido por trilha; BSF > 1,3 desqualifica
-- [ ] RTFx do vencedor dentro do teto de 376M a 1120 ms, medido em 2 P-cores
+- [ ] RTFx do vencedor dentro do teto de **294M** a 1120 ms, medido em 2 P-cores **no regime
+      sustentado** (30 min), não em rajada
 - [ ] ADR de superseção do `wiki/decisoes/0003-finalista-medium.md`
 
 #### Concurrency tests
@@ -269,9 +276,11 @@ M4/M5 deixam de ser comparáveis com as novas.
 **D6 — Concentração de fornecedor.** Professor, backbone candidato, runtime e corpus vêm todos da
 NVIDIA. Licença permissiva, dependência técnica real.
 
-**D7 — RNF-04 e RNF-05 nunca foram exercitados.** Há sinal de degradação com uso prolongado (RTFx
-caiu 21% ao longo de 400 utterances em T2) que **não foi diagnosticado**. Se o regime sustentado
-for 20% mais lento, o teto de 376M cai para ~300M.
+~~**D7**~~ — **RESOLVIDO em parte.** O soak de 30 min mediu degradação de apenas 2,4% e o
+**RNF-04 passa**; a queda vista em T2 era carga concorrente, não térmica. Mas o regime sustentado
+custa 20,6% a mais que a rajada, e o teto caiu de 376M para **294M**
+([`m10-q14`](../../wiki/medicoes/m10-q14-soak-sustentado.md)). **RNF-05 (carga concorrente) segue
+não exercitado** — e é o que o pior minuto do soak (1,20× por canal) sugere ser o risco real.
 
 ---
 
@@ -284,7 +293,8 @@ for 20% mais lento, o teto de 376M cai para ~300M.
 **Q-13 — Fração pt-BR contra pt-PT nos corpora novos.** VoxPopuli é parlamento europeu; YODAS é
 YouTube misto. Um corpus majoritariamente europeu move FLEURS sem mover call center brasileiro.
 
-**Q-14 — O regime sustentado é 20% mais lento?** D7. Decide se o teto é 376M ou ~300M.
+~~**Q-14**~~ — **RESPONDIDA**: sim, 20,6% mais lento. O teto a 1120 ms é **294M**, não 376M. Mas
+não há degradação ao longo do tempo (2,4% em 30 min) e o RNF-04 passa.
 
 **Q-01 (herdada) — Piso de hardware da frota BYOD.** T1 mediu a máquina de referência, não o piso.
 
