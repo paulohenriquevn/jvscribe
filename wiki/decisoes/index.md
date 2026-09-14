@@ -30,6 +30,11 @@ como uma medição anterior sugeria.
 
 Empatado o RTFx, o desempate migra para acurácia → **o `medium` ganha**.
 
+O **0006** aceita o TAGARELA como corpus principal com o risco de licença `CC-BY-NC-SA-4.0`
+dimensionado: 8.130 h de pt-BR contra ~1.180 h de alternativas limpas. Registra que a questão
+"modelo treinado é derivado do corpus?" **não está resolvida**, que ela bloqueia M8 e não M10, e
+qual medição declararia a decisão errada.
+
 ## Um ADR que vale reler antes de reabrir a questão
 
 O **0004** registra que a remoção do Rust **não foi por performance**: a comparação justa

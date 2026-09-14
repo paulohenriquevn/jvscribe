@@ -53,7 +53,7 @@ margem).
 | Category | Constraint |
 |---|---|
 | Stack | Inferência em **Rust**; treino em Python (Lhotse/icefall ou equivalente); export ONNX ou runtime próprio |
-| Compliance / legal | Corpus TAGARELA é `CC-BY-NC-SA-4.0` — **risco assumido e registrado em 2026-07-24**; LGPD pendente (sub-projeto D); ToS da ElevenLabs sobre pseudo-labels em aberto |
+| Compliance / legal | Corpus TAGARELA é `CC-BY-NC-SA-4.0` — risco assumido em 2026-07-24 e **reafirmado com o tamanho medido em 2026-09-14** ([ADR-0006](wiki/decisoes/0006-tagarela-como-corpus-principal.md)): sem ele o corpus pt-BR é 6× menor. ⚠️ **A questão "modelo treinado é derivado do corpus?" bloqueia M8, não M10** — precisa de resposta antes do piloto. LGPD pendente (sub-projeto D); ToS sobre pseudo-labels em aberto |
 | Deadline | Nenhum prazo externo declarado |
 | Team | Não declarado — assumir equipe pequena; o gargalo é tempo de engenharia, não capital |
 | Runtime target | **CPU apenas**, ≤ 2 P-cores; máquina de referência **Intel i7-1355U** (2 P @5,0 GHz + 8 E @3,7 GHz, AVX-VNNI, sem AVX-512, 15 GB RAM) — medida, não estimada. Piso real da frota BYOD **desconhecido** (Q-01) |

@@ -10,6 +10,19 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — ADR-0006: TAGARELA é o corpus principal, risco de licença aceito
+
+- **Decisão do dono**: usar o TAGARELA (8.130 h de pt-BR) apesar do `CC-BY-NC-SA-4.0`. A
+  alternativa limpa soma ~1.180 h — **menos do que o modelo atual já viu** —, então não moveria o
+  gargalo — [ADR-0006](decisoes/0006-tagarela-como-corpus-principal.md).
+- **O que se aceita está dimensionado**: NC bloqueia uso comercial, SA contaminaria a distribuição
+  do peso, e a pergunta "modelo treinado é derivado do corpus?" não tem consenso na indústria.
+- **A pendência bloqueia M8, não M10.** Registrada no `ROADMAP.md` § Constraints com o milestone
+  que ela trava.
+- **Quatro mitigações entram como parte da decisão**: proveniência por shard, braço de corpus
+  limpo mantido em paralelo, cópia local preservada, e o contraste dos dois braços medido em T5 —
+  se o limpo ficar a menos de 2 p.p., o risco não estava sendo pago.
+
 ## 2026-09-14 (noite) — T3/Q-12: o corpus aberto em PT é menor e do domínio errado
 
 - **YODAS-Granary pt tem 262 h**, não as 15–25 mil que o plano estimava. Medido por duas vias
