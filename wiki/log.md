@@ -10,6 +10,19 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — T3: o TAGARELA é ~1,9× maior do que o card declara
+
+- **~17.000 h medidas**, IC95% [13.661; 20.269], contra 8.972 h anunciadas. Duas vias convergem:
+  extrapolação de 4 shards completos (16.965 h) e exemplos × duração medida (16.968 h). **Os
+  números do próprio card não fecham entre si** — 7.111.196 exemplos × 9,30 s dão 18.371 h.
+  Em pt-BR são **~15.600 h**, quase o dobro do que o ADR-0006 assumiu.
+- **Um shard é um show.** 1.764 shards para 2.094 shows: o amostrador estratificado por posição
+  que já existe no repo é, na prática, estratificado por show.
+- **O ID do show é do Spotify**, confirmando a origem por uma terceira via.
+- ⚠️ **O áudio já passou por realce neural** (`enhanced_vocos`). O `e12` mediu "seis técnicas de
+  realce, seis pioras". Treinar em áudio revocodado ensina artefato que o call center não terá —
+  verificar se existe versão não-realçada antes do treino de escala.
+
 ## 2026-09-14 (noite) — ADR-0006: TAGARELA é o corpus principal, risco de licença aceito
 
 - **Decisão do dono**: usar o TAGARELA (8.130 h de pt-BR) apesar do `CC-BY-NC-SA-4.0`. A

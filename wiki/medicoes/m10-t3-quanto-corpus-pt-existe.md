@@ -166,6 +166,58 @@ podcast é o TAGARELA, não o Cem Mil Podcasts.
 > Não verifiquei se existe canal de solicitação individual ao Spotify Research, nem se o corpus
 > circula por acordo institucional. O que está verificado é que **a via pública saiu do ar**.
 
+## O TAGARELA é ~1,9× maior do que o próprio card declara `[MEDIDO]`
+
+O card declara três números que **não fecham entre si**: 8.972 h, 7.111.196 exemplos no split
+`train`, e duração média de 9,30 ± 5,49 s. Os dois últimos dão **18.371 h**, não 8.972.
+
+Medição direta, quatro shards lidos por inteiro (16.125 segmentos, 100% de cada shard):
+
+| shard | segmentos | média | horas |
+|---|---|---|---|
+| 100 | 4.032 | 10,96 s | 12,28 |
+| 600 | 4.031 | 7,20 s | 8,06 |
+| 1200 | 4.031 | 8,67 s | 9,71 |
+| 1700 | 4.031 | 7,52 s | 8,42 |
+
+Agregado: média **8,59 s**, mediana 7,52 s, p10 2,80 s, p90 16,56 s.
+
+Duas vias independentes convergem:
+
+| via | total |
+|---|---|
+| horas por shard × 1.764 shards | **16.965 h**, IC95% [13.661; 20.269] |
+| 7.111.196 exemplos × 8,59 s medidos | **16.968 h** |
+
+**O número de exemplos e a duração média do card estão corretos; o total de horas não.** O corpus
+tem cerca de **17.000 h**, não 8.972 — e a ~92% de pt-BR, isso são **~15.600 h de português
+brasileiro**, quase o dobro do que o [ADR-0006](../decisoes/0006-tagarela-como-corpus-principal.md)
+assumiu ao aceitar o risco de licença.
+
+A variância entre shards é alta (7,20 a 10,96 s de média) **porque cada shard é um show**, e shows
+têm estilos diferentes. Por isso o IC é largo: 4 de 1.764 shards é 0,23% de amostra.
+
+## A estrutura do corpus, lida do path
+
+```
+podcasts_segmented_enhanced_vocos_16khz_flac/1/X/show_1xbd6Gfk8xiL6YpYdpQL3k/
+  0BZA2JUaMiVp2r7Kwe6rlg_<hash>_782.58_800.28-0001.flac
+```
+
+Três coisas que o path entrega:
+
+1. **Um shard é um show.** Todos os 4.031 segmentos do shard 882 vêm de
+   `show_1xbd6Gfk8xiL6YpYdpQL3k`. Com 1.764 shards para 2.094 shows, é quase um para um — o que
+   **valida o amostrador estratificado** que já existe em `finetune/download_tagarela_subset.py`.
+   O caveat honesto do docstring ("a estratificação é por posição, não por show") é, na prática,
+   por show.
+2. **O ID é do Spotify**, confirmando por uma terceira via a origem rastreada em Q-09.
+3. ⚠️ **O áudio já passou por realce neural** — `enhanced_vocos`, um vocoder. O `e12` deste projeto
+   mediu **"seis técnicas de realce, seis pioras"** e registrou que *"o reconhecedor lida melhor
+   com informação faltando do que com informação inventada"*. Treinar em áudio revocodado ensina o
+   modelo a esperar artefatos que o áudio real do call center não terá. **Não é bloqueante, mas
+   precisa ser verificado antes do treino de escala**: existe versão não-realçada?
+
 ## Limitações
 
 1. **O VoxPopuli é `[ESTIMATIVA]`.** A taxa de 2,5 palavras/s é típica de fala preparada, mas não

@@ -13,6 +13,12 @@ timestamp: 2026-09-14T18:00:00Z
 - Decisor: dono do projeto
 - Evidência: [`m10-t3-quanto-corpus-pt-existe`](../medicoes/m10-t3-quanto-corpus-pt-existe.md)
 
+> ✅ **Atualização de 2026-09-14 (noite), a favor da decisão.** Medição direta de quatro shards
+> completos mostra que o TAGARELA tem **~17.000 h**, não as 8.972 h do card — cujos próprios
+> números são internamente inconsistentes. Em pt-BR são **~15.600 h**, quase o dobro do que esta
+> ADR assumiu. O risco aceito compra mais do que se pensava
+> ([medição](../medicoes/m10-t3-quanto-corpus-pt-existe.md)).
+
 ## Contexto
 
 O M10 precisa de corpus pt-BR em escala. A medição de T3 inventariou o que existe de fato, e o
