@@ -19,8 +19,16 @@ Ordem cronológica. Detalhe de cada item no conceito linkado.
   única fonte cujo `duration` não existe (`'None'` em 2,28M linhas), logo `[ESTIMATIVA]`.
 - **Só ~1.200 h são medidas E de domínio razoável** (ytc 959 h + YODAS 262 h), e o YODAS tem
   mediana de 0,98 s por segmento — quase palavra isolada, de baixa utilidade para chunk de 1120 ms.
-- **A premissa de T3 está refutada.** Chegar a 25.000 h de dado útil para call center brasileiro
-  exige fonte que este inventário não encontrou.
+- **Q-13 respondida por medição de texto**: o gerúndio brasileiro contra o `a + infinitivo`
+  europeu separa os corpora sem ambiguidade. **VoxPopuli é 3,8% pt-BR**; ytc, YODAS e TAGARELA
+  ficam em 95–97%.
+- **A maior fonte pt-BR é o TAGARELA — 8.972 h, 84% de todo o pt-BR disponível — e o projeto usou
+  13% dela.** A expansão de T3 não depende de achar corpus novo, e sim de escalar o que M3 já
+  escolheu, re-rotulando com professor adaptado.
+- **Escala e licença estão em lados opostos**: o TAGARELA é `CC-BY-NC-SA-4.0`. Só com licença
+  comercialmente limpa, o pt-BR cai de ~10.200 h para ~1.660 h.
+- **A meta de 25.000 h não se sustenta** com fontes abertas em pt-BR. Ou se revisa para ~10.000 h,
+  ou Q-09 (Cem Mil Podcasts) deixa de ser risco e vira pré-requisito.
 
 ## 2026-09-14 (noite) — RNF-02 revisado: 500 ms → 1,6 s, e o modelo pode ir a 376M
 

@@ -1,9 +1,9 @@
 ---
 type: Medição
-title: T3/Q-12 — quanto corpus PT existe de verdade nas fontes abertas
+title: T3/Q-12 e Q-13 — quanto corpus pt-BR existe, medindo a variedade
 description: >-
-  YODAS pt tem 262 h, não as 15–25 mil que o plano estimava. O volume está no VoxPopuli — que é
-  parlamento europeu, o mais distante possível do call center brasileiro.
+  YODAS pt tem 262 h, não 15–25 mil. O volume está no VoxPopuli, que é 3,8% brasileiro. A maior
+  fonte pt-BR é o TAGARELA, já em casa e usado a 13%.
 tags: [medicao, m10, t3, corpus, granary, yodas, voxpopuli, q12, q13]
 timestamp: 2026-09-14T15:00:00Z
 ---
@@ -94,6 +94,48 @@ contexto. As 262 h do YODAS pt entram como dado de baixa utilidade para o regime
 O VoxPopuli é o oposto: 54 palavras por linha, cerca de 22 s por utterance — boa forma para
 contexto longo, domínio errado.
 
+## Q-13 respondida — a variedade, medida em vez de suposta
+
+Não há rótulo de variedade em nenhum manifesto. O que há é texto, e pt-BR e pt-PT divergem em
+itens lexicais de alta frequência e em **duas construções gramaticais**: o gerúndio brasileiro
+(`está fazendo`) contra o infinitivo preposicionado europeu (`está a fazer`). Contando marcadores
+exclusivos por milhão de palavras:
+
+| fonte | palavras | léxico BR | gramática BR | veredito |
+|---|---|---|---|---|
+| **VoxPopuli pt** | 21,4 M | 22,3% | **3,8%** | **pt-PT** |
+| YouTube-Commons pt | 8,5 M | 98,3% | **96,7%** | **pt-BR** |
+| YODAS pt | 1,1 M | 98,2% | **95,3%** | **pt-BR** |
+| TAGARELA (1 shard) | 11,5 k | 98,2% | **95,2%** | **pt-BR** |
+
+O sinal gramatical é mais limpo que o lexical porque alguns marcadores lexicais são ambíguos
+(`fato` é "terno" em pt-PT mas palavra comum em pt-BR; `meia` idem). No VoxPopuli o `a + infinitivo`
+aparece **1.807 vezes por milhão** contra 72 do gerúndio — razão de 25 para 1.
+
+## O inventário que importa: horas de pt-BR, não de "pt"
+
+| fonte | horas | % BR | **horas pt-BR** | licença | estilo |
+|---|---|---|---|---|---|
+| **TAGARELA** | 8.972 | 95,2% | **~8.540** | **CC-BY-NC-SA-4.0** | podcast espontâneo |
+| VoxPopuli pt | ~12.700 `[EST]` | 3,8% | ~480 | CC0 | parlamento europeu |
+| YouTube-Commons pt | 959 | 96,7% | ~927 | CC-BY | YouTube |
+| YODAS pt | 262 | 95,3% | ~250 | CC-BY-3.0 | YouTube, fragmentado |
+
+**Duas conclusões que mudam T3:**
+
+1. **O TAGARELA é 84% de todo o pt-BR disponível** — e o projeto usou **1.139 h dele, 13%**
+   (`e13`). A maior fonte não é nova: está identificada, baixável e subutilizada.
+2. **A escala e a licença estão em lados opostos.** O TAGARELA é `CC-BY-NC-SA-4.0` — **não
+   comercial** — e o produto é para operação de call center de empresa. Somando apenas fontes de
+   licença comercialmente limpa, o pt-BR disponível cai para **~1.660 h**.
+
+O risco de licença do TAGARELA já está registrado no `ROADMAP.md` § Constraints como "assumido em
+2026-07-24". Esta medição mostra o tamanho do que se assumiu: **sem o TAGARELA o corpus pt-BR é
+seis vezes menor.**
+
+O TAGARELA traz ainda uma coluna `accent`, que permite estratificar por sotaque — algo que nenhuma
+outra fonte oferece e que o teste de call center vai exigir.
+
 ## Limitações
 
 1. **O VoxPopuli é `[ESTIMATIVA]`.** A taxa de 2,5 palavras/s é típica de fala preparada, mas não
@@ -101,20 +143,36 @@ contexto longo, domínio errado.
    taxa, não a de segmentação ou silêncio.
 2. **Nada foi baixado em áudio.** Todos os números vêm de manifesto e metadado. Se houver
    divergência entre manifesto e o que os arquivos contêm, ela não aparece aqui.
-3. **A fração pt-BR contra pt-PT não foi medida** em nenhuma fonte — nem no `ytc`, nem no YODAS.
-   Q-13 continua aberta para as duas fontes de YouTube.
-4. **A amostragem do YODAS usou 10 de 2.084 parquets.** A concordância com o manifesto (1%) dá
+3. **A variedade foi medida no TEXTO, não no áudio.** Marcadores lexicais e gramaticais separam
+   os corpora de forma inequívoca (razão de 25:1 no VoxPopuli), mas um falante brasileiro citando
+   forma europeia — ou o inverso — conta como o que escreveu, não como o que é. Para um corpus
+   inteiro o viés se dilui; para um shard específico, não.
+4. **O TAGARELA foi medido em UM shard** (11,5 k palavras de 1.857). A concordância com as outras
+   fontes brasileiras dá confiança, mas a distribuição de sotaque entre shards não foi verificada —
+   e a coluna `accent` existe justamente para isso.
+5. **A amostragem do YODAS usou 10 de 2.084 parquets.** A concordância com o manifesto (1%) dá
    confiança, mas não é censo.
 
 ## Consequência para o plano
 
-A premissa de T3 — "YODAS-Granary pt resolve o volume" — **está refutada**. O que sobra:
+A premissa de T3 — "YODAS-Granary pt resolve o volume" — **está refutada**, e a fonte que a
+substitui já estava em casa.
 
-- **~13.900 h** de Granary pt, dos quais ~12.700 h de domínio errado e não medidos.
-- **~1.200 h** medidas e de domínio razoável (`ytc` 959 h + YODAS 262 h), mas o YODAS é fragmentado.
-- O corpus que o projeto já viu: **~1.413 h** (`e13`).
+**O pt-BR disponível soma ~10.200 h**, das quais **~8.540 h são TAGARELA** — identificado,
+baixável, com coluna de sotaque, e usado a 13% da sua extensão. A expansão de T3 não depende de
+descobrir corpus novo; depende de **escalar o uso do que já foi escolhido em M3**.
 
-Chegar a 25.000 h de **dado útil para call center brasileiro** exige fonte que este inventário não
-encontrou. As opções que restam estão fora deste documento: Q-09 (Cem Mil Podcasts), coleta
-própria de áudio PT-BR, ou aceitar que o corpus será dominado por domínio distante e compensar em
-T6 com síntese.
+Isso reordena as prioridades de T3:
+
+1. **Escalar o TAGARELA de 1.139 h para a faixa de 5.000–8.500 h.** É a alavanca maior, e a mais
+   barata: o amostrador estratificado (`finetune/download_tagarela_subset.py`) já existe e é
+   auditável. Mas os rótulos são pseudo-Whisper — **é preciso re-rotular com professor adaptado**
+   (ADR-003), porque foi ao ruído desses rótulos que M5 fez overfitting.
+2. **Somar as ~1.180 h de YouTube** (`ytc` + YODAS), que são pt-BR medido e de licença limpa.
+3. **Descartar o VoxPopuli pt** como fonte principal. 3,8% de pt-BR significa que 96% do maior
+   volume disponível treina a variedade errada. Pode entrar como dado de pré-treino genérico, nunca
+   como corpus de domínio.
+4. **A meta de 25.000 h não se sustenta** com fontes abertas em pt-BR. Ou se revisa para a faixa
+   de 10.000 h, ou Q-09 (Cem Mil Podcasts, ~76 k h) deixa de ser risco e passa a ser pré-requisito.
+
+E a tensão que T3 tem de resolver antes de T5: **a escala e a licença estão em lados opostos.**
