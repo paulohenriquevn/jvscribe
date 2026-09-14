@@ -157,3 +157,97 @@ def expandir_numeros(texto: str) -> str:
 
 
 _RE_INTEIRO = re.compile(r"\d+")
+
+
+# ---------------------------------------------------------------------------
+# Régua PÚBLICA — a do Open ASR Leaderboard
+# ---------------------------------------------------------------------------
+#
+# As duas réguas acima são deste projeto e servem a decisões internas. Nenhuma delas produz
+# um número comparável com o que terceiros publicam: `normalize_for_wer_compare` remove
+# acento e mantém dígito; o leaderboard faz o oposto nos dois eixos. A diferença entre as
+# réguas internas já vale ~2 p.p. (14,83% contra 12,75% no mesmo áudio), então afirmar
+# "batemos o modelo X" comparando régua interna contra número publicado compara coisas
+# diferentes — o erro que `wiki/disciplina/` existe para impedir.
+#
+# Portada de `huggingface/open_asr_leaderboard` (Apache-2.0), `normalizer/normalizer.py`
+# (`BasicMultilingualTextNormalizer`) e `normalizer/data_utils.py` (`MultilingualNormalizer`),
+# lidos em 2026-09-14. O scoring multilíngue instancia o normalizador com
+# `remove_diacritics=False` e chama com `lang=`, o que ATIVA a conversão de dígitos.
+
+_RE_COLCHETE = re.compile(r"[<\[][^>\]]*[>\]]")
+_RE_PARENTESE = re.compile(r"\(([^)]+?)\)")
+_RE_MILHAR = re.compile(r"(\d)\s+(\d{3})\b")
+
+
+def _remover_simbolos_mantendo_marcas(texto: str) -> str:
+    """Troca símbolo e pontuação por espaço, preservando marcas combinantes (categoria 'M').
+
+    Preservar 'M' é o que mantém o acento vivo quando o texto chega decomposto (NFD): em
+    `combining acute` o acento é um caractere próprio, e removê-lo mudaria a régua de
+    "com acento" para "sem acento" em silêncio, dependendo só de como o arquivo foi salvo.
+    """
+    return "".join(
+        " " if unicodedata.category(c)[0] in "SP" else c
+        for c in unicodedata.normalize("NFKC", texto)
+    )
+
+
+def normalize_for_leaderboard(text: str, lang: str = "pt") -> str:
+    """Régua do Open ASR Leaderboard. **Quem COMPARA COM TERCEIROS usa esta.**
+
+    Difere das duas réguas internas em dois eixos, e os dois importam:
+
+    | | acento | dígito |
+    |---|---|---|
+    | `normalize_for_wer_compare` | removido | mantido como dígito |
+    | `normalize_train_target` | preservado | mantido como dígito |
+    | **esta** | **preservado** | **convertido para forma falada** |
+
+    Ordem fixa: caixa baixa → remove `[...]` e `(...)` → símbolos viram espaço (marcas
+    preservadas) → remove o que não é palavra nem espaço → colapsa espaço → junta grupos de
+    milhar separados por espaço → dígitos viram palavras via `num2words`.
+
+    ⚠️ NÃO trata símbolo monetário, ao contrário de `normalize_for_wer_compare`. "R$ 1.250"
+    vira "r mil duzentos e cinquenta", com o "r" órfão. É fiel ao original — o objetivo aqui
+    é reproduzir o número de terceiros, não produzir o número mais justo.
+
+    `regex` e `num2words` são importados aqui dentro de propósito: `text.py` é a régua central
+    e é importado por quase tudo, e nem todo consumidor precisa comparar com o leaderboard.
+
+    >>> normalize_for_leaderboard("A fatura venceu no dia 15 de março.")
+    'a fatura venceu no dia quinze de março'
+    >>> normalize_for_leaderboard("Coração, atenção! [ruído] (aparte)")
+    'coração atenção'
+    """
+    try:
+        import regex as _regex
+        from num2words import num2words as _num2words
+    except ImportError as exc:  # pragma: no cover - ambiente sem as deps declaradas
+        raise ImportError(
+            "normalize_for_leaderboard exige `regex` e `num2words` "
+            "(declarados em requirements-eval.txt). Instale-os antes de comparar com o "
+            "Open ASR Leaderboard — sem eles o número não é o deles."
+        ) from exc
+
+    s = (text or "").lower()
+    s = _RE_COLCHETE.sub("", s)
+    s = _RE_PARENTESE.sub("", s)
+    s = _remover_simbolos_mantendo_marcas(s).lower()
+    s = _regex.sub(r"[^\w\s]", "", s)
+    s = re.sub(r"\s+", " ", s).strip()
+
+    s = _RE_MILHAR.sub(r"\1\2", s)
+
+    def _falar_inteiro(m: "re.Match[str]") -> str:
+        try:
+            return _num2words(int(m.group()), lang=lang)
+        except OverflowError:
+            # `num2words` recusa acima de 10^15. Numa transcrição isso é lixo de ASR — uma
+            # sequência longa de dígitos alucinada — e não um número que alguém falou. Deixar
+            # o literal passar mantém o par referência/hipótese comparável; levantar aqui
+            # derrubaria a avaliação inteira por causa de uma utterance defeituosa.
+            # A captura é ESTREITA de propósito: qualquer outro erro é defeito e deve subir.
+            return m.group()
+
+    return _RE_INTEIRO.sub(_falar_inteiro, s)
