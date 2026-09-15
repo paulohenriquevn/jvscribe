@@ -36,7 +36,7 @@ tempo(T, P) [ms por segundo de áudio] = (7,69 + 0,19509·P)/T + (29,53 + 0,1721
 `T` em segundos, `P` em milhões de parâmetros. Erro de previsão ≤ 1,4% sobre 5 pontos medidos.
 
 **Teto a 1120 ms: 294M parâmetros** no regime sustentado (376M em rajada curta — o sustentado é o
-que dimensiona). Faixa-alvo revisada para **250–280M**, 4,4× o modelo atual
+que dimensiona). Faixa-alvo revisada para **180–220M**, ~3× o modelo atual, depois do RNF-05
 ([`m10-q14`](../../wiki/medicoes/m10-q14-soak-sustentado.md)).
 
 ---
@@ -97,7 +97,7 @@ Problem); travar em 64M (o diagnóstico de overfitting era sobre 1.413 h, não s
 ### ADR-002 — A arquitetura é decidida por bake-off medido
 Duas trilhas sob protocolo idêntico em T4: **A** — Nemotron-3.5 com full-parameter fine-tune
 monolíngue PT-BR, preservando cache-aware e prompt conditioning; **B** — Zipformer2 causal
-escalado a ~270M, com CR-CTC.
+escalado a ~200M, com CR-CTC.
 **Alternativas rejeitadas:** só A (descarta o domínio de icefall de M4/M5); só B (descarta um
 backbone que já entrega 5,80% em pt); decidir por benchmark de terceiros (`disciplina/o-que-nao-transfere`).
 

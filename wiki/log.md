@@ -10,6 +10,19 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-14 (noite) — RNF-05: carga concorrente é o critério mais restritivo
+
+- **Softphone sozinho custa 16%**; softphone + CRM custa **61,7%** e derruba o por-canal para
+  **0,98×** — abaixo de 1,0, onde o backlog cresce sem limite e o backpressure passa a descartar
+  áudio — [m10-rnf05](medicoes/m10-rnf05-carga-concorrente.md).
+- **Nenhum cenário passa o RNF-01** com o Nemotron 600M, nem o ocioso (2,55× por canal).
+- **O teto cai de novo**: 294M sustentado → **230M com softphone**. A faixa-alvo do encoder passa
+  para **180–220M**.
+- **O modelo atual de 64M reprova sob carga pesada** (2,71× por canal) — não por ser lento, por não
+  sobrar CPU.
+- **A sequência de correções da sessão**: 174M (errado) → 376M (rajada) → 294M (sustentado) →
+  **230M (com carga)**. Cada medição mais realista derrubou o número.
+
 ## 2026-09-14 (noite) — Q-14 e RNF-04: sem degradação térmica, mas o teto cai para 294M
 
 - **30 minutos contínuos, degradação de 2,4%.** A queda vista em T1 e T2 **não era térmica** — era
