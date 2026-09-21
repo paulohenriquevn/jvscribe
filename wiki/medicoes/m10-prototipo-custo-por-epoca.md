@@ -1,84 +1,96 @@
 ---
 type: Medição
-title: Protótipo Colab — 0,89 h por época, e a divergência que a mediu
+title: Protótipo Colab — 0,85 h por época, e a Fase 3 reprecificada em 10×
 description: >-
-  Primeiro treino real do M10. Diverge por LR alto contra batch pequeno, mas entrega o
-  número que o run existia para produzir: o custo por época numa L4.
-tags: [medicao, m10, colab, custo, treino, divergencia, learning-rate]
-timestamp: 2026-09-21T14:10:00Z
+  Três épocas completas de zipformer 66M sobre 295 h do TAGARELA numa L4. O custo medido
+  põe a Fase 3 uma ordem de grandeza abaixo do que o plano estimava.
+tags: [medicao, m10, colab, custo, treino, learning-rate, fase-3]
+timestamp: 2026-09-21T18:06:00Z
 ---
 
 # Protótipo no Colab — custo por época `[MEDIDO]`
 
-Data: 2026-09-21 · Colab Pro, NVIDIA L4 · torch 2.11.0+cu128, k2 1.24.4, python 3.13 ·
-zipformer causal 66,4M, transducer podado + CTC · 112.311 cuts do TAGARELA (31 shards).
+Data: 2026-09-21 · Colab Pro, NVIDIA L4 (23 GB) · torch 2.11.0+cu128, k2 1.24.4, python 3.13 ·
+zipformer causal 66,4M, transducer podado + CTC · `--max-duration 700 --base-lr 0.015`.
 
-## O número
+## O corpus, medido
 
 | | |
 |---|---|
-| setup (start → batch 0) | 59 s |
-| **época 1 (batch 0 → checkpoint)** | **0,89 h — 53 min** |
-| custo na L4 `[ESTIMATIVA de unidades/h]` | 4,3 unidades ≈ **$0,43 por época** |
+| shards baixados (estratificados de 1.764) | 31 |
+| utterances brutas | 124.970 |
+| **mantidas** | **113.311 (90,7%)** |
+| descartadas por sotaque pt-pt | 10.992 (**8,8%**) |
+| alucinação + ratio + vazio | 667 (0,53%) |
+| **duração após o filtro** | **296,8 h** |
+| shows distintos / maior show | 187 / 7,0% |
+| features em disco (`lilcom_chunky`) | **9,1 GB — 31 MB/h** |
+| wavs decodificados intermediários | 33 GB |
 
-Isto **retira o risco R1** do [plano de treino](../../docs/plans/m10-treino-vastai.md), que
-estimava a Fase 3 por proporção a um run de M5 cujo custo não está registrado em lugar
-nenhum.
+Fbank: **44 min** com `--num-jobs 4`. A verificação de `storage_type` passou.
 
-**Custo por época mede throughput, não convergência.** O forward e o backward custam o
-mesmo numa época que aprende e numa que diverge — por isso o número vale, embora o modelo
-não valha nada.
+**31 MB/h confirma a medição de storage** ([m10-t3-fbank-e-storage](m10-t3-fbank-e-storage.md),
+27 MB/h em FLEURS) e refuta os 115 MB/h do backend numpy. Em 5.000 h: 155 GB contra 575 GB.
 
-## O que quebrou
+## O custo
 
-A loss desce de 9,0 para 1,5 nos primeiros 400 batches — o modelo **estava aprendendo** —
-e depois sobe de volta, monotonicamente, por mais de 3.000 batches até virar NaN.
-
-| marco | tot_loss |
+| | |
 |---|---|
-| época 1, batch 0 | 9,011 |
-| época 1, batch 750 (mínimo) | **1,514** |
-| época 1, batch 2000 | 1,724 |
-| validação da época 1 | 1,921 |
-| **validação da época 2** | **2,284** |
-| época 2, batch ~1400 | NaN → `bad-model-0.pt` |
+| **3 épocas completas** | 2,55 h |
+| **por época** | **0,85 h — 51 min** |
+| custo na L4 `[ESTIMATIVA de unidades/h]` | 4,1 unidades ≈ **$0,41** |
+| checkpoints | 3 × 1.063 MB |
 
-## A causa: a razão LR/batch, não o LR sozinho
+## A Fase 3 reprecificada
 
-`encoder_embed.conv.0.weight` domina `tot_sumsq` desde o batch 0 — chega a 0,93 da norma
-total do gradiente. O `percent-clipped` sobe de 0% a **67%**: dois terços dos batches
-sendo cortados pelo otimizador.
+O [plano](../../docs/plans/m10-treino-vastai.md) estima a Fase 3 em **$600–1.500**, por
+proporção a um run de M5 cujo custo não está registrado em lugar nenhum. É o risco R1.
 
-| | batch efetivo | base-lr | razão |
-|---|---|---|---|
-| `RESULTS.md` do recipe | ~2.200 s (2×1000 ou 4×550) | 0,045 | **2,0e-5** |
-| esta execução | 300 s (1×300) | 0,030 | **1,0e-4** |
+Escalando o número medido — 0,85 h por época por 295 h de corpus:
 
-**Cinco vezes mais quente.** E os dois erros vieram de fontes diferentes:
+| corpus | épocas | h de GPU | Colab L4 | A100 vast.ai |
+|---|---|---|---|---|
+| 1.500 h | 20 | 87 h | $42 | $28 |
+| 5.000 h | 10 | 144 h | $69 | $46 |
+| 5.000 h | **40** | 577 h | **$277** | **$185** |
+| 5.000 h | 20 | 289 h | $138 | $92 |
 
-- `--base-lr 0.03` foi importado da lição de M5 — que era **finetune de cabeça fresca sobre
-  encoder pré-treinado**. Aqui o treino é **do zero**. A lição foi aplicada fora do regime
-  que a produziu.
-- `--max-duration 300` foi escolhido por medo de OOM. O log mostra pico de **9.090 MB** numa
-  L4 de 24 GB — folga de 2,5× que não estava sendo usada, e que teria dado batch maior
-  **e** mais throughput.
+**Mesmo a 40 épocas — o regime dos recipes do icefall — a Fase 3 custa menos que o piso de
+$600 do plano.** A estimativa por proporção errava por ~2–5×, e a ordem de grandeza da
+dúvida some.
 
-## Correção aplicada
+⚠️ **O gargalo passa a ser tempo, não dinheiro.** 577 h são **24 dias** de L4 contínua, o que
+o Colab Pro não sustenta (background execution é recurso do Pro+). Isso reforça a vast.ai
+para a Fase 3 — não pelo custo, pelo prazo.
 
-`--max-duration 700` + `--base-lr 0.015` → razão 2,1e-5, a do recipe. Não verificado: nenhum
-run rodou com esta configuração ainda.
+## O que o run NÃO mostra
 
-O notebook ganhou um **vigia de divergência** — mata o treino quando a `tot_loss` fica 25%
-acima do mínimo por 4 logs seguidos. Os 75 minutos gastos depois que o problema já era
-visível no log são o custo de não ter isso.
+**O modelo não converge em 3 épocas, e não era para converger.** Os recipes do icefall rodam
+30–50. Mas a curva tem um sinal que precisa ser observado na próxima rodada:
+
+| | tot_loss | simple | pruned | ctc | validação |
+|---|---|---|---|---|---|
+| ép. 1, batch 0 | 8,99 | 7,37 | 6,89 | 4,66 | 8,882 |
+| ép. 1, batch 1000 | 1,476 | 0,799 | 0,930 | 2,048 | — |
+| ép. 2, batch 1400 | 1,710 | 0,747 | 0,859 | 2,401 | **1,731** |
+| ép. 3, batch 50 | 1,790 | 0,738 | 0,845 | 2,882 | **1,909** |
+
+1. **`simple_loss` e `pruned_loss` estagnam** em ~0,73/0,86 já no fim da época 1 e não melhoram
+   mais — 2,5 épocas sem progresso nas perdas do transducer.
+2. **`ctc_loss` sobe**: 2,05 → 2,88.
+3. **A validação piora** entre a época 2 e a 3: 1,731 → 1,909.
+
+Não é a divergência da tentativa anterior — não houve NaN, nem clipping em massa, e o vigia
+não disparou. É estagnação com a CTC se degradando, e **a causa não está determinada**.
 
 ## Limitações
 
-1. **Unidades/h da L4 é `[ESTIMATIVA]`**, não medida. As horas são medidas; a conversão para
-   dinheiro não.
-2. **Uma época só.** A segunda não terminou, então não há como ver se o custo por época é
-   estável — carregamento de features e cache do dataloader podem mudar da 1ª para a 2ª.
-3. **A extrapolação linear para 5.000 h é um piso**, não uma estimativa: batch maior usa
-   melhor a GPU e corpus maior move o gargalo para I/O.
-4. **O corpus efetivo não foi registrado.** A célula que imprime `HORAS_TREINO` rodou, mas a
-   saída não foi capturada — 112.311 cuts, duração total não anotada.
+1. **Unidades/h da L4 é `[ESTIMATIVA]`.** As horas são medidas; a conversão para dinheiro não.
+2. **A extrapolação linear é um piso.** Batch maior usa melhor a GPU; corpus maior move o
+   gargalo para I/O. A escala real tende a ser mais barata por hora de áudio e mais lenta por
+   época do que a reta sugere.
+3. **Três épocas não dizem nada sobre WER.** Nenhum decode foi rodado.
+4. **A estagnação não foi diagnosticada.** LR, escala da CTC (`--ctc-loss-scale 0.2`) e
+   qualidade do pseudo-rótulo são candidatos, nenhum testado.
+5. **O dev split é uma fatia contígua**, não shows disjuntos — a validação pode compartilhar
+   locutor com o treino. Para custo isso é irrelevante; para o número 1.909, não.
