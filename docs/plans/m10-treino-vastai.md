@@ -80,6 +80,28 @@ em `exp/` — ver Fase 4.
 
 ## As quatro fases, com custo
 
+### Fase −1 — protótipo no Colab Pro (custo: ~$14)
+
+Adicionada em 2026-09-20, depois que a medição de storage mostrou que **300 h de corpus cabem em
+10 GB** de features lilcom — e que o Colab Pro comporta até ~6.000 h.
+
+`docs/notebooks/m10-prototipo-colab.ipynb` roda ~300 h do TAGARELA por 3 épocas numa L4 e
+**mede o custo por época**. É a resposta direta ao risco R1: hoje a Fase 3 é estimada por
+proporção a um run de M5 cujo custo não está registrado em lugar nenhum.
+
+| | Colab Pro (L4) | vast.ai (A100) |
+|---|---|---|
+| protótipo 300 h | **~$14** | ~$12 |
+| bake-off 1.500 h | **~$72** | ~$60 |
+| escala 5.000 h | ~$240, **21 dias de aba aberta** | ~$200 |
+
+O Colab Pro custa ~20% mais e elimina provisionamento, transferência e gestão de instância. Para
+as duas primeiras linhas isso é vantagem; para a terceira, **a falta de background execution no
+Pro (é recurso do Pro+) inviabiliza**.
+
+**Consequência para este plano: a vast.ai sai do caminho crítico até a Fase 3.** Protótipo e
+bake-off podem rodar no Colab enquanto a chave de API não existe.
+
 ### Fase 0 — provisionar e validar (custo: ~$2)
 
 1. Criar volume. **Dimensionar pela fase 2**, não pela 1 — expandir volume depois costuma exigir
