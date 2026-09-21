@@ -91,9 +91,17 @@ _fixo    = lambda p: p * 1e6 * 16 / 1e6
 ATIV_300 = 9090 - _fixo(66.4)
 ORCAMENTO_MB = 20000                      # 23.034 na L4, ~3 GB de folga
 MAX_DUR = int(300 * (ORCAMENTO_MB - _fixo(P_M)) / ATIV_300 / (P_M/66.4)**0.5 / 10) * 10
+# A razao lr/batch do recipe (2,1e-5) vale para a LARGURA do recipe. A 191,7M ela
+# produziu NaN no batch 1700 ("Too many grads were not finite"), com a loss ainda
+# descendo ate 1450. Modelo mais largo precisa de lr menor: a heuristica usual e
+# lr ~ 1/sqrt(largura), e largura ~ sqrt(P), entao o fator e (66,4/P)^0,25... mas
+# o ponto medido pede mais que isso. Aqui o corretor e (66,4/P)^0,5 -- [ESTIMATIVA]
+# de um unico NaN, nao de uma varredura.
 RAZAO   = 2.1e-5                          # a razao lr/batch do RESULTS.md do recipe
-BASE_LR = round(RAZAO * MAX_DUR, 5)
-print(f'fixo ~{_fixo(P_M)/1000:.1f} GB | MAX_DUR {MAX_DUR} s [ESTIMATIVA] | BASE_LR {BASE_LR}')
+BASE_LR = round(RAZAO * MAX_DUR * (66.4/P_M)**0.5, 5)
+WARM    = 4000 if P_M > 100 else 2000     # o NaN veio ANTES do pico do warmup
+print(f'fixo ~{_fixo(P_M)/1000:.1f} GB | MAX_DUR {MAX_DUR} s [ESTIMATIVA] '
+      f'| BASE_LR {BASE_LR} | warm-step {WARM}')
 
 cmd = (
     'cd /content/icefall/egs/commonvoice/ASR && python3 zipformer/train.py'
@@ -103,7 +111,8 @@ cmd = (
     f' --max-duration {MAX_DUR} --use-fp16 0 --num-workers 2'
     f" --num-encoder-layers {CFG['layers']} --feedforward-dim {CFG['ffw']}"
     f" --encoder-dim {CFG['dim']} --encoder-unmasked-dim {CFG['unmask']}"
-    f' --causal 1 --use-transducer 1 --use-ctc 1 --base-lr {BASE_LR}')
+    f' --causal 1 --use-transducer 1 --use-ctc 1'
+    f' --base-lr {BASE_LR} --warm-step {WARM}')
 print('\n' + cmd + '\n')
 
 # --- rodar, vigiar, medir ---------------------------------------------------
@@ -112,9 +121,14 @@ print('\n' + cmd + '\n')
 # antes de virar NaN -- 75 min gastos depois que o problema ja estava no log.
 LOG = '/content/train-200m.log'
 print(f'log -> {LOG}\n')
-RE_TOT = re.compile(r'tot_loss\[loss=([\d.]+)')
+# Dois sinais. tot_loss e MEDIA CORRENTE: quando o batch 1700 deu NaN ela mal se
+# mexeu (1,580 -> 1,622, 2,7%) e o vigia de 25% ficou cego. O `loss[loss=nan` do
+# batch e imediato -- uma ocorrencia basta.
+RE_TOT  = re.compile(r'tot_loss\[loss=([\d.]+)')
+RE_NAN  = re.compile(r'batch \d+, loss\[loss=(nan|inf)')
+RE_BAT  = re.compile(r'Epoch \d+, batch (\d+),')
 melhor, ruins, MAX_RUINS, FATOR = float('inf'), 0, 4, 1.25
-divergiu = False
+divergiu, n_bat, t_b0 = False, 0, None
 
 t0 = time.time()
 with open(LOG, 'w') as fh:
@@ -127,6 +141,14 @@ with open(LOG, 'w') as fh:
                                     'Saving','validation','Maximum memory',
                                     'model parameters')):
             print(linha, end='')
+        b = RE_BAT.search(linha)
+        if b:
+            n_bat = int(b.group(1))
+            if t_b0 is None: t_b0 = time.time()   # o relogio comeca no batch 0
+        if RE_NAN.search(linha):
+            divergiu = True
+            print(f'\n!! NaN no batch {n_bat}. Matando -- a taxa ja esta medida.')
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM); break
         m = RE_TOT.search(linha)
         if m:
             v = float(m.group(1))
@@ -141,19 +163,24 @@ with open(LOG, 'w') as fh:
     proc.wait()
 el = time.time() - t0
 
-# Custo por epoca mede THROUGHPUT, nao convergencia: forward e backward custam o
-# mesmo numa epoca que aprende e numa que nao. O numero vale se UMA epoca fechou.
-ckpts = sorted(f for f in os.listdir(EXP) if f.startswith('epoch-') and f.endswith('.pt'))
-for f in ckpts:
-    print(f'  {f}  {os.path.getsize(os.path.join(EXP,f))/1e6:.0f} MB')
-if not ckpts:
+# Custo por epoca e uma TAXA, e taxa nao precisa de epoca fechada. Exigir um
+# checkpoint foi erro de desenho: este run mediu 1.650 batches em 45 min e nao
+# reportou nada. O que fecha uma epoca e o MODELO; o custo ja estava na mao.
+if t_b0 is None or n_bat < 100:
     print('\n'.join(open(LOG).read().splitlines()[-40:]))
-    raise RuntimeError(f'nenhuma epoca fechou em {el/60:.1f} min -- sem custo a medir.')
+    raise RuntimeError(f'so {n_bat} batches em {el/60:.1f} min -- amostra curta demais.')
 
-h_ep = el/3600/len(ckpts)
-print(f'\n=== CUSTO MEDIDO A {P_M:.0f}M ===   ({HORAS_TREINO:.0f} h de corpus)')
-print(f'{h_ep:.2f} h por epoca   (66,4M mediu 0,85 h -> escala {h_ep/0.85:.2f}x '
-      f'para {P_M/66.4:.2f}x de parametros)')
+seg      = time.time() - t_b0
+aud_h    = n_bat * MAX_DUR / 3600            # audio processado
+taxa     = aud_h / (seg/3600)                # x tempo real
+h_ep     = HORAS_TREINO / taxa
+ckpts    = sorted(f for f in os.listdir(EXP) if f.startswith('epoch-') and f.endswith('.pt'))
+
+print(f'\n=== CUSTO MEDIDO A {P_M:.0f}M ===')
+print(f'{n_bat} batches em {seg/60:.1f} min | {seg/n_bat:.2f} s/batch | {taxa:.0f}x tempo real')
+print(f'{h_ep:.2f} h por epoca sobre {HORAS_TREINO:.0f} h de corpus'
+      f'   (66,4M: 0,85 h -> {h_ep/0.85:.2f}x para {P_M/66.4:.2f}x de parametros'
+      f' = {(h_ep/0.85)/(P_M/66.4):.2f} do linear)')
 if un_h:
     print(f'{h_ep*un_h:.1f} unidades = ${h_ep*un_h/10:.2f} por epoca')
     for c in (1500, 5000):
@@ -161,5 +188,6 @@ if un_h:
             h = h_ep*c/HORAS_TREINO*ne
             print(f'  {c} h x {ne} ep: {h:5.0f} h GPU | Colab ${h*un_h/10:4.0f} '
                   f'| A100 vast.ai ${h/2.5*0.80:4.0f} | {h/24:.0f} dias')
+print(f'\ncheckpoints fechados: {ckpts or "nenhum"}')
 if divergiu or proc.returncode != 0:
-    print(f'\nO CUSTO ACIMA VALE. O MODELO NAO: exit {proc.returncode}, divergiu={divergiu}.')
+    print(f'A TAXA ACIMA VALE. O MODELO NAO: exit {proc.returncode}, divergiu={divergiu}.')
