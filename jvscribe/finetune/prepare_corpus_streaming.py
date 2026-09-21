@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 from pathlib import Path
 
 from lhotse import CutSet, Fbank, FbankConfig
@@ -50,6 +51,11 @@ import prep_tagarela as PT
 # `[MEDIDO]` 31 shards do TAGARELA renderam 296,8 h depois dos filtros de accent, texto,
 # alucinação e razão char/s (wiki/medicoes/m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md).
 HORAS_POR_SHARD = 296.8 / 31
+
+# Acima disto a rede está fora, não "alguns shards ruins": seguir produziria um corpus
+# silenciosamente menor que o alvo. Mesmo espírito do `MAX_FRACAO_DECODE_ERROR` do prep —
+# fail-soft por item, fail-fast em massa.
+MAX_FRACAO_SHARD_PERDIDO = 0.10
 
 
 def shards_para_horas(horas: float) -> int:
@@ -77,13 +83,31 @@ def ciclo(idx_grupo: list[int], n: int, args, out: Path, extractor, id_offset: i
         kept = len(cuts)
         print(f"[stream] ciclo {n}: manifesto já existe ({kept} cuts) — pulando", flush=True)
         return dict(textos=[], horas=sum(c.duration for c in cuts) / 3600.0,
-                    kept=kept, show_counts={}, manifesto=manifesto, retomado=True)
+                    kept=kept, show_counts={}, manifesto=manifesto, retomado=True,
+                    perdidos=[])
 
     raw = out / f"raw{sufixo}"
     raw.mkdir(parents=True, exist_ok=True)
+    perdidos = []
     for i in idx_grupo:
-        DL.download_shard(i, args.total_shards, args.pattern, raw, args.token)
-    print(f"[stream] ciclo {n}: {len(idx_grupo)} shards baixados em {raw}", flush=True)
+        try:
+            DL.download_shard(i, args.total_shards, args.pattern, raw, args.token)
+        except (subprocess.CalledProcessError, RuntimeError) as e:
+            # Um shard vale ~9,6 h de 1.500: derrubar 14 ciclos por 0,6% do corpus é
+            # desproporcional. Mas perder shard também não pode ser invisível — ele é
+            # contado, relatado, e a perda em massa aborta.
+            perdidos.append(i)
+            print(f"[stream] ciclo {n}: shard {i:05d} PERDIDO após os retries ({e})",
+                  flush=True)
+    if len(perdidos) > max(1, len(idx_grupo) * MAX_FRACAO_SHARD_PERDIDO):
+        raise RuntimeError(
+            f"[stream] ciclo {n}: {len(perdidos)}/{len(idx_grupo)} shards perdidos "
+            f"({', '.join(f'{i:05d}' for i in perdidos)}) — isso é a rede fora, não shard "
+            f"ruim. Corrija a conexão; não monte corpus de treino com buraco em silêncio.")
+    if not list(raw.glob("*.parquet")):
+        raise RuntimeError(f"[stream] ciclo {n}: nenhum shard baixado — rede indisponível.")
+    print(f"[stream] ciclo {n}: {len(idx_grupo) - len(perdidos)}/{len(idx_grupo)} shards "
+          f"em {raw}", flush=True)
 
     r = PT.prepare(raw, out, extractor, args.num_jobs, None,
                    shards_per_batch=args.shards_por_lote,
@@ -91,6 +115,7 @@ def ciclo(idx_grupo: list[int], n: int, args, out: Path, extractor, id_offset: i
     # Só agora: as features do grupo estão gravadas e o parquet não é mais necessário.
     shutil.rmtree(raw, ignore_errors=True)
     r["retomado"] = False
+    r["perdidos"] = perdidos
     return r
 
 
@@ -119,7 +144,7 @@ def main():
 
     id_offset, horas = 0, 0.0
     show_counts: dict[str, int] = {}
-    manifestos = []
+    manifestos, perdidos = [], []
     for n, g in enumerate(lotes):
         r = ciclo(g, n, args, out, extractor, id_offset)
         id_offset += r["kept"]
@@ -127,6 +152,7 @@ def main():
         for show, c in r["show_counts"].items():
             show_counts[show] = show_counts.get(show, 0) + c
         manifestos.append(r["manifesto"])
+        perdidos.extend(r["perdidos"])
         print(f"[stream] ciclo {n + 1}/{len(lotes)}: {horas:.1f} h acumuladas", flush=True)
 
     todos = CutSet.from_cuts(c for m in manifestos for c in CutSet.from_file(str(m)))
@@ -150,6 +176,15 @@ def main():
     print(f"[stream] pronto: {len(ids)} cuts, "
           f"{sum(c.duration for c in todos) / 3600:.1f} h [MEDIDO] → "
           f"tagarela_cuts_train.jsonl.gz", flush=True)
+    if perdidos:
+        # O corpus é menor do que o alvo pedia, e isso precisa estar escrito em algum
+        # lugar que sobreviva ao scrollback.
+        nota = (f"{len(perdidos)}/{len(indices)} shards perdidos na rede "
+                f"(~{len(perdidos) * HORAS_POR_SHARD:.0f} h a menos que o alvo): "
+                f"{', '.join(f'{i:05d}' for i in perdidos)}\n")
+        (out / "shards_perdidos.txt").write_text(nota, encoding="utf-8")
+        print(f"[stream] ⚠️  {nota}[stream] registrado em {out / 'shards_perdidos.txt'}",
+              flush=True)
 
 
 if __name__ == "__main__":

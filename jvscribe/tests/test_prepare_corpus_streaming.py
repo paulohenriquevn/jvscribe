@@ -164,3 +164,52 @@ def test_id_duplicado_no_consolidado_falha_alto(tmp_path, rede_falsa, monkeypatc
                         lambda *a, **k: {**real(*a[:5], 0), "retomado": False})
     with pytest.raises(RuntimeError, match="ids duplicados"):
         ST.main()
+
+
+# ── Rede instável: 157 downloads de ~690 MB não chegam todos na primeira tentativa ──────
+
+def test_shard_perdido_nao_derruba_o_ciclo_mas_fica_registrado(tmp_path, monkeypatch):
+    """Um shard vale ~9,6 h de 1.500 — 0,6%. Abortar 14 ciclos por isso é desproporcional.
+
+    Mas perder shard também não pode ser invisível: o corpus fica menor que o alvo, e
+    quem ler o manifesto depois precisa saber disso sem depender do scrollback.
+    """
+    import subprocess as sp
+    chamadas = []
+
+    def _falha_uma(i, total, pattern, out, token):
+        chamadas.append(i)
+        if i == chamadas[0] and len(chamadas) == 1:
+            raise sp.CalledProcessError(92, ["curl"])
+        dest = out / f"train-{i:05d}-of-{total:05d}.parquet"
+        _parquet(dest, n=2, show=f"show{i}")
+        return dest
+
+    monkeypatch.setattr(ST.DL, "download_shard", _falha_uma)
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+
+    nota = (tmp_path / "shards_perdidos.txt").read_text(encoding="utf-8")
+    assert "1/4 shards perdidos" in nota
+    cuts = CutSet.from_file(str(tmp_path / "tagarela_cuts_train.jsonl.gz"))
+    assert len(cuts) == 6, "os 3 shards que chegaram deveriam ter sido preparados"
+
+
+def test_perda_em_massa_aborta_em_vez_de_montar_corpus_com_buraco(tmp_path, monkeypatch):
+    """Metade do grupo falhando é a rede fora, não shard ruim."""
+    import subprocess as sp
+
+    def _falha_tudo(i, total, pattern, out, token):
+        raise sp.CalledProcessError(92, ["curl"])
+
+    monkeypatch.setattr(ST.DL, "download_shard", _falha_tudo)
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    with pytest.raises(RuntimeError, match="shards perdidos"):
+        ST.main()
+
+
+def test_run_sem_perda_nao_escreve_o_registro(tmp_path, rede_falsa, monkeypatch):
+    """O arquivo é um aviso; existir sem motivo o esvazia de significado."""
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+    assert not (tmp_path / "shards_perdidos.txt").exists()

@@ -40,6 +40,17 @@ versioning follows [Semantic Versioning](https://semver.org/).
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
 ### Fixed
+- Shard downloads now survive an unstable CDN and never publish a half-written file.
+  `curl --retry` alone does not repeat HTTP/2 framing errors (exit 92) — by default it
+  only repeats timeouts and 408/429/5xx — so one such error on shard 00057 aborted a
+  1,500 h run in its first cycle. Downloads now use HTTP/1.1 with `--retry-all-errors`,
+  land in a `.part` file promoted by an atomic rename, and are rejected unless both PAR1
+  magics are present, which `st_size > 0` cannot tell apart from a shard truncated by a
+  dead session. (`jvscribe/finetune/download_tagarela_subset.py`)
+- A shard that still fails after its retries no longer destroys the run. It is counted,
+  named in `shards_perdidos.txt` alongside the hours it cost, and only aborts when more
+  than 10% of a cycle is lost — which is the network being down, not a bad shard.
+  (`jvscribe/finetune/prepare_corpus_streaming.py`)
 - The corpus cell now syncs its clone and verifies the script it is about to run exists,
   instead of surfacing Python's bare `exit status 2` for a missing file — an error that
   says nothing about the clone being out of date. It also streams the subprocess output
