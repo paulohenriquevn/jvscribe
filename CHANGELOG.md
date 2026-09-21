@@ -27,6 +27,11 @@ versioning follows [Semantic Versioning](https://semver.org/).
   Colab session disk can hold alongside the source shards and the extracted features.
   (`docs/plans/m10-sota-ptbr.md` T3, step 2)
 
+- Paste-and-run Colab cell that builds the ~1,500 h bake-off corpus end to end: projects
+  peak disk and refuses to start when it will not fit, downloads stratified shards,
+  prepares them in batches, and reports kept hours against the target.
+  (`docs/notebooks/m10-celula-corpus-1500h.py`)
+
 ### Fixed
 - Cut IDs are now unique across the whole corpus rather than within one preparation run.
   Every batch previously restarted its counter at `tagarela_00000000`, so a concatenated
