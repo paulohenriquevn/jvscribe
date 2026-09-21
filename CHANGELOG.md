@@ -27,9 +27,16 @@ versioning follows [Semantic Versioning](https://semver.org/).
   Colab session disk can hold alongside the source shards and the extracted features.
   (`docs/plans/m10-sota-ptbr.md` T3, step 2)
 
+- Corpus preparation can cycle download and preparation so the source shards leave disk
+  before the next group arrives (`prepare_corpus_streaming.py`). Downloading all 157
+  shards up front leaves 107.7 GB of parquet idle until extraction ends, which makes the
+  source data — not the features — the dominant term of peak disk. Cycling drops peak at
+  1,500 h from 166.0 GB to 57.9 GB, and raises the corpus a 117.5 GB session disk can hold
+  from 800 h to ~2,900 h. Resumable: a cycle whose manifest already exists is skipped.
+  (`docs/plans/m10-sota-ptbr.md` T3, step 2)
 - Paste-and-run Colab cell that builds the ~1,500 h bake-off corpus end to end: projects
   peak disk and refuses to start when it will not fit, downloads stratified shards,
-  prepares them in batches, and reports kept hours against the target.
+  prepares them in cycles, and reports kept hours against the target.
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
 ### Fixed

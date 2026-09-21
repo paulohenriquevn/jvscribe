@@ -288,7 +288,6 @@ def test_alguns_flacs_corrompidos_nao_derrubam_o_run(monkeypatch, tmp_path):
     stats = {"total": 1000, "kept": 990, "empty": 0, "wrong_accent": 0,
              "hallucination": 0, "bad_ratio": 0, "decode_error": 10, "show_counts": {}}
     monkeypatch.setattr(PT, "build_split", lambda *a, **k: ([], [], stats))
-    monkeypatch.setattr(PT, "_write_coverage_report", lambda *a, **k: None)
     # Roda até o fim: 1% de perda é o caso normal e não pode abortar o pipeline.
     PT.prepare(tmp_path, tmp_path, extractor=None, num_jobs=1, limit=None)
 

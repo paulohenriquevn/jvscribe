@@ -278,7 +278,8 @@ def _guarda_decode(stats: dict, escopo: str):
 
 
 def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int | None,
-            shards_per_batch: int = 0, drop_audio: bool = False):
+            shards_per_batch: int = 0, drop_audio: bool = False,
+            id_offset: int = 0, sufixo: str = ""):
     """Prepara o corpus em LOTES de shards, para que o pico de disco não cresça com o corpus.
 
     Com `shards_per_batch=0` (default) o comportamento é o antigo: todos os shards de uma
@@ -298,7 +299,16 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
 
     O contador de id é GLOBAL (`id_offset`): sem ele, cada lote reiniciaria em
     `tagarela_00000000` e o CutSet concatenado teria ids duplicados — sem erro do lhotse,
-    e com a mesma utterance entrando duas vezes no treino.
+    e com a mesma utterance entrando duas vezes no treino. O parâmetro é público porque
+    quem chama em ciclos (`prepare_corpus_streaming.py`) precisa continuar a contagem de
+    onde a chamada anterior parou.
+
+    `sufixo` separa os artefatos de uma chamada das outras, para que ciclos sucessivos
+    sobre a mesma `out` não se sobrescrevam. Vazio = layout de chamada única.
+
+    Não escreve o relatório de cobertura: devolve `show_counts` e deixa o relatório para
+    quem tem a visão do corpus inteiro. Um relatório por ciclo diria que cada ciclo é
+    dominado por um show sem que isso signifique nada sobre o corpus.
     """
     wav_dir = out / "wav_train"
     shards = iter_parquet_shards(parquet_dir)
@@ -318,7 +328,8 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
         restante = None if limit is None else max(0, limit - total["kept"])
         if restante == 0:
             break
-        recs, sups, stats = build_split(lote, wav_dir, restante, id_offset=total["kept"])
+        recs, sups, stats = build_split(lote, wav_dir, restante,
+                                        id_offset=id_offset + total["kept"])
         for k in total:
             total[k] += stats[k]
         for show, c in stats["show_counts"].items():
@@ -339,8 +350,8 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
         # **115 MB por hora** de áudio contra **31 MB** do `lilcom_chunky` `[MEDIDO]`
         # (`wiki/medicoes/m10-t3-fbank-e-storage.md`). Em 5.000 h a diferença é de ~410 GB,
         # e o lhotse não avisa — ele apenas grava maior.
-        destino = (out / "feats_train" if shards_per_batch <= 0
-                   else out / "feats_train" / f"batch_{n:03d}")
+        destino = (out / f"feats_train{sufixo}" if shards_per_batch <= 0
+                   else out / f"feats_train{sufixo}" / f"batch_{n:03d}")
         # O LilcomChunkyWriter trata `storage_path` como PREFIXO de arquivo (`….lca`) e
         # não cria o diretório pai. Com lotes o pai é `feats_train/`, que ainda não existe.
         destino.parent.mkdir(parents=True, exist_ok=True)
@@ -363,13 +374,13 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
             f"[tagarela] 0 utterances mantidas sob {parquet_dir} — shards vazios ou "
             f"todos filtrados (accent/texto/alucinação/ratio)?")
     _guarda_decode(total, "total")
-    _write_coverage_report(out, dict(show_counts), total["kept"])
     cuts = CutSet.from_cuts(todos_cuts)
-    cuts.to_file(str(out / "tagarela_cuts_train.jsonl.gz"))
+    nome = f"tagarela_cuts_train{sufixo}.jsonl.gz"
+    cuts.to_file(str(out / nome))
     hours = sum(c.duration for c in cuts) / 3600.0
-    print(f"[tagarela] {len(cuts)} cuts, {hours:.2f}h [MEDIDO] "
-          f"→ tagarela_cuts_train.jsonl.gz", flush=True)
-    return todos_textos, hours
+    print(f"[tagarela] {len(cuts)} cuts, {hours:.2f}h [MEDIDO] → {nome}", flush=True)
+    return dict(textos=todos_textos, horas=hours, kept=total["kept"],
+                show_counts=dict(show_counts), manifesto=out / nome)
 
 
 def main():
@@ -397,10 +408,11 @@ def main():
     parquet_dir = Path(args.parquet_dir)
     extractor = Fbank(FbankConfig(num_mel_bins=80))
 
-    texts, _ = prepare(parquet_dir, out, extractor, args.num_jobs, args.limit,
-                       shards_per_batch=args.shards_per_batch,
-                       drop_audio=args.drop_audio_after_features)
-    (out / "transcript_words.txt").write_text("\n".join(texts) + "\n", encoding="utf-8")
+    r = prepare(parquet_dir, out, extractor, args.num_jobs, args.limit,
+                shards_per_batch=args.shards_per_batch,
+                drop_audio=args.drop_audio_after_features)
+    _write_coverage_report(out, r["show_counts"], r["kept"])
+    (out / "transcript_words.txt").write_text("\n".join(r["textos"]) + "\n", encoding="utf-8")
     print(f"[tagarela] pronto em {out} (formato datamodule commonvoice, split=train "
           f"ÚNICO — invariante estrutural §7.3)", flush=True)
 
