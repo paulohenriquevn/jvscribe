@@ -40,6 +40,12 @@ versioning follows [Semantic Versioning](https://semver.org/).
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
 ### Fixed
+- The corpus cell now syncs its clone and verifies the script it is about to run exists,
+  instead of surfacing Python's bare `exit status 2` for a missing file — an error that
+  says nothing about the clone being out of date. It also streams the subprocess output
+  live while writing it to `/content/corpus.log`, so a five-hour run is neither invisible
+  while it works nor unreadable when it fails.
+  (`docs/notebooks/m10-celula-corpus-1500h.py`)
 - Cut IDs are now unique across the whole corpus rather than within one preparation run.
   Every batch previously restarted its counter at `tagarela_00000000`, so a concatenated
   manifest carried duplicate IDs — lhotse raises nothing for this, and the same utterance

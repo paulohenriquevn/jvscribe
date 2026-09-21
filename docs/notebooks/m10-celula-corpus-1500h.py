@@ -28,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import deque
 from pathlib import Path
 
 # ── o que você escolhe ───────────────────────────────────────────────────────────────
@@ -68,16 +69,50 @@ if gb_pico + MARGEM > livre_gb:
         f'livres.\nHORAS_ALVO = {max(100, cabe // 100 * 100)} cabe neste disco.\n'
         f'Encher o disco no meio do fbank perde o ciclo em curso.')
 
+# ── sincroniza o clone ───────────────────────────────────────────────────────────────
+# Sem isto, um clone feito antes do commit falha com `exit status 2` — que é o
+# "can't open file" do Python, e não diz nada sobre estar desatualizado.
+FINETUNE = REPO / 'jvscribe/finetune'
+SCRIPT   = FINETUNE / 'prepare_corpus_streaming.py'
+
+if not (REPO / '.git').is_dir():
+    raise SystemExit(f'{REPO} não é um clone git — rode a célula 3 do notebook antes.')
+subprocess.run(['git', '-C', str(REPO), 'pull', '--ff-only', 'origin', 'workspace'],
+               check=True)
+if not SCRIPT.exists():
+    raise SystemExit(
+        f'{SCRIPT} não existe mesmo depois do pull.\n'
+        f'O clone aponta para outro remoto ou outra branch. Confira:\n'
+        f'  !git -C {REPO} remote -v && git -C {REPO} branch --show-current')
+_head = subprocess.run(['git', '-C', str(REPO), 'rev-parse', '--short', 'HEAD'],
+                       capture_output=True, text=True).stdout.strip()
+print(f'repo em {_head}')
+
 # ── baixa e prepara ──────────────────────────────────────────────────────────────────
 print(f'\nbaixando e preparando em {-(-N_SHARDS // SHARDS_POR_CICLO)} ciclos…')
 t0 = time.time()
-subprocess.run(
+# Ecoa ao vivo E grava: são ~5 h de execução, e sem eco você fica no escuro; sem log,
+# a causa de uma falha no ciclo 9 já saiu do scrollback do Colab quando ela aparece.
+LOG = Path('/content/corpus.log')
+proc = subprocess.Popen(
     [sys.executable, 'prepare_corpus_streaming.py',
      '--out', str(RAIZ), '--horas-alvo', str(HORAS_ALVO),
      '--shards-por-ciclo', str(SHARDS_POR_CICLO),
      '--shards-por-lote', str(SHARDS_POR_LOTE),
      '--num-jobs', str(NUM_JOBS)],
-    check=True, cwd=str(REPO / 'jvscribe/finetune'))
+    cwd=str(FINETUNE), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    text=True, bufsize=1)
+ultimas = deque(maxlen=40)
+with LOG.open('w') as fh:
+    for linha in proc.stdout:
+        fh.write(linha)
+        ultimas.append(linha)
+        if linha.startswith('[stream]') or 'Error' in linha or 'error' in linha:
+            print(linha, end='', flush=True)
+if proc.wait() != 0:
+    print('\n--- últimas 40 linhas ---')
+    print(''.join(ultimas))
+    raise SystemExit(f'preparação FALHOU (exit {proc.returncode}) — log completo em {LOG}')
 minutos = (time.time() - t0) / 60
 
 # ── relatório ────────────────────────────────────────────────────────────────────────
