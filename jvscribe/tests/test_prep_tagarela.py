@@ -175,7 +175,8 @@ def test_show_key_pega_primeiro_segmento():
 def test_build_split_filtra_e_conta_por_categoria(tmp_path):
     """Cada filtro exclui exatamente a linha esperada; contadores expostos no stats."""
     _write_parquet(tmp_path / "shard0.parquet", _canonical_rows())
-    recs, sups, stats = prep_tagarela.build_split(tmp_path, tmp_path / "wav", limit=None)
+    recs, sups, stats = prep_tagarela.build_split(
+        prep_tagarela.iter_parquet_shards(tmp_path), tmp_path / "wav", limit=None)
     assert stats["kept"] == 2
     assert stats["wrong_accent"] == 1
     assert stats["empty"] == 1
@@ -187,7 +188,8 @@ def test_build_split_filtra_e_conta_por_categoria(tmp_path):
 def test_build_split_faz_downmix_para_mono(tmp_path):
     """F4: a linha 0 é FLAC ESTÉREO; o wav gravado deve ser MONO (1 canal)."""
     _write_parquet(tmp_path / "shard0.parquet", _canonical_rows())
-    recs, _, _ = prep_tagarela.build_split(tmp_path, tmp_path / "wav", limit=None)
+    recs, _, _ = prep_tagarela.build_split(
+        prep_tagarela.iter_parquet_shards(tmp_path), tmp_path / "wav", limit=None)
     assert all(r.num_channels == 1 for r in recs)
 
 
@@ -195,7 +197,8 @@ def test_ids_gerados_sao_disjuntos_dos_ids_gerados_do_coraa(tmp_path):
     """F1/F8: os ids REALMENTE gerados (não só a constante) não colidem com o padrão de
     id do CORAA — impede substituição silenciosa no `--use-mux`."""
     _write_parquet(tmp_path / "shard0.parquet", _canonical_rows())
-    recs, _, _ = prep_tagarela.build_split(tmp_path, tmp_path / "wav", limit=None)
+    recs, _, _ = prep_tagarela.build_split(
+        prep_tagarela.iter_parquet_shards(tmp_path), tmp_path / "wav", limit=None)
     tag_ids = {r.id for r in recs}
     coraa_ids = {f"coraa_train_{i:07d}" for i in range(len(recs))}
     assert tag_ids.isdisjoint(coraa_ids)
@@ -209,7 +212,8 @@ def test_prepare_emite_so_manifest_de_train_com_texto_normalizado_como_coraa(tmp
     de áudio local — memória baseline-python-env-quirks)."""
     from lhotse import CutSet, RecordingSet, SupervisionSet, load_manifest_lazy
     _write_parquet(tmp_path / "shard0.parquet", _canonical_rows())
-    recs, sups, stats = prep_tagarela.build_split(tmp_path, tmp_path / "wav", limit=None)
+    recs, sups, stats = prep_tagarela.build_split(
+        prep_tagarela.iter_parquet_shards(tmp_path), tmp_path / "wav", limit=None)
 
     # filtro (F3): 6 linhas → 2 mantidas; cada caminho de descarte contado
     assert stats["kept"] == 2
@@ -262,6 +266,8 @@ def test_decode_error_em_massa_falha_alto(monkeypatch, tmp_path):
     """
     import prep_tagarela as PT
 
+    _write_parquet(tmp_path / "shard0.parquet",
+                   [(_flac_bytes(1.0, 16000, 1), "oi", "pt-br", "s/a.flac")])
     stats = {"total": 1000, "kept": 400, "empty": 0, "wrong_accent": 0,
              "hallucination": 0, "bad_ratio": 0, "decode_error": 600, "show_counts": {}}
     monkeypatch.setattr(PT, "build_split", lambda *a, **k: ([], [], stats))
@@ -277,6 +283,8 @@ def test_alguns_flacs_corrompidos_nao_derrubam_o_run(monkeypatch, tmp_path):
     """
     import prep_tagarela as PT
 
+    _write_parquet(tmp_path / "shard0.parquet",
+                   [(_flac_bytes(1.0, 16000, 1), "oi", "pt-br", "s/a.flac")])
     stats = {"total": 1000, "kept": 990, "empty": 0, "wrong_accent": 0,
              "hallucination": 0, "bad_ratio": 0, "decode_error": 10, "show_counts": {}}
     monkeypatch.setattr(PT, "build_split", lambda *a, **k: ([], [], stats))
@@ -288,3 +296,92 @@ def test_alguns_flacs_corrompidos_nao_derrubam_o_run(monkeypatch, tmp_path):
 
 # A guarda de `except` largo virou `test_erros_nao_engolidos.py`, do PACOTE inteiro —
 # a mesma classe apareceu em `common/audio/codecs.py`. Escopar por arquivo era DRY ao contrário.
+
+
+# ── Preparação em LOTES: o pico de disco não pode crescer com o corpus ───────────────────
+#
+# `build_split` grava um .wav por utterance mantida — ~115 MB por hora de áudio `[MEDIDO]`.
+# Num lote único isso é disco proporcional ao corpus INTEIRO: ~170 GB em 1.500 h, contra os
+# 236 GB do disco de sessão do Colab, que ainda precisa hospedar os parquets e as features.
+# Processar em lotes bounda o pico ao lote.
+
+def _dois_shards(tmp_path, por_shard=2):
+    for i in range(2):
+        rows = [(_flac_bytes(1.0, 16000, 1), f"frase {i}{j}", "pt-br", f"show{i}/a{j}.flac")
+                for j in range(por_shard)]
+        _write_parquet(tmp_path / f"shard{i}.parquet", rows)
+
+
+def test_id_offset_torna_os_ids_unicos_entre_lotes(tmp_path):
+    """Sem offset, cada lote reinicia em `tagarela_00000000`.
+
+    O CutSet concatenado ficaria com ids duplicados — o lhotse não reclama, e a mesma
+    utterance entraria duas vezes no treino. Silenciosamente.
+    """
+    _dois_shards(tmp_path)
+    shards = prep_tagarela.iter_parquet_shards(tmp_path)
+    recs_a, _, st_a = prep_tagarela.build_split([shards[0]], tmp_path / "w", None, id_offset=0)
+    recs_b, _, _ = prep_tagarela.build_split(
+        [shards[1]], tmp_path / "w", None, id_offset=st_a["kept"])
+
+    ids_a = {r.id for r in recs_a}
+    ids_b = {r.id for r in recs_b}
+    assert ids_a and ids_b
+    assert not (ids_a & ids_b), f"ids colidiram entre lotes: {sorted(ids_a & ids_b)}"
+
+
+def test_lotes_produzem_o_mesmo_corpus_que_um_lote_unico(tmp_path):
+    """Lotear é decisão de memória, não de conteúdo: o manifesto tem de ser o mesmo."""
+    from lhotse import CutSet, Fbank, FbankConfig
+
+    src = tmp_path / "src"; src.mkdir()
+    _dois_shards(src, por_shard=2)
+    ext = Fbank(FbankConfig(num_mel_bins=80))
+
+    inteiro = tmp_path / "inteiro"; inteiro.mkdir()
+    prep_tagarela.prepare(src, inteiro, ext, num_jobs=1, limit=None)
+
+    loteado = tmp_path / "loteado"; loteado.mkdir()
+    prep_tagarela.prepare(src, loteado, ext, num_jobs=1, limit=None, shards_per_batch=1)
+
+    a = CutSet.from_file(str(inteiro / "tagarela_cuts_train.jsonl.gz"))
+    b = CutSet.from_file(str(loteado / "tagarela_cuts_train.jsonl.gz"))
+    # O id do CUT carrega o índice dentro do CutSet que o originou, e esse índice reinicia
+    # a cada lote. O que precisa bater — e o que o treino consome — é o conjunto de
+    # RECORDINGS e a duração total.
+    assert sorted(c.recording_id for c in a) == sorted(c.recording_id for c in b)
+    assert len(set(b.ids)) == len(list(b.ids)), "ids duplicados no manifesto loteado"
+    assert round(sum(c.duration for c in a), 3) == round(sum(c.duration for c in b), 3)
+
+
+def test_drop_audio_apaga_os_wav_e_preserva_as_features(tmp_path):
+    """O áudio só some DEPOIS das features; o manifesto continua utilizável para treino."""
+    from lhotse import CutSet, Fbank, FbankConfig
+
+    src = tmp_path / "src"; src.mkdir()
+    _dois_shards(src, por_shard=2)
+    out = tmp_path / "out"; out.mkdir()
+    prep_tagarela.prepare(src, out, Fbank(FbankConfig(num_mel_bins=80)), num_jobs=1,
+                          limit=None, shards_per_batch=1, drop_audio=True)
+
+    assert not (out / "wav_train").exists() or not list((out / "wav_train").glob("*.wav"))
+    cuts = CutSet.from_file(str(out / "tagarela_cuts_train.jsonl.gz"))
+    assert len(cuts) == 4
+    assert next(iter(cuts)).load_features().shape[1] == 80
+
+
+def test_guarda_de_decode_dispara_no_lote_antes_do_fbank(tmp_path):
+    """Descobrir um shard truncado só no total custaria horas de extração em 1.500 h."""
+    stats = {"total": 1000, "kept": 400, "empty": 0, "wrong_accent": 0,
+             "hallucination": 0, "bad_ratio": 0, "decode_error": 600, "show_counts": {}}
+    with pytest.raises(RuntimeError, match="lote 1/1: 600/1000"):
+        prep_tagarela._guarda_decode(stats, "lote 1/1")
+
+
+def test_drop_audio_sem_lote_e_recusado(tmp_path, monkeypatch):
+    """Com um lote único o áudio só sairia no fim — quando o pico de disco já aconteceu."""
+    monkeypatch.setattr(sys, "argv",
+                        ["prep_tagarela.py", "--parquet-dir", str(tmp_path),
+                         "--drop-audio-after-features"])
+    with pytest.raises(SystemExit, match="não economiza nada"):
+        prep_tagarela.main()

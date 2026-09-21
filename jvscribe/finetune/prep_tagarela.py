@@ -58,6 +58,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import shutil
 from collections import defaultdict
 from pathlib import Path
 
@@ -162,7 +163,7 @@ def iter_parquet_shards(parquet_dir: Path):
     return shards
 
 
-def build_split(parquet_dir: Path, wav_dir: Path, limit: int | None):
+def build_split(shards, wav_dir: Path, limit: int | None, id_offset: int = 0):
     """Lê os shards parquet e constrói Recording+Supervision a partir dos bytes FLAC
     embutidos + coluna `sentence`. Espelha `prep_icefall.build` (Regra 9):
 
@@ -186,7 +187,7 @@ def build_split(parquet_dir: Path, wav_dir: Path, limit: int | None):
     stats = dict(total=0, kept=0, empty=0, wrong_accent=0, hallucination=0, bad_ratio=0,
                  decode_error=0)
     show_counts: dict[str, int] = defaultdict(int)
-    for shard in iter_parquet_shards(parquet_dir):
+    for shard in shards:
         pf = pq.ParquetFile(shard)
         for batch in pf.iter_batches(columns=["audio", "sentence", "accent", "path"]):
             d = batch.to_pydict()
@@ -223,7 +224,7 @@ def build_split(parquet_dir: Path, wav_dir: Path, limit: int | None):
                 if cps < MIN_CPS or cps > MAX_CPS:
                     stats["bad_ratio"] += 1
                     continue
-                cid = f"{CUT_ID_PREFIX}_{stats['kept']:08d}"
+                cid = f"{CUT_ID_PREFIX}_{id_offset + stats['kept']:08d}"
                 wav = wav_dir / f"{cid}.wav"
                 sf.write(str(wav), arr, sr)
                 rec = Recording.from_file(str(wav), recording_id=cid)
@@ -254,46 +255,121 @@ def _write_coverage_report(out: Path, show_counts: dict[str, int], kept: int):
         print(f"[tagarela] maior show = {dom_share:.1f}% das utts{flag}", flush=True)
 
 
-def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int | None):
-    wav_dir = out / "wav_train"
-    recs, sups, stats = build_split(parquet_dir, wav_dir, limit)
-    print(f"[tagarela] total={stats['total']} kept={stats['kept']} "
-          f"empty_text={stats['empty']} wrong_accent={stats['wrong_accent']} "
-          f"hallucination={stats['hallucination']} bad_ratio={stats['bad_ratio']} "
-          f"decode_error={stats['decode_error']}", flush=True)
-    if stats["kept"] == 0:
-        raise RuntimeError(
-            f"[tagarela] 0 utterances mantidas sob {parquet_dir} — shards vazios ou "
-            f"todos filtrados (accent/texto/alucinação/ratio)?")
-    # Perda em MASSA por decode não pode passar como linha de log. Alguns FLACs corrompidos
-    # num shard são normais; um shard truncado no download derruba tudo, e o pipeline seguiria
-    # montando o corpus de treino com o que sobrou — sem erro, e o efeito só apareceria como
-    # WER pior no fim do run de GPU. O limiar é heurístico e está aqui para ser visto.
+def _guarda_decode(stats: dict, escopo: str):
+    """Perda em MASSA por decode não pode passar como linha de log.
+
+    Alguns FLACs corrompidos num shard são normais; um shard truncado no download derruba
+    tudo, e o pipeline seguiria montando o corpus de treino com o que sobrou — sem erro, e
+    o efeito só apareceria como WER pior no fim do run de GPU. O limiar é heurístico e está
+    aqui para ser visto.
+
+    Roda POR LOTE (antes do fbank daquele lote, que é a parte cara) e de novo no total.
+    Só no total seria tarde: em 1.500 h o shard quebrado custaria horas de extração antes
+    de alguém saber.
+    """
     if stats["total"] and stats["decode_error"] / stats["total"] > MAX_FRACAO_DECODE_ERROR:
         raise RuntimeError(
-            f"[tagarela] {stats['decode_error']}/{stats['total']} utterances falharam ao "
-            f"decodificar ({100 * stats['decode_error'] / stats['total']:.1f}% > "
+            f"[tagarela] {escopo}: {stats['decode_error']}/{stats['total']} utterances "
+            f"falharam ao decodificar "
+            f"({100 * stats['decode_error'] / stats['total']:.1f}% > "
             f"{100 * MAX_FRACAO_DECODE_ERROR:.0f}%) — shard truncado no download? "
             f"Corrija a origem; não construa corpus de treino com dado faltando em silêncio."
         )
-    _write_coverage_report(out, stats["show_counts"], stats["kept"])
-    cuts = CutSet.from_manifests(
-        recordings=RecordingSet.from_recordings(recs),
-        supervisions=SupervisionSet.from_segments(sups))
-    cuts = cuts.resample(TARGET_SR)  # podcasts costumam ser 44,1/48k → 16k = CORAA/MLS
+
+
+def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int | None,
+            shards_per_batch: int = 0, drop_audio: bool = False):
+    """Prepara o corpus em LOTES de shards, para que o pico de disco não cresça com o corpus.
+
+    Com `shards_per_batch=0` (default) o comportamento é o antigo: todos os shards de uma
+    vez, um `feats_train/` único. Esse modo pede disco proporcional ao corpus INTEIRO —
+    ~115 MB de wav por hora de áudio `[MEDIDO]`, ~170 GB em 1.500 h — e não cabe numa
+    sessão do Colab, cujo disco é de 236 GB e ainda precisa hospedar os parquets.
+
+    Com `shards_per_batch>0`, cada lote percorre decode → wav → fbank antes que o próximo
+    comece, e as features vão para `feats_train/batch_NNN/`. Com `drop_audio=True` os wavs
+    do lote são apagados assim que as features estão gravadas, e o pico de disco passa a
+    ser o de UM lote em vez do corpus.
+
+    ⚠️ `drop_audio=True` FECHA a augmentação telefônica on-the-fly
+    (`load_telephone_audio`, `corpus/build_manifest.py`), que relê o áudio a cada época.
+    Quem apaga o áudio treina só com as features já extraídas. A troca é disco contra
+    augmentação, e precisa ser feita de olhos abertos.
+
+    O contador de id é GLOBAL (`id_offset`): sem ele, cada lote reiniciaria em
+    `tagarela_00000000` e o CutSet concatenado teria ids duplicados — sem erro do lhotse,
+    e com a mesma utterance entrando duas vezes no treino.
+    """
+    wav_dir = out / "wav_train"
+    shards = iter_parquet_shards(parquet_dir)
+    if shards_per_batch > 0:
+        lotes = [shards[i:i + shards_per_batch]
+                 for i in range(0, len(shards), shards_per_batch)]
+    else:
+        lotes = [shards]
+
+    total = dict(total=0, kept=0, empty=0, wrong_accent=0, hallucination=0, bad_ratio=0,
+                 decode_error=0)
+    show_counts: dict[str, int] = defaultdict(int)
+    todos_textos: list[str] = []
+    todos_cuts: list = []
+
+    for n, lote in enumerate(lotes):
+        restante = None if limit is None else max(0, limit - total["kept"])
+        if restante == 0:
+            break
+        recs, sups, stats = build_split(lote, wav_dir, restante, id_offset=total["kept"])
+        for k in total:
+            total[k] += stats[k]
+        for show, c in stats["show_counts"].items():
+            show_counts[show] += c
+        print(f"[tagarela] lote {n + 1}/{len(lotes)} ({len(lote)} shards) "
+              f"total={stats['total']} kept={stats['kept']} "
+              f"empty_text={stats['empty']} wrong_accent={stats['wrong_accent']} "
+              f"hallucination={stats['hallucination']} bad_ratio={stats['bad_ratio']} "
+              f"decode_error={stats['decode_error']}", flush=True)
+        _guarda_decode(stats, f"lote {n + 1}/{len(lotes)}")
+        if stats["kept"] == 0:
+            continue
+        cuts = CutSet.from_manifests(
+            recordings=RecordingSet.from_recordings(recs),
+            supervisions=SupervisionSet.from_segments(sups))
+        cuts = cuts.resample(TARGET_SR)  # podcasts costumam ser 44,1/48k → 16k = CORAA/MLS
         # `storage_type` EXPLÍCITO: o default do lhotse é `numpy_files`, que grava
-        # **115 MB por hora** de áudio contra **33 MB** do `lilcom_chunky` `[MEDIDO]`
+        # **115 MB por hora** de áudio contra **31 MB** do `lilcom_chunky` `[MEDIDO]`
         # (`wiki/medicoes/m10-t3-fbank-e-storage.md`). Em 5.000 h a diferença é de ~410 GB,
         # e o lhotse não avisa — ele apenas grava maior.
-    cuts = cuts.compute_and_store_features(
-        extractor=extractor, storage_path=str(out / "feats_train"), num_jobs=num_jobs,
-        storage_type=LilcomChunkyWriter)
-    cuts = CutSet.from_cuts(_clamp(c) for c in cuts)
+        destino = (out / "feats_train" if shards_per_batch <= 0
+                   else out / "feats_train" / f"batch_{n:03d}")
+        # O LilcomChunkyWriter trata `storage_path` como PREFIXO de arquivo (`….lca`) e
+        # não cria o diretório pai. Com lotes o pai é `feats_train/`, que ainda não existe.
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        cuts = cuts.compute_and_store_features(
+            extractor=extractor, storage_path=str(destino), num_jobs=num_jobs,
+            storage_type=LilcomChunkyWriter)
+        todos_cuts.extend(_clamp(c) for c in cuts)
+        todos_textos.extend(sp.text for sp in sups)
+        if drop_audio:
+            # Só depois que as features do lote estão em disco. Antes disso, um erro no
+            # fbank deixaria o lote sem áudio E sem feature.
+            shutil.rmtree(wav_dir, ignore_errors=True)
+
+    print(f"[tagarela] TOTAL total={total['total']} kept={total['kept']} "
+          f"empty_text={total['empty']} wrong_accent={total['wrong_accent']} "
+          f"hallucination={total['hallucination']} bad_ratio={total['bad_ratio']} "
+          f"decode_error={total['decode_error']}", flush=True)
+    if total["kept"] == 0:
+        raise RuntimeError(
+            f"[tagarela] 0 utterances mantidas sob {parquet_dir} — shards vazios ou "
+            f"todos filtrados (accent/texto/alucinação/ratio)?")
+    _guarda_decode(total, "total")
+    _write_coverage_report(out, dict(show_counts), total["kept"])
+    cuts = CutSet.from_cuts(todos_cuts)
     cuts.to_file(str(out / "tagarela_cuts_train.jsonl.gz"))
     hours = sum(c.duration for c in cuts) / 3600.0
     print(f"[tagarela] {len(cuts)} cuts, {hours:.2f}h [MEDIDO] "
           f"→ tagarela_cuts_train.jsonl.gz", flush=True)
-    return [sp.text for sp in sups], hours
+    return todos_textos, hours
 
 
 def main():
@@ -303,13 +379,27 @@ def main():
                     help="dir com os shards *.parquet baixados (subset estratificado)")
     ap.add_argument("--num-jobs", type=int, default=8)
     ap.add_argument("--limit", type=int, default=None, help="máx utts (smoke)")
+    ap.add_argument("--shards-per-batch", type=int, default=0,
+                    help="processa os shards em lotes deste tamanho (0 = todos de uma vez). "
+                         "Bounda o pico de disco de wav ao lote, não ao corpus.")
+    ap.add_argument("--drop-audio-after-features", action="store_true",
+                    help="apaga os wav do lote depois de gravar as features. FECHA a "
+                         "augmentação telefônica on-the-fly, que relê o áudio a cada época.")
     args = ap.parse_args()
+
+    if args.drop_audio_after_features and args.shards_per_batch <= 0:
+        raise SystemExit(
+            "[tagarela] --drop-audio-after-features sem --shards-per-batch não economiza "
+            "nada: com um lote único o áudio só seria apagado no fim, quando o pico de "
+            "disco já aconteceu. Escolha um tamanho de lote.")
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     parquet_dir = Path(args.parquet_dir)
     extractor = Fbank(FbankConfig(num_mel_bins=80))
 
-    texts, _ = prepare(parquet_dir, out, extractor, args.num_jobs, args.limit)
+    texts, _ = prepare(parquet_dir, out, extractor, args.num_jobs, args.limit,
+                       shards_per_batch=args.shards_per_batch,
+                       drop_audio=args.drop_audio_after_features)
     (out / "transcript_words.txt").write_text("\n".join(texts) + "\n", encoding="utf-8")
     print(f"[tagarela] pronto em {out} (formato datamodule commonvoice, split=train "
           f"ÚNICO — invariante estrutural §7.3)", flush=True)
