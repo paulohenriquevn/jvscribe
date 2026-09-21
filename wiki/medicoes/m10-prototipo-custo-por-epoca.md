@@ -1,9 +1,9 @@
 ---
 type: Medição
-title: Protótipo Colab — 0,85 h por época, e a Fase 3 reprecificada em 10×
+title: Protótipo Colab — 0,85 h por época, medido num modelo 3× menor que o alvo
 description: >-
   Três épocas completas de zipformer 66M sobre 295 h do TAGARELA numa L4. O custo medido
-  põe a Fase 3 uma ordem de grandeza abaixo do que o plano estimava.
+  Escalado ao tamanho-alvo de 200M, a Fase 3 cai na metade de baixo da faixa que o plano estimava.
 tags: [medicao, m10, colab, custo, treino, learning-rate, fase-3]
 timestamp: 2026-09-21T18:06:00Z
 ---
@@ -41,27 +41,33 @@ Fbank: **44 min** com `--num-jobs 4`. A verificação de `storage_type` passou.
 | custo na L4 `[ESTIMATIVA de unidades/h]` | 4,1 unidades ≈ **$0,41** |
 | checkpoints | 3 × 1.063 MB |
 
-## A Fase 3 reprecificada
+## A Fase 3 reprecificada — com a ressalva que domina tudo
 
-O [plano](../../docs/plans/m10-treino-vastai.md) estima a Fase 3 em **$600–1.500**, por
-proporção a um run de M5 cujo custo não está registrado em lugar nenhum. É o risco R1.
+⚠️ **O protótipo tem 66,4M. A faixa-alvo do M10 é 180–220M** — o teto de 230M medido em
+[`m10-rnf05`](m10-rnf05-carga-concorrente.md), sob carga de softphone. O run mediu o custo de
+um modelo do **tamanho do que já está em produção**, não do que o M10 pretende treinar.
 
-Escalando o número medido — 0,85 h por época por 295 h de corpus:
+Escalando 0,85 h por época por 295 h de corpus, e depois por parâmetros `[ESTIMATIVA]`:
 
-| corpus | épocas | h de GPU | Colab L4 | A100 vast.ai |
+| modelo | corpus × épocas | h de GPU | Colab L4 | A100 vast.ai |
 |---|---|---|---|---|
-| 1.500 h | 20 | 87 h | $42 | $28 |
-| 5.000 h | 10 | 144 h | $69 | $46 |
-| 5.000 h | **40** | 577 h | **$277** | **$185** |
-| 5.000 h | 20 | 289 h | $138 | $92 |
+| 66,4M (medido) | 5.000 h × 40 | 577 h | $277 | $185 |
+| 66,4M (medido) | 5.000 h × 20 | 289 h | $138 | $92 |
+| **200M (alvo)** | **5.000 h × 40** | **~1.738 h** | **~$834** | **~$556** |
+| 200M (alvo) | 5.000 h × 20 | ~869 h | ~$417 | ~$278 |
 
-**Mesmo a 40 épocas — o regime dos recipes do icefall — a Fase 3 custa menos que o piso de
-$600 do plano.** A estimativa por proporção errava por ~2–5×, e a ordem de grandeza da
-dúvida some.
+O plano estima a Fase 3 em **$600–1.500**. No tamanho-alvo, a medição cai **dentro** dessa
+faixa — na metade de baixo. **O R1 não fecha; ele encolhe.** O que era uma estimativa por
+proporção a um run sem registro vira uma extrapolação com um ponto medido na base, e a
+incerteza restante é a escala por parâmetros, não a ordem de grandeza.
 
-⚠️ **O gargalo passa a ser tempo, não dinheiro.** 577 h são **24 dias** de L4 contínua, o que
-o Colab Pro não sustenta (background execution é recurso do Pro+). Isso reforça a vast.ai
-para a Fase 3 — não pelo custo, pelo prazo.
+A escala por parâmetros é `[ESTIMATIVA]` linear e provavelmente **otimista**: no Zipformer,
+crescer 3× em parâmetros alarga as dimensões, e a atenção é quadrática no comprimento da
+sequência. Medir uma época a 200M é o próximo passo barato — uma época, ~2,5 h, ~$12.
+
+⚠️ **O gargalo é tempo, não dinheiro.** 1.738 h são **72 dias** de L4 contínua. O Colab Pro
+não sustenta isso (background execution é recurso do Pro+). Isso mantém a vast.ai na Fase 3 —
+pelo calendário, não pelo custo.
 
 ## O que o run NÃO mostra
 
