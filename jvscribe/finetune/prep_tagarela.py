@@ -64,6 +64,7 @@ from pathlib import Path
 import pyarrow.parquet as pq
 import soundfile as sf
 from lhotse import CutSet, Fbank, FbankConfig, Recording, SupervisionSegment, SupervisionSet
+from lhotse.features.io import LilcomChunkyWriter
 from lhotse.audio import RecordingSet
 from lhotse.utils import fastcopy
 
@@ -280,8 +281,13 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
         recordings=RecordingSet.from_recordings(recs),
         supervisions=SupervisionSet.from_segments(sups))
     cuts = cuts.resample(TARGET_SR)  # podcasts costumam ser 44,1/48k → 16k = CORAA/MLS
+        # `storage_type` EXPLÍCITO: o default do lhotse é `numpy_files`, que grava
+        # **115 MB por hora** de áudio contra **33 MB** do `lilcom_chunky` `[MEDIDO]`
+        # (`wiki/medicoes/m10-t3-fbank-e-storage.md`). Em 5.000 h a diferença é de ~410 GB,
+        # e o lhotse não avisa — ele apenas grava maior.
     cuts = cuts.compute_and_store_features(
-        extractor=extractor, storage_path=str(out / "feats_train"), num_jobs=num_jobs)
+        extractor=extractor, storage_path=str(out / "feats_train"), num_jobs=num_jobs,
+        storage_type=LilcomChunkyWriter)
     cuts = CutSet.from_cuts(_clamp(c) for c in cuts)
     cuts.to_file(str(out / "tagarela_cuts_train.jsonl.gz"))
     hours = sum(c.duration for c in cuts) / 3600.0
