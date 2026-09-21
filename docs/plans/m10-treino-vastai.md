@@ -52,7 +52,23 @@ volume vast.ai  (persistente entre instâncias)
 ```
 
 **Por que `fbank/` separado de `raw/`:** o treino lê features, não áudio. Com as features
-materializadas, um run que caia reinicia sem refazer a extração — que é a parte lenta e serial.
+materializadas, um run que caia reinicia sem refazer a extração.
+
+⚠️ **E elas são MAIS BARATAS que o áudio, ao contrário do que este plano assumia**
+([`m10-t3-fbank-e-storage`](../../wiki/medicoes/m10-t3-fbank-e-storage.md)):
+
+| o que guardar | por hora | 8.000 h |
+|---|---|---|
+| features em **lilcom** | **27 MB** | **216 GB** |
+| áudio FLAC 16 kHz | 52 MB | 416 GB |
+| features em numpy | 115 MB | 920 GB |
+
+A configuração mais barata de volume é **materializar features e descartar o áudio** — 216 GB em
+vez de 416 GB. E o codec não é detalhe: `storage_type=LilcomChunkyWriter` foi **ignorado em
+silêncio** numa execução real, gravando numpy. **Conferir `storage_type` no manifesto gerado**;
+errar isto custa 700 GB.
+
+Extração medida: **1.638× tempo real** com `num_jobs=1`, ou ~4,9 h de CPU para 8.000 h.
 
 **Por que `lang_bpe_XXX/` no volume:** o `bpe.model` do M4 se perdeu e custou retrabalho
 (registrado nas armadilhas de M5). No volume ele sobrevive à morte da instância.

@@ -30,6 +30,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m10-q14-soak-sustentado.md](m10-q14-soak-sustentado.md) | 30 min sem degradação: RNF-04 passa, mas o teto cai de 376M para 294M |
 | [m10-rnf05-carga-concorrente.md](m10-rnf05-carga-concorrente.md) | Softphone custa 16%; com CRM o por-canal vai a 0,98× e o backlog cresce |
 | [m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md](m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md) | A cadeia funciona em shards reais; os dois professores discordam em 22,7% |
+| [m10-t3-fbank-e-storage.md](m10-t3-fbank-e-storage.md) | CutSet e fbank fecham; lilcom contra numpy vale 4,3× e 700 GB em 8.000 h |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |

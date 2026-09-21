@@ -10,6 +10,21 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-20 — T3: a cadeia fecha até o fbank, e o codec de storage vale 4,3×
+
+- **`build_cutset` → fbank → `load_features` validado** com o código do próprio repo, sem
+  modificação. Fbank a **1.638× tempo real** (1 job): 8.000 h em ~4,9 h de CPU —
+  [m10-t3-fbank-e-storage](medicoes/m10-t3-fbank-e-storage.md).
+- **Features em lilcom custam 27 MB/h; em numpy, 115 MB/h.** Contra 52 MB/h do áudio FLAC. Isso
+  **inverte a arquitetura do plano de treino**: materializar features e descartar o áudio é a
+  configuração mais barata (216 GB contra 416 GB em 8.000 h).
+- ⚠️ **`storage_type=LilcomChunkyWriter` foi ignorado em silêncio** por
+  `compute_and_store_features`, gravando numpy. Conferir `storage_type` no manifesto; errar custa
+  700 GB em 8.000 h.
+- **Defeito de ambiente corrigido**: pyOpenSSL 25.1 contra cryptography 49 quebrava qualquer uso de
+  lhotse com `AttributeError: module 'lib' has no attribute 'GEN_EMAIL'`. Resolvido com
+  `pip install -U pyopenssl` (→ 26.4.0).
+
 ## 2026-09-20 — T3 smoke: a pipeline funciona, e o rótulo do TAGARELA tem ~20% de divergência
 
 - **Cadeia validada em 2 shards reais** — ler, decodificar, normalizar, comparar, manifesto com
