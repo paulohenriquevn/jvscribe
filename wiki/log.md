@@ -10,6 +10,21 @@ timestamp: 2026-08-01T00:00:00Z
 
 Ordem cronológica. Detalhe de cada item no conceito linkado.
 
+## 2026-09-20 — T3 smoke: a pipeline funciona, e o rótulo do TAGARELA tem ~20% de divergência
+
+- **Cadeia validada em 2 shards reais** — ler, decodificar, normalizar, comparar, manifesto com
+  proveniência por linha. **RTFx 3,16×** em áudio de podcast, consistente com os 3,44× do soak em
+  FLEURS — [m10-t3-smoke](medicoes/m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md).
+- **Os dois professores divergem em 22,7%** das palavras (mediana). A hipótese de que era formato
+  numérico foi **refutada**: as três réguas dão o mesmo número.
+- **A divergência cai com a duração**: 18,8% acima de 8 s. Parte é artefato do chunk de 1120 ms em
+  segmento curto.
+- **O filtro de concordância ganhou curva**: limiar de 30% preserva 66% do corpus (~5.370 h de
+  pt-BR), dentro da faixa que a Fase 3 do plano de treino assume.
+- **O ADR-003 fica justificado por número**: ruído dessa ordem é o que M5 identificou como causa do
+  overfitting. Mas **discordância não é erro** — sem transcrição humana não se sabe quem erra, e os
+  exemplos mostram os dois errando na mesma frase.
+
 ## 2026-09-14 (noite) — RNF-05: carga concorrente é o critério mais restritivo
 
 - **Softphone sozinho custa 16%**; softphone + CRM custa **61,7%** e derruba o por-canal para

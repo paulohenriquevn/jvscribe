@@ -29,6 +29,7 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m10-t3-quanto-corpus-pt-existe.md](m10-t3-quanto-corpus-pt-existe.md) | YODAS pt tem 262 h, não 15–25 mil; o volume está no parlamento europeu |
 | [m10-q14-soak-sustentado.md](m10-q14-soak-sustentado.md) | 30 min sem degradação: RNF-04 passa, mas o teto cai de 376M para 294M |
 | [m10-rnf05-carga-concorrente.md](m10-rnf05-carga-concorrente.md) | Softphone custa 16%; com CRM o por-canal vai a 0,98× e o backlog cresce |
+| [m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md](m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md) | A cadeia funciona em shards reais; os dois professores discordam em 22,7% |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |
