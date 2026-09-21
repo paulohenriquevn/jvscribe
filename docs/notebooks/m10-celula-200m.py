@@ -35,7 +35,15 @@ print(f'GPU: {GPU} | unidades/h: {un_h} | corpus: {HORAS_TREINO:.1f} h\n')
 # get_parser() ja chama add_model_arguments(); o datamodule so entra no main(),
 # entao parse_args() aceita apenas flags de modelo. blank_id/vocab_size sao
 # preenchidos no main a partir do bpe.model -- por isso entram a mao aqui.
+# /content/icefall e o REPO; o pacote e /content/icefall/icefall. Como o cwd do
+# kernel e /content, `import icefall` acha o diretorio do repo -- que nao tem
+# __init__.py -- e o trata como namespace package vazio: icefall.utils some.
+# O treino nao sofria disso porque roda em subprocesso com PYTHONPATH setado.
+sys.path.insert(0, '/content/icefall')          # antes do cwd, para achar o pacote
 sys.path.insert(0, '/content/icefall/egs/commonvoice/ASR/zipformer')
+for _m in [k for k in list(sys.modules) if k == 'icefall' or k.startswith('icefall.')]:
+    del sys.modules[_m]                          # purga o namespace vazio ja cacheado
+import icefall.utils                             # falha aqui, nao dentro do train.py
 import train as T
 
 CANDIDATOS = {
