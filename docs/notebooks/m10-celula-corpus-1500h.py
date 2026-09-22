@@ -24,12 +24,24 @@
 #
 # Retomada: se a sessão morrer, rode de novo. Ciclo com manifesto pronto é pulado.
 # =====================================================================================
+import importlib.util
 import shutil
 import subprocess
 import sys
 import time
 from collections import deque
 from pathlib import Path
+
+# ── as dependências existem nesta sessão? ────────────────────────────────────────────
+# Um runtime reiniciado perde tudo que as células 2-4 instalaram, e este script só
+# importaria o lhotse DEPOIS de horas de download e extração.
+_faltando = [m for m in ('lhotse', 'lilcom', 'soundfile', 'pyarrow')
+             if importlib.util.find_spec(m) is None]
+if _faltando:
+    raise SystemExit(
+        f'faltam nesta sessão: {", ".join(_faltando)}\n'
+        f'Rode as células 2 e 4 do m10-prototipo-colab.ipynb (dependências) antes desta.\n'
+        f'O runtime foi reiniciado? Então elas precisam rodar de novo.')
 
 # ── o que você escolhe ───────────────────────────────────────────────────────────────
 HORAS_ALVO       = 1500   # meta do bake-off (plano M10, T4)
@@ -94,6 +106,7 @@ t0 = time.time()
 # Ecoa ao vivo E grava: são ~5 h de execução, e sem eco você fica no escuro; sem log,
 # a causa de uma falha no ciclo 9 já saiu do scrollback do Colab quando ela aparece.
 LOG = Path('/content/corpus.log')
+_marca = time.strftime('%Y-%m-%d %H:%M:%S')
 proc = subprocess.Popen(
     [sys.executable, 'prepare_corpus_streaming.py',
      '--out', str(RAIZ), '--horas-alvo', str(HORAS_ALVO),
@@ -103,11 +116,15 @@ proc = subprocess.Popen(
     cwd=str(FINETUNE), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     text=True, bufsize=1)
 ultimas = deque(maxlen=40)
-with LOG.open('w') as fh:
+with LOG.open('a') as fh:   # 'a': uma retomada não apaga o log da execução que morreu,
+                            # que é justamente o que se quer ler para saber por quê.
+    fh.write(f'\n===== execução {_marca} · alvo {HORAS_ALVO} h =====\n')
     for linha in proc.stdout:
+        if '\r' in linha:   # barra de progresso do lhotse; infla o log sem informar
+            continue
         fh.write(linha)
         ultimas.append(linha)
-        if linha.startswith('[stream]') or 'Error' in linha or 'error' in linha:
+        if linha.startswith(('[stream]', '[tagarela]')) or 'rror' in linha:
             print(linha, end='', flush=True)
 if proc.wait() != 0:
     print('\n--- últimas 40 linhas ---')

@@ -51,6 +51,13 @@ versioning follows [Semantic Versioning](https://semver.org/).
   named in `shards_perdidos.txt` alongside the hours it cost, and only aborts when more
   than 10% of a cycle is lost — which is the network being down, not a bad shard.
   (`jvscribe/finetune/prepare_corpus_streaming.py`)
+- The corpus cell checks its dependencies before doing any work, echoes per-batch
+  progress rather than only per-cycle, and appends to its log instead of truncating it.
+  A restarted runtime loses everything the setup cells installed, and the script would
+  otherwise only import lhotse after hours of downloading and extraction; a cycle takes
+  ~20 minutes, so echoing only cycle boundaries left the screen frozen; and truncating
+  the log on resume erased the record of the run that died, which is the one worth
+  reading. (`docs/notebooks/m10-celula-corpus-1500h.py`)
 - The corpus cell now syncs its clone and verifies the script it is about to run exists,
   instead of surfacing Python's bare `exit status 2` for a missing file — an error that
   says nothing about the clone being out of date. It also streams the subprocess output
