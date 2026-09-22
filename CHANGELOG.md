@@ -39,6 +39,13 @@ versioning follows [Semantic Versioning](https://semver.org/).
   prepares them in cycles, and reports kept hours against the target.
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
+- `export_corpus.py` rewrites a prepared corpus's manifest with paths relative to its
+  root, and can emit a dataset card carrying the source license, the attribution
+  ShareAlike requires, and the fact that the labels are machine-generated. Optional
+  `--escrever-card`; the card deliberately states no retention rate, because this script
+  sees only the surviving manifest and cannot observe what was dropped.
+  (`jvscribe/finetune/export_corpus.py`)
+
 ### Fixed
 - Corpus preparation can write its output to persistent storage while keeping throwaway
   intermediates on local disk (`--scratch`). Colab erases `/content` when the VM
