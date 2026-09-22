@@ -48,8 +48,24 @@ HORAS_ALVO       = 1500   # meta do bake-off (plano M10, T4)
 SHARDS_POR_CICLO = 12     # parquet vivo = este número de shards
 SHARDS_POR_LOTE  = 4      # wav vivo = este número, dentro do ciclo
 NUM_JOBS         = 8      # paralelismo do fbank
-RAIZ             = Path('/content/data/tagarela_1500h')
+DRIVE            = Path('/content/drive/MyDrive/jvscribe/corpus')
+SCRATCH          = Path('/content/scratch')   # descartável: parquet e wav
 REPO             = Path('/content/jvscribe')
+
+# ── onde o produto fica ──────────────────────────────────────────────────────────────
+# `/content` é apagado quando a VM reinicia, e com ele as horas de extração já pagas.
+# Se o Drive estiver montado e couber, as features vão para lá e sobrevivem ao reinício.
+# Os wav e os parquet NÃO: são intermediários apagados minutos depois, e mandá-los ao
+# Drive pagaria a rede por bytes condenados.
+_drive_montado = Path('/content/drive/MyDrive').is_dir()
+if _drive_montado:
+    RAIZ = DRIVE
+    _onde = 'Drive — sobrevive ao reinício da VM'
+else:
+    RAIZ = Path('/content/data/tagarela_1500h')
+    _onde = ('/content — ⚠️ SOME se a VM reiniciar. Monte o Drive para não perder o '
+             'trabalho:\n                 from google.colab import drive; '
+             'drive.mount("/content/drive")')
 
 # ── constantes MEDIDAS neste projeto (não estimadas) ─────────────────────────────────
 H_POR_SHARD  = 296.8 / 31   # [MEDIDO] 31 shards → 296,8 h mantidas após os filtros
@@ -73,6 +89,15 @@ print(f'wav vivo        {gb_wav:>7.1f} GB   ({SHARDS_POR_LOTE} shards por lote)'
 print(f'features        {gb_feats:>7.1f} GB   (acumula até o fim; em numpy seriam '
       f'{HORAS_ALVO * MB_WAV_H / 1024:.0f} GB)')
 print(f'PICO            {gb_pico:>7.1f} GB   contra {livre_gb:.1f} GB livres')
+print(f'saída em        {RAIZ}\n                {_onde}')
+if _drive_montado:
+    _livre_drive = shutil.disk_usage('/content/drive/MyDrive').free / 1024**3
+    print(f'Drive livre     {_livre_drive:>7.1f} GB   (features vão pedir {gb_feats:.1f} GB)')
+    if _livre_drive < gb_feats + 5:
+        raise SystemExit(
+            f'\nO Drive tem {_livre_drive:.0f} GB livres e as features pedem '
+            f'{gb_feats:.0f} GB.\nLibere espaço, ou reduza HORAS_ALVO, ou aceite rodar '
+            f'em /content sabendo que um reinício apaga tudo (desmonte o Drive).')
 
 if gb_pico + MARGEM > livre_gb:
     cabe = int((livre_gb - MARGEM - gb_parq - gb_wav) / (MB_FEAT_H / 1024))
@@ -112,6 +137,7 @@ proc = subprocess.Popen(
      '--out', str(RAIZ), '--horas-alvo', str(HORAS_ALVO),
      '--shards-por-ciclo', str(SHARDS_POR_CICLO),
      '--shards-por-lote', str(SHARDS_POR_LOTE),
+     '--scratch', str(SCRATCH),
      '--num-jobs', str(NUM_JOBS)],
     cwd=str(FINETUNE), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     text=True, bufsize=1)

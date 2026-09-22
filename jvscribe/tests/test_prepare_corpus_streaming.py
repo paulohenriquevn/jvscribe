@@ -74,7 +74,8 @@ def rede_falsa(monkeypatch):
 def _args(out, **kw):
     import argparse
     d = dict(out=str(out), horas_alvo=40.0, shards_por_ciclo=2, shards_por_lote=1,
-             num_jobs=1, total_shards=8, pattern=ST.DL.SHARD_PATTERN, token="")
+             num_jobs=1, total_shards=8, pattern=ST.DL.SHARD_PATTERN, token="",
+             scratch=None)
     d.update(kw)
     return argparse.Namespace(**d)
 
@@ -249,3 +250,42 @@ def test_retomar_com_o_mesmo_alvo_passa_pela_trava(tmp_path, rede_falsa, monkeyp
     rede_falsa.clear()
     ST.main()
     assert rede_falsa == []
+
+
+# ── Sobreviver ao reinício da VM: o produto vai para o persistente, o lixo para o local ──
+
+def test_scratch_recebe_o_descartavel_e_out_so_o_produto(tmp_path, monkeypatch):
+    """O Colab apaga /content quando a VM reinicia, e cinco horas de extração vão junto.
+
+    A saída pode então apontar para um Drive montado — mas os wav e os parquet são
+    intermediários apagados minutos depois, e mandá-los para lá pagaria a rede por bytes
+    condenados. `--scratch` separa os dois.
+    """
+    out = tmp_path / "persistente"
+    scratch = tmp_path / "local"
+    escritos = []
+
+    def _baixa(i, total, pattern, destino, token):
+        escritos.append(destino)
+        d = destino / f"train-{i:05d}-of-{total:05d}.parquet"
+        _parquet(d, n=2, show=f"show{i}")
+        return d
+
+    monkeypatch.setattr(ST.DL, "download_shard", _baixa)
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args",
+                        lambda self: _args(out, scratch=str(scratch)))
+    ST.main()
+
+    assert all(scratch in d.parents or d.parent == scratch for d in escritos), \
+        f"parquet foi para o armazenamento persistente: {escritos}"
+    assert not list(out.glob("raw_*")), "sobrou parquet sob --out"
+    assert not (out / "wav_train").exists(), "wav intermediário foi para --out"
+    assert (out / "tagarela_cuts_train.jsonl.gz").exists()
+    assert list(out.glob("feats_train_*")), "as features precisam ficar no persistente"
+
+
+def test_sem_scratch_tudo_fica_sob_out(tmp_path, rede_falsa, monkeypatch):
+    """O default não muda: quem não passa --scratch continua com o layout antigo."""
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+    assert (tmp_path / "tagarela_cuts_train.jsonl.gz").exists()

@@ -279,7 +279,7 @@ def _guarda_decode(stats: dict, escopo: str):
 
 def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int | None,
             shards_per_batch: int = 0, drop_audio: bool = False,
-            id_offset: int = 0, sufixo: str = ""):
+            id_offset: int = 0, sufixo: str = "", scratch: Path | None = None):
     """Prepara o corpus em LOTES de shards, para que o pico de disco não cresça com o corpus.
 
     Com `shards_per_batch=0` (default) o comportamento é o antigo: todos os shards de uma
@@ -309,8 +309,14 @@ def prepare(parquet_dir: Path, out: Path, extractor, num_jobs: int, limit: int |
     Não escreve o relatório de cobertura: devolve `show_counts` e deixa o relatório para
     quem tem a visão do corpus inteiro. Um relatório por ciclo diria que cada ciclo é
     dominado por um show sem que isso signifique nada sobre o corpus.
+
+    `scratch` separa o que é DESCARTÁVEL do que precisa SOBREVIVER. Os wav são
+    intermediários — existem entre o decode e o fbank, e são apagados logo depois; as
+    features e o manifesto são o produto. Quando `out` aponta para armazenamento
+    persistente e lento (um Drive montado), mandar os wav para lá paga o preço da rede
+    por bytes que serão apagados em minutos. Sem `scratch`, tudo fica sob `out`.
     """
-    wav_dir = out / "wav_train"
+    wav_dir = (scratch or out) / "wav_train"
     shards = iter_parquet_shards(parquet_dir)
     if shards_per_batch > 0:
         lotes = [shards[i:i + shards_per_batch]
@@ -393,6 +399,9 @@ def main():
     ap.add_argument("--shards-per-batch", type=int, default=0,
                     help="processa os shards em lotes deste tamanho (0 = todos de uma vez). "
                          "Bounda o pico de disco de wav ao lote, não ao corpus.")
+    ap.add_argument("--scratch", default=None,
+                    help="dir de trabalho para os wav intermediários (default: --out). "
+                         "Use disco local quando --out for armazenamento persistente.")
     ap.add_argument("--drop-audio-after-features", action="store_true",
                     help="apaga os wav do lote depois de gravar as features. FECHA a "
                          "augmentação telefônica on-the-fly, que relê o áudio a cada época.")
@@ -410,7 +419,8 @@ def main():
 
     r = prepare(parquet_dir, out, extractor, args.num_jobs, args.limit,
                 shards_per_batch=args.shards_per_batch,
-                drop_audio=args.drop_audio_after_features)
+                drop_audio=args.drop_audio_after_features,
+                scratch=Path(args.scratch) if args.scratch else None)
     _write_coverage_report(out, r["show_counts"], r["kept"])
     (out / "transcript_words.txt").write_text("\n".join(r["textos"]) + "\n", encoding="utf-8")
     print(f"[tagarela] pronto em {out} (formato datamodule commonvoice, split=train "

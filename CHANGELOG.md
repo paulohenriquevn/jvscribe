@@ -40,6 +40,15 @@ versioning follows [Semantic Versioning](https://semver.org/).
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
 ### Fixed
+- Corpus preparation can write its output to persistent storage while keeping throwaway
+  intermediates on local disk (`--scratch`). Colab erases `/content` when the VM
+  restarts, taking hours of already-paid extraction with it; resume protected against the
+  script dying, not against the disk disappearing. The cell now targets a mounted Drive
+  when one is available, checks it has room before starting, and says plainly when the
+  output will not survive a restart. The wav and parquet files stay local — they are
+  deleted minutes after being written, and sending them over the Drive's network would
+  pay for bytes already condemned.
+  (`jvscribe/finetune/prepare_corpus_streaming.py`, `docs/notebooks/m10-celula-corpus-1500h.py`)
 - Changing `--horas-alvo` between runs against the same output directory now fails
   instead of producing a corpus built from two different plans. Resume skips a cycle by
   manifest name, while which shards the plan wants comes from `select_indices`, which

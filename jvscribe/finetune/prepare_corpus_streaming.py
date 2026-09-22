@@ -119,7 +119,7 @@ def ciclo(idx_grupo: list[int], n: int, args, out: Path, extractor, id_offset: i
                     kept=kept, show_counts={}, manifesto=manifesto, retomado=True,
                     perdidos=[])
 
-    raw = out / f"raw{sufixo}"
+    raw = (args.scratch_dir or out) / f"raw{sufixo}"
     raw.mkdir(parents=True, exist_ok=True)
     perdidos = []
     for i in idx_grupo:
@@ -144,7 +144,8 @@ def ciclo(idx_grupo: list[int], n: int, args, out: Path, extractor, id_offset: i
 
     r = PT.prepare(raw, out, extractor, args.num_jobs, None,
                    shards_per_batch=args.shards_por_lote,
-                   drop_audio=True, id_offset=id_offset, sufixo=sufixo)
+                   drop_audio=True, id_offset=id_offset, sufixo=sufixo,
+                   scratch=args.scratch_dir)
     # Só agora: as features do grupo estão gravadas e o parquet não é mais necessário.
     shutil.rmtree(raw, ignore_errors=True)
     r["retomado"] = False
@@ -161,12 +162,19 @@ def main():
     ap.add_argument("--shards-por-lote", type=int, default=4,
                     help="sublote dentro do ciclo — define o wav vivo")
     ap.add_argument("--num-jobs", type=int, default=8)
+    ap.add_argument("--scratch", default=None,
+                    help="disco local para parquet e wav — o que é descartável. Use quando "
+                         "--out for persistente (um Drive montado), para não pagar a rede "
+                         "por bytes que vão ser apagados minutos depois.")
     ap.add_argument("--total-shards", type=int, default=1764)
     ap.add_argument("--pattern", default=DL.SHARD_PATTERN)
     ap.add_argument("--token", default="")
     args = ap.parse_args()
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
+    args.scratch_dir = Path(args.scratch) if args.scratch else None
+    if args.scratch_dir:
+        args.scratch_dir.mkdir(parents=True, exist_ok=True)
     extractor = Fbank(FbankConfig(num_mel_bins=80))
 
     n_shards = shards_para_horas(args.horas_alvo)
