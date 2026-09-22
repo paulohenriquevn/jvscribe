@@ -50,6 +50,12 @@ import prep_tagarela as PT
 
 # `[MEDIDO]` 31 shards do TAGARELA renderam 296,8 h depois dos filtros de accent, texto,
 # alucinação e razão char/s (wiki/medicoes/m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md).
+#
+# ⚠️ Uma segunda amostra, de 12 shards em outra faixa do corpus, rendeu 10,85 h/shard —
+# 13% acima desta constante. A taxa varia com o shard, e 31 shards não bastam para fixá-la.
+# NÃO ajuste este número sem propósito: ele decide QUANTOS shards, e o número de shards
+# decide QUAIS (`select_indices` espaça uniformemente). Mudá-lo invalida todo plano já em
+# curso — `travar_plano` transforma isso em erro em vez de corpus misturado.
 HORAS_POR_SHARD = 296.8 / 31
 
 # Acima disto a rede está fora, não "alguns shards ruins": seguir produziria um corpus
@@ -62,6 +68,33 @@ def shards_para_horas(horas: float) -> int:
     if horas <= 0:
         raise ValueError(f"horas-alvo deve ser > 0 (recebido: {horas})")
     return max(1, round(horas / HORAS_POR_SHARD))
+
+
+def travar_plano(out: Path, indices: list[int]) -> None:
+    """Grava a lista de shards no primeiro run e recusa qualquer run que a contradiga.
+
+    A retomada pula ciclo por NOME de manifesto (`..._000.jsonl.gz`), e os índices vêm de
+    `select_indices(total, n)`, que depende de `--horas-alvo`. Mudar o alvo entre execuções
+    muda quais shards o plano pede, mas não muda os nomes: os ciclos prontos continuariam
+    sendo pulados enquanto guardam shards que o novo plano não escolheu.
+
+    O resultado seria um corpus meio de um plano e meio de outro, sem erro e sem aviso —
+    e a lista `selected_shards.txt` que serve de auditoria descreveria só metade dele.
+    """
+    plano = out / "plano_de_shards.txt"
+    linha = ",".join(str(i) for i in indices)
+    if not plano.exists():
+        plano.write_text(linha + "\n", encoding="utf-8")
+        return
+    anterior = plano.read_text(encoding="utf-8").strip()
+    if anterior != linha:
+        antes = anterior.split(",")
+        raise RuntimeError(
+            f"[stream] esta execução pede {len(indices)} shards e {plano.name} registra "
+            f"{len(antes)}. O alvo mudou entre execuções.\n"
+            f"Os ciclos já prontos seriam reaproveitados mesmo guardando shards que o novo "
+            f"plano não escolheu — corpus meio de um plano, meio de outro, sem erro.\n"
+            f"Ou volte ao alvo original, ou comece em uma --out limpa.")
 
 
 def grupos(indices: list[int], tamanho: int) -> list[list[int]]:
@@ -138,6 +171,7 @@ def main():
 
     n_shards = shards_para_horas(args.horas_alvo)
     indices = DL.select_indices(args.total_shards, n_shards)
+    travar_plano(out, indices)
     lotes = grupos(indices, args.shards_por_ciclo)
     print(f"[stream] alvo {args.horas_alvo:.0f} h → {len(indices)} shards "
           f"({HORAS_POR_SHARD:.2f} h/shard [MEDIDO]) em {len(lotes)} ciclos", flush=True)

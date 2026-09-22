@@ -213,3 +213,39 @@ def test_run_sem_perda_nao_escreve_o_registro(tmp_path, rede_falsa, monkeypatch)
     monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
     ST.main()
     assert not (tmp_path / "shards_perdidos.txt").exists()
+
+
+# ── O plano de shards não pode mudar entre execuções de uma mesma --out ──────────────────
+
+def test_plano_e_gravado_no_primeiro_run(tmp_path, rede_falsa, monkeypatch):
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+    plano = (tmp_path / "plano_de_shards.txt").read_text(encoding="utf-8").strip()
+    assert plano == ",".join(str(i) for i in ST.DL.select_indices(8, 4))
+
+
+def test_mudar_o_alvo_no_meio_falha_em_vez_de_misturar_dois_planos(
+        tmp_path, rede_falsa, monkeypatch):
+    """A retomada pula ciclo por NOME de manifesto, não por conteúdo.
+
+    Com outro `--horas-alvo`, `select_indices` escolhe outros shards; os ciclos prontos
+    continuariam sendo pulados enquanto guardam shards que o novo plano não pediu. O
+    corpus sairia metade de um plano e metade de outro, e a lista de auditoria descreveria
+    só uma das metades.
+    """
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args",
+                        lambda self: _args(tmp_path, horas_alvo=70.0))
+    with pytest.raises(RuntimeError, match="alvo mudou entre execuções"):
+        ST.main()
+
+
+def test_retomar_com_o_mesmo_alvo_passa_pela_trava(tmp_path, rede_falsa, monkeypatch):
+    """A trava protege contra plano trocado, não contra retomada legítima."""
+    monkeypatch.setattr(ST.argparse.ArgumentParser, "parse_args", lambda self: _args(tmp_path))
+    ST.main()
+    rede_falsa.clear()
+    ST.main()
+    assert rede_falsa == []

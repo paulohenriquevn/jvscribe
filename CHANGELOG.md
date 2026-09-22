@@ -40,6 +40,12 @@ versioning follows [Semantic Versioning](https://semver.org/).
   (`docs/notebooks/m10-celula-corpus-1500h.py`)
 
 ### Fixed
+- Changing `--horas-alvo` between runs against the same output directory now fails
+  instead of producing a corpus built from two different plans. Resume skips a cycle by
+  manifest name, while which shards the plan wants comes from `select_indices`, which
+  depends on the target — so a changed target left completed cycles holding shards the
+  new plan never chose, with nothing failing and the audit list describing only half of
+  it. (`jvscribe/finetune/prepare_corpus_streaming.py`)
 - Shard downloads now survive an unstable CDN and never publish a half-written file.
   `curl --retry` alone does not repeat HTTP/2 framing errors (exit 92) — by default it
   only repeats timeouts and 408/429/5xx — so one such error on shard 00057 aborted a
