@@ -1,0 +1,27 @@
+# Dependencies for PREPARING CORPUS and TRAINING (M4/M5/M10).
+#
+# `requirements-eval.txt` declares what evaluation needs and `requirements-test.txt` what the
+# suite needs; neither covers the training stack, and `requirements-test.txt` says so
+# explicitly. That left the corpus scripts with no declared dependencies at all.
+#
+# It cost a run to notice: `prep_tagarela.py` filtered 124,970 utterances, wrote the coverage
+# report, and only then died in the feature-extraction workers with
+# `ImportError: To read and write lilcom-compressed arrays, please 'pip install lilcom'`.
+# lhotse does NOT depend on lilcom, so importing `LilcomChunkyWriter` succeeds and the failure
+# waits until a worker opens the storage.
+#
+# lilcom is not optional here. The numpy backend it replaces costs 115 MB/h against 33 MB/h
+# (`wiki/medicoes/m10-t3-fbank-e-storage.md`), which is 410 GB at the 5,000 h the M10 plan
+# targets. All five corpus scripts import it.
+#
+# NOT declared here, because pip cannot resolve them from PyPI:
+#   - k2: install the wheel matching your torch+CUDA from https://k2-fsa.github.io/k2/cuda.html
+#         (PyPI hosts an UNRELATED package named `k2` that installs without the compiled
+#         extension and fails at import with `No module named '_k2'`)
+#   - icefall: used from a git clone via PYTHONPATH, not installed
+
+lhotse>=1.33
+lilcom>=1.7
+pyarrow>=14.0
+soundfile>=0.12
+sentencepiece>=0.2

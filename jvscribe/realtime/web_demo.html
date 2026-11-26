@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jvscribe — transcrição ao vivo</title>
+<style>
+  :root {
+    --bg:#0f1115; --painel:#171a21; --linha:#242833; --texto:#e6e8ee; --fraco:#8b93a7;
+    --atendente:#4cc3ff; --cliente:#ffc94c; --ok:#43d17c; --ruim:#ff5f56; --indef:#b98cff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f6f7f9; --painel:#fff; --linha:#e3e6ec; --texto:#1a1d24; --fraco:#5b6478;
+            --atendente:#0a6fb5; --cliente:#a06a00; }
+  }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--texto); font:15px/1.55 ui-sans-serif,
+         system-ui,-apple-system,"Segoe UI",Roboto,sans-serif }
+  header { padding:18px 22px; border-bottom:1px solid var(--linha); display:flex;
+           align-items:center; gap:16px; flex-wrap:wrap }
+  h1 { font-size:17px; margin:0; font-weight:650; letter-spacing:-.01em }
+  .sub { color:var(--fraco); font-size:13px }
+  button { font:inherit; font-weight:600; padding:8px 16px; border-radius:8px; cursor:pointer;
+           border:1px solid var(--linha); background:var(--painel); color:var(--texto) }
+  button.primario { background:var(--ok); border-color:var(--ok); color:#06240f }
+  button[disabled] { opacity:.45; cursor:not-allowed }
+  main { display:grid; grid-template-columns:1fr 340px; gap:18px; padding:18px 22px;
+          align-items:start }
+  @media (max-width:900px){ main{ grid-template-columns:1fr } }
+  .painel { background:var(--painel); border:1px solid var(--linha); border-radius:12px;
+            padding:16px }
+  .painel h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em;
+               color:var(--fraco); margin:0 0 12px }
+  #dialogo { min-height:320px; max-height:62vh; overflow-y:auto }
+  .turno { padding:9px 0; border-bottom:1px solid var(--linha) }
+  .turno:last-child { border-bottom:0 }
+  .quem { font-weight:700; font-size:12px; letter-spacing:.04em }
+  .ATENDENTE .quem { color:var(--atendente) }
+  .CLIENTE   .quem { color:var(--cliente) }
+  .t { color:var(--fraco); font-size:11px; font-variant-numeric:tabular-nums; margin-left:6px }
+  .incerta { border-bottom:2px dotted var(--indef); cursor:help }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }
+  td { padding:5px 0; font-size:13px }
+  td:last-child { text-align:right; font-weight:650 }
+  .ok{color:var(--ok)} .ruim{color:var(--ruim)} .indef{color:var(--indef)}
+  .aviso { margin:0 22px 18px; padding:12px 14px; border-radius:10px; font-size:13px;
+           border:1px solid var(--indef); background:color-mix(in srgb,var(--indef) 12%,transparent) }
+  .aviso.oculto { display:none }
+  footer { padding:14px 22px 26px; color:var(--fraco); font-size:12px; max-width:780px }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px }
+  .vazio { color:var(--fraco); font-style:italic }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>jvscribe — transcrição ao vivo</h1>
+    <div class="sub" id="sub">ASR PT-BR sobre CPU · sem GPU, sem rede</div>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:10px">
+    <button id="btIniciar" class="primario">Iniciar captura</button>
+    <button id="btParar" disabled>Parar</button>
+  </div>
+</header>
+
+<div id="avisoCarga" class="aviso oculto"></div>
+
+<main>
+  <section class="painel">
+    <h2>Diálogo</h2>
+    <div id="dialogo"><p class="vazio">Clique em “Iniciar captura”. O microfone é o
+      <strong>atendente</strong>; o loopback da placa é o <strong>cliente</strong>.</p></div>
+  </section>
+
+  <aside style="display:grid; gap:18px">
+    <section class="painel">
+      <h2>Requisitos de tempo real</h2>
+      <table>
+        <tr><td>RTFx <span class="sub">≥ 3×</span></td><td id="mRtfx">—</td></tr>
+        <tr><td>p99 <span class="sub">≤ 500 ms</span></td><td id="mP99">—</td></tr>
+        <tr><td>p50</td><td id="mP50">—</td></tr>
+        <tr><td>backlog <span class="sub">≤ 0,1%</span></td><td id="mBacklog">—</td></tr>
+        <tr><td>duração</td><td id="mDur">—</td></tr>
+        <tr><td>áudio descartado</td><td id="mDesc">—</td></tr>
+      </table>
+    </section>
+    <section class="painel">
+      <h2>Ambiente</h2>
+      <table>
+        <tr><td>modelo</td><td id="mModelo" style="font-size:11px">—</td></tr>
+        <tr><td>threads (intra)</td><td id="mThreads">—</td></tr>
+        <tr><td>load average</td><td id="mCarga">—</td></tr>
+      </table>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  <p><strong>Por que não há diarização.</strong> No caso 1:1 o canal <em>é</em> o falante, por
+  construção da captura: custo zero e acurácia 100%. Um modelo de diarização só entra no caso de
+  três falantes.</p>
+  <p><strong>O áudio não sai desta máquina.</strong> A captura é do servidor local via
+  <code>parec</code>, e o servidor escuta em <code>127.0.0.1</code> por padrão.</p>
+  <p><strong>Os números de tempo dependem da máquina estar ociosa.</strong> A mesma configuração
+  já mediu 3,51× e 2,50× em corridas diferentes só por causa de carga concorrente. Acima do limiar,
+  os vereditos de RTFx, p99 e backlog aparecem como <span class="indef">indeterminados</span> —
+  reprovar e não-medir são resultados diferentes.</p>
+</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const dialogo = $("#dialogo");
+let temTurno = false;
+
+function fmt(v, suf = "", casas = 2) {
+  return (v === null || v === undefined) ? "—" : Number(v).toFixed(casas) + suf;
+}
+
+function pinta(el, valor, alvo, maiorEhMelhor, confiavel) {
+  if (valor === null || valor === undefined) { el.className = ""; return; }
+  if (!confiavel) { el.className = "indef"; return; }
+  const bom = maiorEhMelhor ? valor >= alvo : valor <= alvo;
+  el.className = bom ? "ok" : "ruim";
+}
+
+function addTurno(ev) {
+  if (!temTurno) { dialogo.innerHTML = ""; temTurno = true; }
+  let ultimo = dialogo.lastElementChild;
+  if (ultimo && ultimo.dataset.falante === ev.falante) {
+    ultimo.querySelector(".texto").textContent = ev.texto;
+  } else {
+    const d = document.createElement("div");
+    d.className = "turno " + ev.falante;
+    d.dataset.falante = ev.falante;
+    d.innerHTML = `<div><span class="quem">${ev.falante}</span>` +
+                  `<span class="t">${ev.t.toFixed(1)}s</span></div>` +
+                  `<div class="texto"></div>`;
+    d.querySelector(".texto").textContent = ev.texto;
+    dialogo.appendChild(d);
+  }
+  dialogo.scrollTop = dialogo.scrollHeight;
+}
+
+function addMetricas(m) {
+  const c = m.tempo_confiavel;
+  const sufixo = c ? "" : " ⚠";
+  $("#mRtfx").textContent    = fmt(m.rtfx, "×") + sufixo;
+  $("#mP99").textContent     = fmt(m.p99_ms, " ms", 0) + sufixo;
+  $("#mP50").textContent     = fmt(m.p50_ms, " ms", 0);
+  $("#mBacklog").textContent = fmt(m.backlog_pct, "%") + sufixo;
+  $("#mDur").textContent     = fmt(m.duracao_s, " s", 0);
+  $("#mDesc").textContent    = m.descartado_s > 0 ? fmt(m.descartado_s, " s", 1) : "nenhum";
+  $("#mCarga").textContent   = fmt(m.carga, "", 2);
+  pinta($("#mRtfx"),    m.rtfx,        m.alvos.rtfx,        true,  c);
+  pinta($("#mP99"),     m.p99_ms,      m.alvos.p99_ms,      false, c);
+  pinta($("#mBacklog"), m.backlog_pct, m.alvos.backlog_pct, false, c);
+  avisoCarga(m.carga, c);
+}
+
+function avisoCarga(carga, confiavel) {
+  const el = $("#avisoCarga");
+  if (confiavel) { el.classList.add("oculto"); return; }
+  el.classList.remove("oculto");
+  el.innerHTML = carga === null
+    ? "<strong>Load average indisponível.</strong> Não dá para atestar que a máquina está ociosa — os números de tempo abaixo podem refletir contenção, não o custo do produto."
+    : `<strong>Máquina sob carga (load ${carga.toFixed(1)}).</strong> RTFx, p99 e backlog estão <em>indeterminados</em>: o que se mede assim é disputa por CPU, não o produto. O diálogo transcrito continua válido — ele não depende de tempo.`;
+}
+
+const es = new EventSource("/api/eventos");
+es.onmessage = e => {
+  const ev = JSON.parse(e.data);
+  if (ev.tipo === "turno") addTurno(ev);
+  else if (ev.tipo === "metricas") addMetricas(ev);
+};
+
+async function estado() {
+  const r = await (await fetch("/api/estado")).json();
+  $("#btIniciar").disabled = r.rodando;
+  $("#btParar").disabled = !r.rodando;
+  if (r.modelo) {
+    $("#mModelo").textContent = r.modelo.split("/").slice(-2).join("/");
+    $("#mThreads").textContent = r.threads;
+  }
+  $("#mCarga").textContent = fmt(r.carga, "", 2);
+  avisoCarga(r.carga, r.tempo_confiavel);
+}
+
+$("#btIniciar").onclick = async () => {
+  $("#btIniciar").disabled = true;
+  const r = await (await fetch("/api/iniciar", { method: "POST" })).json();
+  if (!r.ok) { alert("Não foi possível iniciar: " + r.erro); }
+  estado();
+};
+$("#btParar").onclick = async () => {
+  await fetch("/api/parar", { method: "POST" });
+  estado();
+};
+
+estado();
+setInterval(estado, 3000);
+</script>
+</body>
+</html>

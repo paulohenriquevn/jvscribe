@@ -1,7 +1,7 @@
 # ASR PT-BR em CPU Real-Time — Blueprint Técnico
 
 > Versão: 4.0 (consolidada) · 2026-07-24
-> Projeto: macaw-transcribe / Macaw Voice
+> Projeto: jvscribe / jvscribe
 > Substitui as v1.0 (2026-05-09), v2.0 e v3.0. Histórico de correções na § 11.
 
 ---
@@ -151,7 +151,7 @@ honestidade — nem a favor, nem contra.
 |---|---|---|---|
 | MLS Portuguese | ~284 h | CC-BY-4.0 | **Fine-tune final supervisionado** |
 | Common Voice PT | ~100 h+ | CC0 (⚠ não verificado) | **Fine-tune final supervisionado** |
-| `macaw-dataset-processed` | ? | ⚠ não verificado | ? |
+| `jvscribe-dataset-processed` | ? | ⚠ não verificado | ? |
 | **`projeto-sotaque`** | alvo 1-10 k h | CDLA-Permissive-2.0 | **Ativo estratégico — sotaque regional** |
 | ~~CORAA v1.1~~ | ~290 h | CC-BY-NC-**ND** | Excluído — `ND` proíbe derivar |
 
@@ -422,7 +422,7 @@ fornece GPU-horas/época reais.
 | Hardware-alvo não especificado | Sem critério de aceite | **Bloqueia Fase 1** |
 | Tamanho máximo do bundle no edge | Define o teto real do modelo | Aberto |
 | ToS da ElevenLabs (Scribe → treino) | Cobre TAGARELA + `projeto-sotaque` | Aberto, risco aceito |
-| Licença do `macaw-dataset-processed` | Uso no fine-tune final | Não verificado |
+| Licença do `jvscribe-dataset-processed` | Uso no fine-tune final | Não verificado |
 | Proveniência do *Cem Mil Podcasts* | A montante do TAGARELA | Não verificado |
 | Diarização em streaming | Componente mais difícil do escopo | Sem plano técnico ainda |
 | Domínio de áudio alvo | Define vocabulário, ITN, se 8 kHz importa | Não declarado |

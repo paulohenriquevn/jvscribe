@@ -1,0 +1,62 @@
+# Composição do erro — quanto é atacável por léxico? `[MEDIDO]`
+
+**Data:** {{ agora }} · **Hardware:** {{ cpu }}
+**Comando exato:** `{{ cmd }}`
+**Léxico:** {{ n_lexico }} palavras PT-BR (`/usr/share/dict`), normalizadas pela **mesma** régua
+de comparação usada em ref e hyp — se o dicionário guardasse acento e o hyp não, toda palavra
+acentuada ficaria inalcançável e um acerto viraria "palavra inexistente".
+
+## Hipótese
+
+*"Se a palavra existe em PT-BR não mexe; se não existe, corrige"* (Paulo, 2026-07-26).
+A pergunta que decide se vale construir isso: **que fração do erro o método alcança**, e
+**quanto ele quebraria** do que já estava certo.
+
+## Evidência
+
+n = **{{ n_utterances }}** utterances · **{{ total_substituicoes }}** substituições ·
+**{{ corretas }}** palavras corretas
+
+{% if total_substituicoes == 0 %}
+> ⚠️ **Nenhuma substituição nesta amostra — não há o que classificar.** As frações abaixo
+> ficariam sem denominador; publicá-las como `0,0%` afirmaria "medimos e nada é atacável",
+> que é diferente de "não houve medição". Aumente `--n`.
+{% else %}
+| classe | ação que admite | n | fração | IC95% |
+|---|---|---|---|---|
+{% for c in classes %}
+| `{{ c.nome }}` | {{ c.acao }} | {{ c.n }} | {{ "%.1f"|format(100 * c.fracao) }}% | {% if c.ic %}[{{ "%.1f"|format(100 * c.ic[0]) }}; {{ "%.1f"|format(100 * c.ic[1]) }}]{% else %}— (n < 3 utterances){% endif %} |
+{% endfor %}
+
+O IC reamostra **utterances**, não substituições: substituições da mesma utterance são
+correlacionadas (mesmo locutor, mesmo áudio), e tratá-las como independentes estreitaria o
+intervalo artificialmente — falácia § 3 #12 com uma casa decimal a mais.
+{% endif %}
+
+### Risco do lado oposto — corromper o que estava certo
+
+{% if risco is none %}
+> Sem palavras corretas na amostra — risco não medido.
+{% else %}
+**{{ corretas_fora_do_lexico }}/{{ corretas }}** ({{ "%.2f"|format(100 * risco) }}%) das palavras
+**corretas** estão fora do dicionário. O método "corrigiria" estas **sem precisar**. Toda
+avaliação do ganho tem de descontar este dano.
+{% endif %}
+
+### Exemplos
+
+{% for c in classes %}
+- **{{ c.nome }}** ({{ c.acao }}): {{ c.exemplos | join(", ") if c.exemplos else "—" }}
+{% endfor %}
+- **falso positivo** (corretas ∉ dicionário): {{ exemplos_falso_positivo | join(", ") if exemplos_falso_positivo else "—" }}
+
+## Limitações
+
+- **Alinhamento por `zip` dentro do bloco substituído** é aproximação: quando ref e hyp têm
+  tamanhos diferentes no mesmo bloco, o excedente não é classificado. Subestima o total.
+- **O dicionário do sistema não é o léxico do domínio.** Call center tem jargão, produto e
+  nome próprio que `/usr/share/dict` desconhece — o que empurra erro para `rare_ref` e infla
+  o risco de falso positivo em relação a um léxico específico do domínio.
+- **FLEURS é fala lida de notícias**, não conversa telefônica espontânea. A composição do erro
+  no domínio real é `[DESCONHECIDO]` (falácia § 3 #6).
+- Uma corrida só. Não conclua sem repetir (§ 3 regra 3).

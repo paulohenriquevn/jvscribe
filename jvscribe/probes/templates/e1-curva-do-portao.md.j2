@@ -1,0 +1,49 @@
+---
+type: Medição
+title: E1 — curva do portão de confiança (bruto, n={{ n_utterances }})
+description: Precisão e recall do portão por limiar, com IC95% bootstrap sobre utterances.
+tags: [medicao, dados-brutos, e1, portao, protocolo]
+timestamp: 2026-07-31T00:00:00Z
+---
+
+# E1 — curva do portão de confiança `[MEDIDO]`
+
+**Data:** {{ agora }} · **Comando:** `{{ cmd }}`
+**Amostra:** {{ n_utterances }} utterances de FLEURS pt_br · {{ n_palavras }} palavras ·
+{{ n_erradas }} erradas → **taxa base {{ "%.1f"|format(100 * base) }}%**
+**IC95%:** bootstrap percentil reamostrando **utterances** (2000 reamostragens, seed {{ seed }})
+
+## Predição pré-registrada
+
+A τ=1,0: precisão ≥ **35%**, com o **limite inferior** do IC95% **acima** da taxa base.
+
+**Critério de morte:** limite inferior encosta na taxa base → o portão é ruído e o protocolo para.
+
+## Resultado
+
+| τ | sinalizado | recall | precisão | IC95% da precisão | ganho | separa? |
+|---|---|---|---|---|---|---|
+{% for l in linhas %}
+| {{ "%.2f"|format(l.tau) }} | {{ "%.1f"|format(100 * l.sinalizado) }}% | {% if l.recall is not none %}{{ "%.1f"|format(100 * l.recall) }}%{% else %}—{% endif %} | {% if l.precisao is not none %}{{ "%.1f"|format(100 * l.precisao) }}%{% else %}—{% endif %} | {% if l.ic %}[{{ "%.1f"|format(100 * l.ic[0]) }}; {{ "%.1f"|format(100 * l.ic[1]) }}]{% else %}—{% endif %} | {% if l.ganho %}{{ "%.1f"|format(l.ganho) }}×{% else %}—{% endif %} | {{ '✅' if l.separa else '❌' }} |
+{% endfor %}
+
+**"Separa"** = o limite inferior do IC95% da precisão fica **acima** da taxa base. É o critério
+de morte da fase, não uma observação decorativa.
+
+## Como ler
+
+A precisão sobre zero sinalizados é `—`, não 100%: um τ que não sinaliza nada não mediu nada, e
+um ponto perfeito no fim da curva é como se escolhe o τ errado.
+
+A reamostragem é por **utterance**, não por palavra. Palavras da mesma locução são correlacionadas
+— mesmo locutor, mesmo áudio, mesmo contexto — e tratá-las como independentes estreitaria o
+intervalo artificialmente (falácia § 3 #12).
+
+## Limitações
+
+- **FLEURS é leitura de notícias.** A separação em conversa telefônica espontânea segue
+  `[DESCONHECIDO]`. É o limite de todo o protocolo até a fase E5.
+- A margem usa o **primeiro** frame de uma emissão repetida. A posterior da trajetória colapsada
+  provavelmente separa melhor e **não foi comparada** (Unresolved Question 1 do protocolo).
+- Palavras de `insert` no alinhamento contam como erradas; `delete` não aparece — nenhuma palavra
+  foi emitida para carregar margem. O portão, por construção, não enxerga deleção.

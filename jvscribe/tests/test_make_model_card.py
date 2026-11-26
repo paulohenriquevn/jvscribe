@@ -1,0 +1,184 @@
+"""T1.3 (M9) — model_card.json e o diretório canônico.
+
+Invariante inegociável deste milestone: **nenhum arquivo de modelo é movido ou removido**.
+"Canonizar" é symlink, nunca `rm`/`mv`.
+"""
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+
+# Fingerprint MEDIDO pela implementação Rust (`Vocab::fingerprint`) em 2026-07-30 sobre
+# jvscribe/tests/fixtures/tokens-m4.txt (vocabulário da geração M4).
+#
+# ⚠️ Nasceu como conformidade cross-language, mas o runtime Rust saiu do repositório em
+# 2026-07-30 — hoje isto é um GOLDEN CONGELADO, não uma verificação entre duas linguagens
+# vivas. Continua valendo: o valor foi medido por uma implementação independente, então uma
+# regressão no cálculo do Python ainda é pega. O que se perdeu é a capacidade de re-derivá-lo;
+# se este teste falhar, o defeito é do Python — o golden não pode ser "atualizado" para casar.
+RUST_FINGERPRINT_RUNTIME = "4e145aadda045ce654171add157ae7c56e704275dd173b51a9f2754140212647"
+
+
+def test_fingerprint_python_reproduz_o_do_rust():
+    from artifact import vocab_fingerprint
+
+    tokens = REPO / "jvscribe/tests/fixtures/tokens-m4.txt"
+    if not tokens.exists():
+        import pytest
+
+        pytest.skip(f"artefato ausente: {tokens}")
+    assert vocab_fingerprint(tokens) == RUST_FINGERPRINT_RUNTIME
+
+
+def test_real_len_exclui_desambiguacao(tmp_path):
+    from artifact import vocab_real_len
+
+    p = tmp_path / "tokens.txt"
+    p.write_text("<blk> 0\na 1\nb 2\n#0 3\n#1 4\n", encoding="utf-8")
+    assert vocab_real_len(p) == 3
+
+
+def test_model_card_contem_campos_obrigatorios(tmp_path):
+    from artifact import build_card
+
+    (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\n#0 2\n", encoding="utf-8")
+    (tmp_path / "model.int8.onnx").write_bytes(b"fake-onnx-bytes")
+    card = build_card(tmp_path, generated_at="2026-07-30T00:00:00Z")
+    for k in ("model_sha256", "vocab_fingerprint", "vocab_real_len", "generated_at", "model_file"):
+        assert k in card, f"campo obrigatório ausente: {k}"
+    assert card["vocab_real_len"] == 2
+
+
+def test_gerar_card_nunca_remove_nem_move_arquivo(tmp_path):
+    """O invariante do dono: modelo nunca é excluído."""
+    from artifact import build_card, write_card
+
+    (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\n", encoding="utf-8")
+    (tmp_path / "model.int8.onnx").write_bytes(b"pesos")
+    before = sorted(p.name for p in tmp_path.iterdir())
+
+    write_card(tmp_path, build_card(tmp_path, generated_at="2026-07-30T00:00:00Z"))
+    write_card(tmp_path, build_card(tmp_path, generated_at="2026-07-30T00:00:00Z"))  # idempotente
+
+    after = sorted(p.name for p in tmp_path.iterdir())
+    assert set(before).issubset(set(after)), "nenhum arquivo pode sumir"
+    assert (tmp_path / "model.int8.onnx").read_bytes() == b"pesos", "pesos intactos"
+
+
+def test_eval_public_hf_nao_tem_caminho_absoluto():
+    """Critério de aceite T1.3: o script não pode estar amarrado à máquina do dono."""
+    src = (REPO / "jvscribe/batch/eval_public_hf.py").read_text(encoding="utf-8")
+    assert "/home/paulo" not in src, "caminho absoluto ainda presente"
+    # A checagem era pelo literal `JVSCRIBE_MODEL_DIR`. O script passou a DELEGAR ao
+    # `common/artifact.py`, que resolve a variável **e** lê o `model_card.json` — melhor que
+    # reimplementar a cadeia. A guarda segue o mesmo propósito: não amarrar à máquina do dono.
+    assert "default_model_path" in src, "deve resolver pelo artefato canônico"
+
+
+def test_models_current_e_symlink_nao_copia():
+    """`models/current` canoniza por symlink — nunca por cópia ou movimentação de pesos."""
+    current = REPO / "models" / "current"
+    if not current.exists():
+        import pytest
+
+        pytest.skip("models/current ausente (artefatos não versionados)")
+    assert current.is_symlink(), "models/current DEVE ser symlink, não diretório copiado"
+    assert (current / "tokens.txt").exists(), "o symlink deve resolver para um artefato válido"
+
+
+def test_o_schema_declara_o_nome_do_produto():
+    """O schema é `jvscribe-model-card`, não `jvscribe-model-card`.
+
+    "jvscribe" era o nome antigo do produto. Um card publicado com o nome errado confunde quem
+    consome o artefato — e ele É consumido: está no HuggingFace.
+    """
+    import artifact as m
+
+    # O que importa é o que é ESCRITO. O nome antigo pode (e deve) continuar na lista de
+    # aceitos na leitura — ver o teste seguinte.
+    assert m.SCHEMA == "jvscribe-model-card/1"
+
+
+def test_leitor_de_card_aceita_o_schema_antigo():
+    """Compatibilidade: cards já gerados (inclusive o publicado) trazem o nome antigo.
+
+    Recusá-los quebraria a leitura de um artefato válido — o schema mudou de nome, não de
+    formato.
+    """
+    import artifact as m
+
+    assert hasattr(m, "SCHEMAS_ACEITOS"), "falta o conjunto de schemas aceitos na leitura"
+    assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS
+    assert "jvscribe-model-card/1" in m.SCHEMAS_ACEITOS
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# O CLI não pode ESCREVER quando alguém só quis OLHAR.
+#
+# `model_card.json` existe para DETECTAR peso trocado: guarda `model_sha256` e
+# `vocab_fingerprint`. Mas `python3 common/artifact.py <dir>` recomputava os dois a partir do
+# que estivesse em disco e **sobrescrevia o card** — sem `--force`, sem confirmação, imprimindo
+# "escrito:" como se fosse inspeção.
+#
+# A consequência não é estética: com um peso trocado, o card divergente é o alarme. Rodar o
+# gerador — a coisa natural a fazer, "deixa eu regenerar o card" — reescreve o card para
+# abençoar o peso novo. A ferramenta que existe para detectar adulteração a LAVA quando
+# invocada por reflexo.
+#
+# Aconteceu comigo nesta revalidação: rodei para inspecionar e reescreveu. O conteúdo saiu
+# idêntico por sorte (o peso não tinha mudado), e o inventário de entrypoints daquele dia
+# registrava "regenerou model_card.json" como ✅ — sem ninguém notar o que "regenerou"
+# significa.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _artefato_fake(tmp_path):
+    (tmp_path / "model.int8.onnx").write_bytes(b"peso original")
+    (tmp_path / "tokens.txt").write_text("<blk> 0\na 1\nb 2\n", encoding="utf-8")
+    return tmp_path
+
+
+def test_o_modo_padrao_verifica_e_nao_escreve(tmp_path, capsys):
+    """Invocação sem `--write` deixa o card intocado — inclusive o mtime."""
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    antes = card.read_bytes(), card.stat().st_mtime_ns
+
+    assert main([str(d)]) == 0
+    assert (card.read_bytes(), card.stat().st_mtime_ns) == antes, (
+        "o modo padrão escreveu — quem invoca para olhar não pode mutar a autoridade"
+    )
+
+
+def test_peso_trocado_e_denunciado_e_nao_abencoado(tmp_path):
+    """O caso que dá razão a esta guarda existir.
+
+    Antes: o gerador recomputava o sha do peso NOVO e regravava o card, apagando a única
+    evidência de que peso e card divergiam.
+    """
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    original = card.read_text(encoding="utf-8")
+
+    (d / "model.int8.onnx").write_bytes(b"PESO TROCADO")   # o cenário que o card detecta
+
+    assert main([str(d)]) != 0, "divergência entre peso e card tem de falhar"
+    assert card.read_text(encoding="utf-8") == original, (
+        "o card foi reescrito para casar com o peso trocado — a detecção foi lavada"
+    )
+
+
+def test_write_continua_regenerando_de_proposito(tmp_path):
+    """Regenerar é legítimo — só deixa de ser efeito colateral de olhar."""
+    from artifact import build_card, main, write_card
+
+    d = _artefato_fake(tmp_path)
+    card = write_card(d, build_card(d))
+    (d / "model.int8.onnx").write_bytes(b"peso novo, deliberado")
+
+    assert main([str(d), "--write"]) == 0
+    assert "peso" in card.read_text(encoding="utf-8") or card.stat().st_size > 0
+    assert main([str(d)]) == 0, "após regenerar deliberadamente, a verificação passa"
