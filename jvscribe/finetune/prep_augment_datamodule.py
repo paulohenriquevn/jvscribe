@@ -8,7 +8,7 @@ assert count==1 (senão falha alto), valida compilação. Mesmo idioma de
 `prep_finetune.py`.
 
 O que injeta (âncoras verificadas contra o `asr_datamodule.py` REAL de
-`knowledge-base/references/icefall/egs/commonvoice/ASR/zipformer/`):
+`icefall/egs/commonvoice/ASR/zipformer/`):
 
 1. Import de `ReverbWithImpulseResponse` no bloco `from lhotse.dataset import
    (...)` — já importável de lá (blueprint Q3); `CutMix` já está.
@@ -117,7 +117,7 @@ _TELEPHONE_BLOCK = (
 def build_repls() -> list[tuple[str, str]]:
     """As 5 substituicoes (anchor -> anchor+injecao). Anchors sao substrings
     EXATAS do asr_datamodule.py real (verificadas contra
-    knowledge-base/references/icefall/.../commonvoice/ASR/zipformer/) --
+    icefall/egs/commonvoice/ASR/zipformer/) --
     fail-fast (apply_patch/count==1) se a versao na instancia divergir."""
     return [
         # 1. ReverbWithImpulseResponse no bloco de import de lhotse.dataset

@@ -1,10 +1,10 @@
 """Baseline de M1 sobre o test set 8 kHz proxy (T4.1).
 
 Orquestra a régua ponta-a-ponta: lê um manifesto de test set (transcrição
-humana, NUNCA pseudo-label — invariante `PRD.md` § 7.3), aplica a cadeia de
+humana, NUNCA pseudo-label — invariante do projeto), aplica a cadeia de
 augmentação telefônica (`common/audio/augment.sh`), transcreve com um modelo
 baseline, e computa WER+IC via `eval_wer`. Emite um relatório com rótulo de
-proveniência `[MEDIDO]` (`.claude/rules/asr-evidence-discipline.md` § 1).
+proveniência `[MEDIDO]` (disciplina de evidência).
 
 O modelo é injetado (`transcribe_fn`) — DIP: mock determinístico no teste,
 Moonshine/whisper real na execução. A descoberta (blueprint ADR D2) fixou que o
@@ -52,7 +52,7 @@ def load_manifest(entries: list[dict]) -> list[Utterance]:
     """Converte entradas de manifesto em Utterances, rejeitando pseudo-labels.
 
     Raises:
-        BaselineError: se alguma entrada é pseudo-label (invariante PRD § 7.3)
+        BaselineError: se alguma entrada é pseudo-label (invariante do projeto)
                        ou o manifesto está vazio.
     """
     if not entries:
@@ -62,7 +62,7 @@ def load_manifest(entries: list[dict]) -> list[Utterance]:
         if e.get("pseudo_label", False):
             raise BaselineError(
                 f"utterance {i} ({e.get('audio_path','?')}) é pseudo-label — "
-                "PROIBIDO no test set (PRD § 7.3, invariante)"
+                "PROIBIDO no test set (invariante do projeto)"
             )
         utts.append(
             Utterance(

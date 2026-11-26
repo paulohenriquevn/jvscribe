@@ -423,5 +423,5 @@ Challenges*. [arXiv:2502.15264](https://arxiv.org/abs/2502.15264), 2025-02-21.
 | §4.2 | `wiki/medicoes/e1-portao-de-confianca.md` | `probes/portao_correcao_probe.py --curva --n 100` |
 | §5 | `wiki/medicoes/e2-correcao-com-portao.md` | `probes/portao_correcao_probe.py --corrigir --n 100 --tau 1.0` |
 | §6 | `wiki/medicoes/e4-custo-do-beam.md` | `probes/beam_ctc_probe.py --larguras 2 4 8` |
-| protocol | `knowledge-base/plans/portao-de-confianca-plan.md` | pre-registered predictions and kill criteria |
+| protocol | § 8 of this paper | pre-registered predictions and kill criteria |
 | decision | `wiki/decisoes/0005-orcamento-da-correcao-pos-decode.md` | what the numbers decided |

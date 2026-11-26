@@ -1,7 +1,7 @@
 """Baseline real de M1 sobre minds14 pt-PT (fala telefônica 8 kHz real) — T4.1.
 
 minds14 (PolyAI, CC-BY-4.0) é **fala telefônica bancária real 8 kHz** com
-transcrição HUMANA (NÃO pseudo-label; PRD § 7.3 respeitado). É um domínio
+transcrição HUMANA (NÃO pseudo-label — invariante respeitado). É um domínio
 **próximo** do produto — telefonia bancária 8 kHz — com dois gaps explícitos
 (review EVID-04): (a) é **pt-PT** europeu, não pt-BR; (b) são consultas de locutor
 único, não call center 1:1 com crosstalk/AGC. Caveat honesto (blueprint ADR D2,

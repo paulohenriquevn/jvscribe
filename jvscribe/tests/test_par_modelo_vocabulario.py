@@ -1,6 +1,6 @@
 """O par (modelo, vocabulário) não é intercambiável — e nada verificava isso.
 
-`CLAUDE.md` registra o modo de falha como fato medido deste projeto:
+O modo de falha está registrado como fato medido deste projeto:
 
   > Dois artefatos deste projeto têm 500 tokens emitíveis e **492 dos 500 ids mapeiam para
   > tokens diferentes**. Trocar o `tokens.txt` produz português plausível e errado, sem erro

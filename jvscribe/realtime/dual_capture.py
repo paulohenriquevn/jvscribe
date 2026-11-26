@@ -23,7 +23,7 @@ custo de um pipe a mais e a vantagem de não precisar de binding nativo.
 - **Não converte nem reamostra**: `parec` entrega exatamente o formato pedido (`s16le`, taxa e
   canais declarados). Reamostragem em Python no caminho quente seria custo desnecessário.
 - **Falha alto**: source inexistente ou `parec` ausente levantam erro tipado, nunca degradam em
-  silêncio para "sem áudio" (`.claude/rules/error-handling.md` § 2).
+  silêncio para "sem áudio" (erro explícito, nunca silencioso).
 - **Encerra limpo**: `stop()` termina os processos e aguarda; sem processo órfão segurando o
   dispositivo de áudio.
 """

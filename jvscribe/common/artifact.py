@@ -120,7 +120,7 @@ def validar_par_modelo_vocabulario(
 
     ⚠️ A comparação é por FINGERPRINT, nunca por contagem. `[MEDIDO]`: os dois artefatos deste
     projeto têm 500 tokens emitíveis cada e 492 dos 500 ids mapeiam tokens diferentes — a
-    cardinalidade não os distingue. Ver `CLAUDE.md § O modelo`, fato 3.
+    cardinalidade não os distingue.
     """
     d = Path(diretorio)
     card = d / "model_card.json"

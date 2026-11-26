@@ -41,5 +41,5 @@ sobre CPU — foi assim que o FLToP entrou no roadmap: o paper mede num regime e
 
 ## Arquitetura → arquitetura sem parentesco
 
-O erro original registrado no PRD: benchmarks medidos em Moonshine sustentando a escolha de
+O erro original registrado no documento de requisitos: benchmarks medidos em Moonshine sustentando a escolha de
 Zipformer. Modelos sem parentesco não transferem número.

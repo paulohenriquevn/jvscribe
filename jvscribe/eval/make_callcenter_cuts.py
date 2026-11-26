@@ -13,6 +13,7 @@ import numpy as np
 import soundfile as sf
 import torch
 from lhotse import CutSet, Fbank, FbankConfig, Recording, SupervisionSegment, SupervisionSet
+from lhotse.features.io import LilcomChunkyWriter
 from lhotse.audio import RecordingSet
 from scipy.signal import resample_poly
 
@@ -76,8 +77,13 @@ def main():
                                        language="Portuguese", text=""))
     cs = CutSet.from_manifests(recordings=RecordingSet.from_recordings(recs),
                                supervisions=SupervisionSet.from_segments(sups))
+        # `storage_type` EXPLÍCITO: o default do lhotse é `numpy_files`, que grava
+        # **115 MB por hora** de áudio contra **33 MB** do `lilcom_chunky` `[MEDIDO]`
+        # (`wiki/medicoes/m10-t3-fbank-e-storage.md`). Em 5.000 h a diferença é de ~410 GB,
+        # e o lhotse não avisa — ele apenas grava maior.
     cs = cs.compute_and_store_features(extractor=extractor,
-                                       storage_path=str(out / "feats"), num_jobs=1)
+                                       storage_path=str(out / "feats"), num_jobs=1,
+                                       storage_type=LilcomChunkyWriter)
     cs.to_file(str(out / "cv-pt_cuts_test.jsonl.gz"))
     print(f"[cc] {len(cs)} cuts -> {out}/cv-pt_cuts_test.jsonl.gz", flush=True)
 

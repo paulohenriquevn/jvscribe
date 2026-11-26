@@ -34,7 +34,7 @@ Todos `[MEDIDO]` nesta campanha, e todos consomem compute:
 
 ## O que 1× realmente reabriria — e a medição fecha de novo
 
-O `CLAUDE.md` fundamenta a aposta do projeto assim: *"um modelo que só faz PT-BR telefônico cabe em
+O [`ROADMAP.md`](../../ROADMAP.md) § Vision fundamenta a aposta do projeto assim: *"um modelo que só faz PT-BR telefônico cabe em
 dezenas de milhões de parâmetros onde um multilíngue de 600M não fecha real-time em CPU"*. Se o
 requisito cai para 1×, essa premissa precisa ser reexaminada.
 

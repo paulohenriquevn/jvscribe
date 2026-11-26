@@ -14,7 +14,7 @@ Data: 2026-07-31 · `jvscribe/realtime/live_transcribe.py` · modelo `models/cur
 ## Hipótese
 
 A app captura mic (ATENDENTE) e loopback (CLIENTE) em paralelo, transcreve os dois e atende
-os critérios de real-time do `PRD.md § 6`.
+os critérios de real-time (RNF-01..05).
 
 ## Evidência 1 — o roteamento de falante funciona
 

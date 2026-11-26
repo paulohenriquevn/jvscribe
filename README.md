@@ -1,132 +1,134 @@
-# jvscribe — transcrição PT-BR em tempo real, sobre CPU
+# jvscribe — real-time Brazilian Portuguese transcription, on CPU
 
-Transcreva atendimento em português brasileiro **ao vivo, no notebook do próprio
-atendente** — sem GPU, sem enviar áudio para a nuvem, sem custo por hora transcrita.
+Transcribe Brazilian Portuguese customer-service calls **live, on the agent's own
+laptop** — no GPU, no audio sent to the cloud, no per-hour transcription cost.
 
-A aposta é **especialização**: um modelo que só faz PT-BR telefônico cabe em dezenas
-de milhões de parâmetros onde um multilíngue de 600M não fecha tempo real em CPU.
+The bet is **specialization**: a model that only does telephone PT-BR fits in tens of
+millions of parameters, where a 600M multilingual model cannot reach real time on CPU.
 
-Escopo deste repositório: **o modelo** e **o motor de inferência**. Plataforma de
-frota, compliance LGPD e UI ficam fora (`PRD.md` § 3.2).
+Scope of this repository: **the model** and **the inference engine**. Fleet platform,
+LGPD compliance and UI are out of scope ([`ROADMAP.md`](ROADMAP.md) § Scope).
 
 ---
 
-## Estado do projeto
+## Project status
 
-Projeto em **discover contínuo, orientado por evidência**: a arquitetura não é
-escolhida por convicção, é medida. Progresso por milestones (`ROADMAP.md`, M0–M9).
+The project runs as **continuous, evidence-driven discovery**: the architecture is not
+chosen by conviction, it is measured. Progress is tracked by milestones (`ROADMAP.md`, M0–M9).
 
-| Milestone | Estado |
+| Milestone | Status |
 |---|---|
-| M0 — Fundação do runtime · M1 — Instrumentação | ✅ concluídos |
-| M2 — Decisão de arquitetura · M3 — Corpus | ✅ concluídos |
-| M4 — Piloto comparativo | ✅ concluído |
-| M5 — Modelo em escala | ⚠️ 2/3 DoDs — o telefônico ficou **deferido** por limite de dado ([evidência](wiki/medicoes/m5-modelo-final.md)) |
-| M9 — Governança de artefato e reprodutibilidade | ✅ concluído |
-| M6 — Runtime otimizado | 🔬 em medição ([profile por operador](wiki/medicoes/m6-profile-por-operador.md), [RNF ao vivo](wiki/medicoes/m6-rnf-ao-vivo.md)) |
-| M7 — Escopo de produto · M8 — Piloto | ⏳ próximos |
+| M0 — Runtime foundation · M1 — Instrumentation | ✅ done |
+| M2 — Architecture decision · M3 — Corpus | ✅ done |
+| M4 — Comparative pilot | ✅ done |
+| M5 — Model at scale | ⚠️ 2/3 DoDs — telephone audio was **deferred** for lack of data ([evidence](wiki/medicoes/m5-modelo-final.md)) |
+| M9 — Artifact governance and reproducibility | ✅ done |
+| M6 — Optimized runtime | 🔬 being measured ([per-operator profile](wiki/medicoes/m6-profile-por-operador.md), [live NFRs](wiki/medicoes/m6-rnf-ao-vivo.md)) |
+| M7 — Product scope · M8 — Pilot | ⏳ next |
 
-> A tabela reflete o `ROADMAP.md`, que é a fonte da verdade. Um teste
-> ([`test_readme_links.py`](jvscribe/tests/test_readme_links.py)) garante que todo link interno
-> daqui resolve — em 2026-07-30, 5 de 5 apontavam para arquivos removidos por engano.
+> This table mirrors `ROADMAP.md`, which is the source of truth. A test
+> ([`test_readme_links.py`](jvscribe/tests/test_readme_links.py)) guarantees that every internal
+> link here resolves — on 2026-07-30, 5 out of 5 pointed to files deleted by mistake.
 
-### A arquitetura, decidida por medição
+### The architecture, decided by measurement
 
-Dos 5 candidatos avaliados contra 8 critérios, a família **CTC/transducer** venceu o critério
-de velocidade em CPU (M2). O piloto comparativo de M4 então **travou o finalista**:
-**Zipformer-CTC `medium` (64M), int8, com cabeça de fonema auxiliar** —
-[ADR 0003](wiki/decisoes/0003-finalista-medium.md), que supersede o eixo de tamanho do
-[ADR 0002](wiki/decisoes/0002-zipformer-ctc-small.md) após medição de soak e carga.
+Out of 5 candidates evaluated against 8 criteria, the **CTC/transducer** family won the
+CPU-speed criterion (M2). The M4 comparative pilot then **locked the finalist**:
+**Zipformer-CTC `medium` (64M), int8, with an auxiliary phoneme head** —
+[ADR 0003](wiki/decisoes/0003-finalista-medium.md), which supersedes the size axis of
+[ADR 0002](wiki/decisoes/0002-zipformer-ctc-small.md) after soak and load measurements.
 
-`[MEDIDO]` head-to-head com parâmetros equivalentes: Zipformer domina Conformer nos dois eixos
-de acurácia (WER 28,86% vs 31,57%, IC95% do delta excluindo 0). A cabeça de fonema levou o
-medium a **27,49% WER** ([evidência](wiki/medicoes/m4-cabeca-de-fonema-no-medium.md)).
+`[MEDIDO]` Head-to-head at equal parameter count: Zipformer beats Conformer on both accuracy
+axes (WER 28.86% vs 31.57%, with the 95% CI of the delta excluding 0). The phoneme head took the
+medium model to **27.49% WER** ([evidence](wiki/medicoes/m4-cabeca-de-fonema-no-medium.md)).
 
-**O achado de M2 que orientou a escolha da família** `[MEDIDO]`: em CPU, na mesma máquina e na mesma
-clip de 12 s, o transducer é **~2× mais rápido** que o AED em tamanho comparável —
-Zipformer 20M = 15,90 ± 2,06× tempo real vs Moonshine tiny 27M = 7,93 ± 0,72×
-(n=10, separação estatística limpa;
-[medição completa](wiki/medicoes/m2-rtfx-candidatos.md)). A razão é
-arquitetural: o AED é autoregressivo (custo cresce com os tokens gerados), o
-transducer/CTC faz um passe (custo fixo pelos frames de áudio).
+**The M2 finding that drove the choice of family** `[MEDIDO]`: on CPU, on the same machine and the
+same 12 s clip, the transducer is **~2× faster** than AED at comparable size —
+Zipformer 20M = 15.90 ± 2.06× real time vs Moonshine tiny 27M = 7.93 ± 0.72×
+(n=10, clean statistical separation;
+[full measurement](wiki/medicoes/m2-rtfx-candidatos.md)). The reason is
+architectural: AED is autoregressive (cost grows with the generated tokens), while
+transducer/CTC does a single pass (cost fixed by the audio frames).
 
-> Nota de honestidade: esses números são medidos numa **máquina de dev, não no piso
-> da frota BYOD** (ainda `[DESCONHECIDO]`) — o que transfere é a *razão entre
-> arquiteturas*, não o valor absoluto. A magnitude "~2×" precisa de confirmação sob
-> soak com carga concorrente em M4; reportar dispersão já baixou uma estimativa
-> anterior de "~3×" (a diferença era carga de CPU).
+> Honesty note: these numbers were measured on a **dev machine, not on the BYOD fleet's
+> floor hardware** (still `[DESCONHECIDO]`) — what transfers is the *ratio between
+> architectures*, not the absolute value. The "~2×" magnitude needs confirmation under
+> soak with concurrent load in M4; reporting dispersion already lowered an earlier
+> "~3×" estimate (the difference was CPU load).
 
 ---
 
-## O modelo entregue
+## The shipped model
 
-**`jvscribe-ptbr-zipformer-ctc-64m`** — Zipformer-CTC de 64M parâmetros, int8, com cabeça de
-fonema auxiliar. Publicado em `paulohenriquevn/jvscribe` (HuggingFace, privado).
+**`jvscribe-ptbr-zipformer-ctc-64m`** — 64M-parameter Zipformer-CTC, int8, with an auxiliary
+phoneme head. Published at `paulohenriquevn/jvscribe` (Hugging Face, private).
 
-| | valor | condição |
+| | value | condition |
 |---|---|---|
-| WER | **15,99%** | FLEURS pt_br `test[0:100]`, 2.552 palavras, greedy CTC |
-| CER | **7,30%** | idem |
-| RTFx | **40,0×** | i7 12-core, ONNX int8, 4 threads, load average < 1 |
+| WER | **15.99%** | FLEURS pt_br `test[0:100]`, 2,552 words, greedy CTC |
+| CER | **7.30%** | same |
+| RTFx | **40.0×** | 12-core i7, ONNX int8, 4 threads, load average < 1 |
 
-`[MEDIDO]` 2026-07-31 e **reproduzido a partir do download do HuggingFace**, não dos arquivos
-locais ([evidência](wiki/medicoes/reprodutibilidade.md)): sha256 e
-`vocab_fingerprint` conferem com o model card, e o checkpoint publicado carrega, codifica
-PT-BR e aceita treino.
+`[MEDIDO]` 2026-07-31 and **reproduced from the Hugging Face download**, not from local
+files ([evidence](wiki/medicoes/reprodutibilidade.md)): sha256 and
+`vocab_fingerprint` match the model card, and the published checkpoint loads, encodes
+PT-BR and accepts training.
 
-Dos dois candidatos M5 que coabitavam o artefato, o oficial foi decidido por **bootstrap
-pareado** — IC95% do delta em [−2,25; −0,43] pp, sem cruzar zero. O `model_card.json` é a
-autoridade sobre qual peso roda; nome de arquivo não conhece WER.
+Of the two M5 candidates that shared the artifact, the official one was chosen by **paired
+bootstrap** — 95% CI of the delta in [−2.25, −0.43] pp, not crossing zero. `model_card.json` is
+the authority on which weights run; a file name knows nothing about WER.
 
-> O número anterior deste README (27,49%) era o entregável de **M4**, uma geração atrás.
+> The previous number in this README (27.49%) was the **M4** deliverable, one generation back.
 
-**Limites honestos:** WER em telefonia 8 kHz e em fala espontânea de call center seguem
-`[DESCONHECIDO]` — FLEURS é leitura de notícias. E o modelo **não é streaming**: é não-causal,
-usado ao vivo por janela deslizante ([por quê](docs/ARCHITECTURE.md)).
+**Honest limits:** WER on 8 kHz telephone audio and on spontaneous call-center speech remains
+`[DESCONHECIDO]` — FLEURS is read news. And the model is **not streaming**: it is non-causal,
+used live through a sliding window ([why](docs/ARCHITECTURE.md)).
 
-## Rodando
+## Running
 
 ```bash
 pip install -r requirements-eval.txt        # onnxruntime, lhotse, soundfile
-export JVSCRIBE_MODEL_DIR=/caminho/do/artefato # ou deixe models/current apontar para ele
+export JVSCRIBE_MODEL_DIR=/path/to/artifact # or let models/current point to it
 
-# lote — uma pasta de áudios em qualquer formato
-python3 jvscribe/batch/batch_transcribe.py --input-dir ./audios --out-dir ./saida
+# batch — a folder of audio files in any format
+python3 jvscribe/batch/batch_transcribe.py --input-dir ./audios --out-dir ./output
 
-# ao vivo, os dois lados da ligação (ATENDENTE = mic · CLIENTE = loopback)
-python3 jvscribe/realtime/live_transcribe.py --duracao 60 --relatorio evidencia.md
+# live, both sides of the call (ATENDENTE = mic · CLIENTE = loopback)
+python3 jvscribe/realtime/live_transcribe.py --duracao 60 --relatorio evidence.md
 ```
 
-O tempo real exige `pulseaudio-utils` (`parec`, `pactl`) — a captura precisa prender cada
-stream à sua source, e `sounddevice` não expõe monitor sources.
+Real time requires `pulseaudio-utils` (`parec`, `pactl`) — capture must bind each
+stream to its own source, and `sounddevice` does not expose monitor sources.
 
-| ferramenta | para quê |
+| tool | purpose |
 |---|---|
-| [`jvscribe/bench/runtime_bench.py`](jvscribe/bench/runtime_bench.py) | varredura de configuração do ONNX com bootstrap pareado |
-| [`jvscribe/bench/stress_test.py`](jvscribe/bench/stress_test.py) | soak com o modelo real — degradação minuto a minuto |
-| [`jvscribe/bench/finetune_smoke.py`](jvscribe/bench/finetune_smoke.py) | prova que um checkpoint carrega, codifica PT-BR e treina |
-| [`jvscribe/eval/compare_models.py`](jvscribe/eval/compare_models.py) | compara dois modelos na mesma régua, com IC |
-| [`jvscribe/bench/calibrate.py`](jvscribe/bench/calibrate.py) | **calibra o runtime para a máquina-alvo** — rode ao trocar de CPU |
+| [`jvscribe/bench/runtime_bench.py`](jvscribe/bench/runtime_bench.py) | ONNX configuration sweep with paired bootstrap |
+| [`jvscribe/bench/stress_test.py`](jvscribe/bench/stress_test.py) | soak with the real model — minute-by-minute degradation |
+| [`jvscribe/bench/finetune_smoke.py`](jvscribe/bench/finetune_smoke.py) | proves a checkpoint loads, encodes PT-BR and trains |
+| [`jvscribe/eval/compare_models.py`](jvscribe/eval/compare_models.py) | compares two models on the same yardstick, with CIs |
+| [`jvscribe/bench/calibrate.py`](jvscribe/bench/calibrate.py) | **calibrates the runtime for the target machine** — run it when you change CPUs |
 
 ---
 
-## Como navegar
+## Finding your way around
 
-| Documento | Papel |
+The knowledge base under `wiki/` is written in Portuguese.
+
+| Document | Role |
 |---|---|
-| [`docs/CALIBRATION.md`](docs/CALIBRATION.md) | **Runbook de calibração** — o que é portável entre CPUs e o que precisa ser remedido |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Como o modelo e o motor funcionam** — grafo, stacks, custo por operador, pipelines de lote e tempo real |
-| [`PRD.md`](PRD.md) | Requisitos (RF/RNF), arquitetura, pendências, riscos, questões abertas |
-| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 com Definition of Done |
-| [`wiki/medicoes/`](wiki/medicoes/) | Toda medição, com hipótese, evidência e limitações separadas |
-| [`CHANGELOG.md`](CHANGELOG.md) | Toda mudança relevante |
-| [`wiki/`](wiki/index.md) | **Base de conhecimento** em Open Knowledge Format — modelo, motor, treino, otimização, medições e decisões |
-| [`wiki/decisoes/`](wiki/decisoes/index.md) | ADRs — o que foi travado, com racional e alternativas |
-| [`.claude/rules/asr-evidence-discipline.md`](.claude/rules/asr-evidence-discipline.md) | Contrato de evidência — todo número carrega rótulo de proveniência |
+| [`docs/CALIBRATION.md`](docs/CALIBRATION.md) | **Calibration runbook** — what is portable across CPUs and what must be re-measured |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **How the model and the engine work** — graph, stacks, per-operator cost, batch and real-time pipelines |
+| [`ROADMAP.md`](ROADMAP.md) | Milestones M0–M9 with Definition of Done, scope, constraints and open questions |
+| [`wiki/medicoes/`](wiki/medicoes/) | Every measurement, with hypothesis, evidence and limitations kept separate |
+| [`wiki/log.md`](wiki/log.md) | Project history in chronological order |
+| [`wiki/`](wiki/index.md) | **Knowledge base** in Open Knowledge Format — model, engine, training, optimization, measurements and decisions |
+| [`wiki/decisoes/`](wiki/decisoes/index.md) | ADRs — what was locked, with rationale and alternatives |
+| [`wiki/disciplina/`](wiki/disciplina/index.md) | Evidence contract — every number carries a provenance label |
 
-## Disciplina de evidência
+## Evidence discipline
 
-Todo número neste projeto carrega um rótulo: `[MEDIDO]` (rodamos o experimento),
-`[LITERATURA]` (reportado por terceiro), `[FONTE-REPO]` (fato lido no código de um
-peer clonado), `[ESTIMATIVA]` (derivado por cálculo) ou `[DESCONHECIDO]`. Sem rótulo,
-o número não existe. É a vacina contra decidir por benchmark que não transfere.
+Every number in this project carries a label: `[MEDIDO]` (measured: we ran the experiment),
+`[LITERATURA]` (literature: reported by a third party), `[FONTE-REPO]` (source repo: a fact read
+in the code of a cloned peer), `[ESTIMATIVA]` (estimate: derived by calculation) or
+`[DESCONHECIDO]` (unknown). Without a label, the number does not exist. It is the vaccine against
+deciding by a benchmark that does not transfer.

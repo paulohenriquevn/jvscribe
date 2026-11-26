@@ -10,7 +10,7 @@
 > renderiza em qualquer navegador em [`docs/paper/figuras.html`](./figuras.html); a arquitetura
 > isolada em [`docs/paper/arquitetura.html`](./arquitetura.html).
 >
-> **Rótulos de proveniência** (`.claude/rules/asr-evidence-discipline.md`): `[MEDIDO]` (rodamos o
+> **Rótulos de proveniência** (`wiki/disciplina/rotulos-de-proveniencia.md`): `[MEDIDO]` (rodamos o
 > experimento) · `[LITERATURA]` (terceiro citável) · `[FONTE-REPO]` (fato lido em código, arquivo:linha)
 > · `[ESTIMATIVA]` (cálculo explícito) · `[DESCONHECIDO]`. Sem rótulo, o número não existe.
 
@@ -118,8 +118,8 @@ contribuição é *como selecionar, treinar, medir e depurar* sob restrição de
 
 | Restrição | Valor | Racional |
 |---|---|---|
-| RTFx (componente ASR isolado) | **≥ 6×** num i7-1355U de referência (15 W) | O pipeline completo (ASR + diarização + …) soma pelo *inverso* das taxas; ASR sozinho a 3× não deixaria orçamento. `[FONTE-REPO]` PRD §6 |
-| Cauda de latência | p99, não média | a média esconde a cauda que quebra o produto `[FONTE-REPO]` PRD §6 |
+| RTFx (componente ASR isolado) | **≥ 6×** num i7-1355U de referência (15 W) | O pipeline completo (ASR + diarização + …) soma pelo *inverso* das taxas; ASR sozinho a 3× não deixaria orçamento. `[FONTE-REPO]` requisito de real-time |
+| Cauda de latência | p99, não média | a média esconde a cauda que quebra o produto `[FONTE-REPO]` requisito de real-time |
 | Carga sustentada | soak ≥ 10 min, softphone concorrente ativo | benchmark de 30 s mede turbo, não regime permanente, num chip de 15 W |
 | Hardware | só CPU, sem GPU, sem rede | requisito de produto |
 
@@ -496,18 +496,18 @@ Checklist destilado para quem for construir um ASR-CPU especializado em tempo re
 
 Artefatos liberados e testados (159 testes unitários no total):
 
-- **`training/batch/batch_transcribe.py`** — pasta → transcrições, decode via ffmpeg (qualquer formato),
+- **`jvscribe/batch/batch_transcribe.py`** — pasta → transcrições, decode via ffmpeg (qualquer formato),
   segmentação por VAD de energia, inferência ONNX batched, decode paralelo; 7 testes incl. um smoke ponta-a-ponta.
-- **`training/batch/eval_public_hf.py`** — benchmark público reproduzível (FLEURS pt_br) com WER + RTFx.
-- **`training/eval/measure_realcodec.py`, `training/eval/measure_callcenter.py`** — harnesses honestos de WER telefônico.
-- **`scripts/corpus/codec_pool.py`** — augmentação realista por pool de codecs (G.711 via audioop;
+- **`jvscribe/batch/eval_public_hf.py`** — benchmark público reproduzível (FLEURS pt_br) com WER + RTFx.
+- **`jvscribe/eval/measure_realcodec.py`, `jvscribe/eval/measure_callcenter.py`** — harnesses honestos de WER telefônico.
+- **`jvscribe/common/audio/codecs.py`** — augmentação realista por pool de codecs (G.711 via audioop;
   GSM/Opus via ffmpeg / torchaudio `AudioEffector` in-process para throughput).
 - **`models/…/mic_transcribe.py`** — demo de mic em tempo real (LocalAgreement-2 pseudo-streaming sobre
   o modelo não-causal).
 - Runbooks (`run_ft_*.sh`) capturam as configurações exatas de treino, incluindo o `--init-modules` corrigido.
 
 A decisão do finalista, as ablações e a investigação telefônica estão registradas com comandos e
-números por-run em `training/results/` e nos blueprints de descoberta, sob uma trilha de ADRs (`0001`–`0003`).
+números por-run em `wiki/medicoes/` e nos blueprints de descoberta, sob uma trilha de ADRs (`0001`–`0003`).
 
 ---
 
@@ -549,9 +549,8 @@ telefônico real, não de uma loss mais esperta.
 - Vu, Zeng, Xu, Chng (2019). *Audio Codec Simulation based Data Augmentation for Telephony Speech Recognition.* APSIPA.
 - Li, Yu, Huang, Gong (2013). *Improving Wideband Speech Recognition Using Mixed-Bandwidth Training Data.* ICASSP.
 - Macháček, Dabre, Bojar (2023). *Turning Whisper into Real-Time Transcription System.* ACL demo (whisper_streaming).
-- Internas: ADRs `0001`–`0003`; registros de resultado em `training/results/`; blueprints de descoberta
-  em `knowledge-base/discoveries/blueprints/`; regra de disciplina de evidência
-  `.claude/rules/asr-evidence-discipline.md`.
+- Internas: ADRs `0001`–`0003` em `wiki/decisoes/`; registros de resultado em `wiki/medicoes/`;
+  disciplina de evidência em `wiki/disciplina/`.
 
 ---
 

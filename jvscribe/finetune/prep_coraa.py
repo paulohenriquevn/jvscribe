@@ -16,7 +16,7 @@ Reuso (Regra 9 — sem duplicar):
 Layout de entrada esperado (após `unzip {split}.zip` no --audio-root):
   {audio-root}/{split}/sp/{idx}_sp_.wav   (o file_path do CSV é relativo ao audio-root)
 
-INVARIANTE (PRD §7.3): este script usa APENAS a transcrição humana do CSV do CORAA.
+INVARIANTE DO PROJETO: este script usa APENAS a transcrição humana do CSV do CORAA.
 NUNCA gera pseudo-label. O split test é o anchor de eval espontâneo de M5.
 
 Splits oficiais do CORAA (paper arXiv:2110.15731, Tab.4) [LITERATURA]:
@@ -40,6 +40,7 @@ import sys
 from pathlib import Path
 
 from lhotse import CutSet, Fbank, FbankConfig, Recording, SupervisionSegment, SupervisionSet
+from lhotse.features.io import LilcomChunkyWriter
 from lhotse.audio import RecordingSet
 from lhotse.utils import fastcopy
 
@@ -120,8 +121,13 @@ def prepare(split: str, audio_root: Path, meta_dir: Path, out: Path, extractor,
         recordings=RecordingSet.from_recordings(recs),
         supervisions=SupervisionSet.from_segments(sups))
     cuts = cuts.resample(TARGET_SR)  # garante 16k = distribuição do treino
+        # `storage_type` EXPLÍCITO: o default do lhotse é `numpy_files`, que grava
+        # **115 MB por hora** de áudio contra **33 MB** do `lilcom_chunky` `[MEDIDO]`
+        # (`wiki/medicoes/m10-t3-fbank-e-storage.md`). Em 5.000 h a diferença é de ~410 GB,
+        # e o lhotse não avisa — ele apenas grava maior.
     cuts = cuts.compute_and_store_features(
-        extractor=extractor, storage_path=str(out / f"feats_{split}"), num_jobs=num_jobs)
+        extractor=extractor, storage_path=str(out / f"feats_{split}"), num_jobs=num_jobs,
+        storage_type=LilcomChunkyWriter)
     cuts = CutSet.from_cuts(_clamp(c) for c in cuts)
     cuts.to_file(str(out / f"cv-pt_cuts_{split}.jsonl.gz"))
     hours = sum(c.duration for c in cuts) / 3600.0
@@ -146,7 +152,7 @@ def main():
     # guarda-corpo do invariante: filtro de voto proibido no anchor de eval
     if args.min_net_votes is not None and any(s in ("dev", "test") for s in args.splits):
         sys.exit("[coraa] ERRO: --min-net-votes altera o split oficial; proibido em dev/test "
-                 "(anchor de eval de M5, PRD §7.3). Rode dev/test sem o filtro.")
+                 "(anchor de eval de M5, invariante do projeto). Rode dev/test sem o filtro.")
 
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     audio_root = Path(args.audio_root)

@@ -1,6 +1,6 @@
 """A opção de diarização — e a aritmética que decide se ela cabe.
 
-`CLAUDE.md`: *no caso 1:1 não existe diarização* — o mic **é** o atendente e o loopback **é** o
+No caso 1:1 não existe diarização* — o mic **é** o atendente e o loopback **é** o
 cliente, por construção da captura: custo zero, acurácia 100%. Esta opção não revoga isso; ela
 destrava os casos que a demo de 2026-07-31 mostrou serem reais e que a captura por canal não
 resolve:
@@ -11,7 +11,7 @@ resolve:
 | supervisor entra na ligação | três falantes, dois canais |
 | duas pessoas do lado do cliente | o loopback carrega duas vozes |
 
-⚠️ **O orçamento é o portão, e ele é aritmético.** Taxas somam pelo INVERSO (`PRD.md` § 6,
+⚠️ **O orçamento é o portão, e ele é aritmético.** Taxas somam pelo INVERSO (RNF-01..05,
 racional do RNF-07): ASR a 3× somado a diarização a 3× dá **1,5×**, não 3×. Com o RTFx ao vivo
 medido de **3,58×**, um diarizador teria de rodar a **18,5×** para o pipeline ficar em ≥3×.
 

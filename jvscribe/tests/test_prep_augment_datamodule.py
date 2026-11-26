@@ -26,7 +26,7 @@ import prep_augment_datamodule  # noqa: E402
 
 # asr_datamodule.py mínimo com os 5 anchors que o patch procura (subconjunto
 # fiel do arquivo real, validado à parte contra
-# knowledge-base/references/icefall/.../commonvoice/ASR/zipformer/asr_datamodule.py).
+# icefall/egs/commonvoice/ASR/zipformer/asr_datamodule.py).
 FIXTURE_DATAMODULE_PY = '''\
 from lhotse.dataset import (  # noqa F401 for PrecomputedFeatures
     CutConcatenate,

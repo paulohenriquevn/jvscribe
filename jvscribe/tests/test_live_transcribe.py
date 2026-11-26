@@ -1,7 +1,7 @@
 """Núcleo da app de transcrição ao vivo em dois canais.
 
 Testa o que é lógica de negócio — rotulagem de falante, montagem de turnos e o veredito
-contra os RNF do PRD § 6 — sem tocar em áudio, modelo ou hardware. A captura tem os seus
+contra os RNF de real-time — sem tocar em áudio, modelo ou hardware. A captura tem os seus
 próprios testes em `test_dual_capture.py`.
 """
 import sys
@@ -18,7 +18,7 @@ from live_transcribe import MetricasRNF, Transcricao, rotular  # noqa: E402
 
 # --- rotulagem de falante -------------------------------------------------
 # No caso 1:1 a diarização não precisa existir: o mic É o atendente por construção e o
-# loopback É o cliente (CLAUDE.md). Errar este mapeamento troca quem disse o quê.
+# loopback É o cliente. Errar este mapeamento troca quem disse o quê.
 
 def test_mic_e_o_atendente_e_loopback_e_o_cliente():
     assert rotular("mic") == "ATENDENTE"
@@ -104,7 +104,7 @@ def test_resumo_sem_amostras_nao_divide_por_zero():
     assert r["amostras"] == 0 and r["rtfx"] is None and r["p99_ms"] is None
 
 
-# --- veredito contra os limiares do PRD § 6 -------------------------------
+# --- veredito contra os limiares de RNF -------------------------------
 
 def test_veredito_aprova_quando_os_tres_criterios_sao_atendidos():
     m = MetricasRNF()

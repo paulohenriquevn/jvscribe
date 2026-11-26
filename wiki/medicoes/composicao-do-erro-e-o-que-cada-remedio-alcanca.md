@@ -42,7 +42,7 @@ colapsou numa palavra). Grafias inexistentes, 1–3 edições de distância.
 **Inatacável por léxico** — `segundo→segunda`, `de→da`, `logo→longo`, `a→antes`. Isto é
 **concordância, gênero e palavra funcional**: as duas formas existem, e nenhuma lista distingue.
 Mas é precisamente o que um **modelo de linguagem no decode** resolve — a alavanca que o
-`CLAUDE.md` já registra como não explorada (beam + LM, 10–20% relativo `[LITERATURA]`).
+o projeto já registra como não explorada (beam + LM, 10–20% relativo `[LITERATURA]`).
 
 Ou seja: rotular esse terço de "inatacável" é verdade **para léxico** e falso para LM.
 
@@ -118,7 +118,7 @@ por um caminho independente.
 | [`arXiv:2409.06062`](https://arxiv.org/abs/2409.06062) | retrieval por similaridade **acústica** + LLM corretor sobre texto | `non_word_hyp` + `rare_ref` | **parcialmente** |
 | [`arXiv:2505.17410`](https://arxiv.org/abs/2505.17410) | dados **sintéticos** de termos raros no treino | `rare_ref` na origem | **parcialmente** |
 | [`arXiv:2509.19567`](https://arxiv.org/abs/2509.19567) | **descoberta automática** de contexto por embedding + biasing | `rare_ref` | **retrieval sim, biasing não** |
-| beam + LM (`CLAUDE.md`) | fusão com modelo de linguagem no decode | `real_word_hyp` | sim, não explorado |
+| beam + LM | fusão com modelo de linguagem no decode | `real_word_hyp` | sim, não explorado |
 | [`arXiv:2502.15264`](https://arxiv.org/abs/2502.15264) | RAG no decoder do LLM | — | **não** |
 | [`arXiv:2501.06713`](https://arxiv.org/abs/2501.06713) | RAG por grafo para modelos pequenos | — | **não** — outra tarefa |
 

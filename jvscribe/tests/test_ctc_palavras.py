@@ -1,6 +1,6 @@
 """Confiança por palavra — o instrumento da fase E0 do protocolo do portão.
 
-`knowledge-base/plans/portao-de-confianca-plan.md` § Phase E0. A margem (top-1 menos top-2, em
+A margem (top-1 menos top-2, em
 nats) é o único sinal de confiança que sai **de graça** do decode que já rodamos, e mediu
 separação real: a τ=1,0 sinaliza 10,3% das palavras e contém 49,8% dos erros.
 

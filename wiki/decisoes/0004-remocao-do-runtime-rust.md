@@ -15,7 +15,7 @@ timestamp: 2026-07-31T00:00:00Z
 ## Contexto
 
 O repositório mantinha dois runtimes: um motor de inferência em Rust (3 crates, 4.042 LoC,
-79 testes) e as pipelines Python de corpus, treino e avaliação. O PRD escopava o repositório
+79 testes) e as pipelines Python de corpus, treino e avaliação. O documento de requisitos escopava o repositório
 como "o modelo **e** o motor de inferência".
 
 A decisão foi motivada por **colaboração**: cientistas de dados trabalham em Python, e manter
@@ -26,8 +26,8 @@ um segundo runtime em outra linguagem cobra imposto de contexto em toda mudança
 Uma medição preliminar sugeriu que o binário Rust entregava RTFx 5,8× — abaixo do piso de 6×
 do RNF-07 — enquanto o harness Python reportava 41–90×. **Essa comparação era inválida** e foi
 corrigida antes de decidir: confrontava o RTFx do Rust (pipeline completo — fbank + inferência
-+ decode) com o do `bench_rtfx.py` (só inferência). É a falácia § 3 #11 da
-`asr-evidence-discipline.md`.
++ decode) com o do `bench_rtfx.py` (só inferência) — comparar medições de escopos diferentes
+([o que não transfere](../disciplina/o-que-nao-transfere.md)).
 
 Comparação justa `[MEDIDO]` 2026-07-30, mesma clip de 17,76 s, mesmo pipeline, 2 threads,
 i7-1355U:
@@ -62,9 +62,9 @@ rotulagem de falante.
 8 entradas e **zero** monitor sources. É o mesmo motivo que levou o ADR D2 a escolher libpulse
 em vez de cpal.
 
-Solução adotada: `training/realtime/dual_capture.py`, um processo `parec --device=<source>` por
+Solução adotada: `realtime/dual_capture.py`, um processo `parec --device=<source>` por
 stream. Mesma capacidade, mesmo mecanismo do libpulse, via subprocesso. **Provado em execução**
-por `training/tests/test_dual_capture.py` — 6 testes, incluindo captura simultânea real dos dois
+por `tests/test_dual_capture.py` — 6 testes, incluindo captura simultânea real dos dois
 streams e verificação de que nenhum processo fica órfão.
 
 ### O que se perdeu
@@ -85,5 +85,5 @@ streams e verificação de que nenhum processo fica órfão.
 
 O produto se chama **jvscribe**. As referências a "jvscribe" e aos crates `jvscribe-*` eram
 resquício e foram corrigidas nos documentos vivos. Registros históricos (ADRs anteriores,
-`training/results/*.md`, medições) **não** foram reescritos: eles documentam o que era verdade
+medições) **não** foram reescritos: eles documentam o que era verdade
 quando foram escritos, e reescrevê-los falsificaria evidência.

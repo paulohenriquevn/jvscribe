@@ -8,7 +8,7 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Disciplina de evidência
 
-Este projeto registra no próprio PRD uma falha de método já cometida: a escolha de Zipformer foi
+Este projeto registra no próprio documento de requisitos original uma falha de método já cometida: a escolha de Zipformer foi
 sustentada, inicialmente, por benchmarks medidos em arquitetura sem parentesco. As regras abaixo
 são a vacina.
 

@@ -1,8 +1,7 @@
-"""O portão de confiança — lógica pura da fase E1 do protocolo.
+"""O portão de confiança — lógica pura da fase E1 do protocolo pré-registrado.
 
-`knowledge-base/plans/portao-de-confianca-plan.md` § Phase E1. O portão sinaliza palavras cuja
-margem fica abaixo de τ. Os números que motivaram o protocolo vieram de **uma** passagem, e a
-regra 3 da disciplina de medição (`.claude/rules/asr-evidence-discipline.md` § 3) proíbe concluir
+O portão sinaliza palavras cuja margem fica abaixo de τ. Os números que motivaram o protocolo vieram de **uma** passagem, e a
+regra 3 da disciplina de medição (§ 3) proíbe concluir
 de corrida única — este projeto errou três vezes assim.
 
 O que estes testes fixam é a **aritmética** do portão, para que o probe meça o fenômeno e não um
@@ -96,7 +95,7 @@ class TestBootstrap:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════════════════
-# E2 — o corretor. `knowledge-base/plans/portao-de-confianca-plan.md` § Phase E2.
+# E2 — o corretor (fase E2 do protocolo pré-registrado).
 #
 # O corretor só age onde a classe o admite. A precondição do caminho do dicionário é exatamente
 # `non_word_hyp`: a hipótese NÃO é palavra e a referência é. Mexer numa palavra que já existe é

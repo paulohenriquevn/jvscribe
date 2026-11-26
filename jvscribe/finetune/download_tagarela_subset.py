@@ -54,16 +54,59 @@ def select_indices(total: int, num: int) -> list[int]:
     return sorted({round(i * (total - 1) / (num - 1)) for i in range(num)})
 
 
+# Todo arquivo parquet começa E termina com o magic "PAR1" (spec do formato). Conferir os
+# dois é o teste de truncamento mais barato que existe: o do fim só está lá se o footer
+# — onde vive o schema — foi escrito por inteiro.
+PARQUET_MAGIC = b"PAR1"
+
+
+def parquet_completo(path: Path) -> bool:
+    """True se o arquivo tem os dois magics do parquet nas pontas.
+
+    Existe porque `st_size > 0` não distingue shard inteiro de shard pela metade. Uma
+    sessão do Colab que morre no meio de um download de 690 MB deixa um arquivo com
+    centenas de MB e nenhum footer; a retomada o trataria como cache válido, o
+    `prep_tagarela` leria o que desse, e o corpus sairia menor sem que nada falhasse.
+    """
+    try:
+        tam = path.stat().st_size
+    except OSError:
+        return False
+    if tam < 2 * len(PARQUET_MAGIC):
+        return False
+    with path.open("rb") as fh:
+        if fh.read(len(PARQUET_MAGIC)) != PARQUET_MAGIC:
+            return False
+        fh.seek(-len(PARQUET_MAGIC), os.SEEK_END)
+        return fh.read(len(PARQUET_MAGIC)) == PARQUET_MAGIC
+
+
 def download_shard(i: int, total: int, pattern: str, out: Path, token: str) -> Path:
     rel = pattern.format(i=i, total=total)
     dest = out / Path(rel).name
-    if dest.exists() and dest.stat().st_size > 0:
+    if parquet_completo(dest):
         return dest
     url = f"https://huggingface.co/datasets/{REPO}/resolve/main/{rel}"
-    cmd = ["curl", "-sfL", "--retry", "3", url, "-o", str(dest)]
+    # Baixa para `.part` e só depois renomeia: `os.replace` é atômico no mesmo filesystem,
+    # então `dest` nunca existe pela metade e a retomada não tem o que confundir.
+    parcial = dest.with_suffix(dest.suffix + ".part")
+    cmd = ["curl", "-sfL",
+           # O CDN do HF serve por HTTP/2 e devolve erro de framing (curl 92) sob carga.
+           # `--retry` sozinho NÃO repete o 92: por padrão o curl só repete timeout e
+           # 408/429/5xx. `--retry-all-errors` inclui o 92, e `--http1.1` evita a classe
+           # inteira — medido contra o shard 00057, que falhou com 92 no primeiro ciclo.
+           "--http1.1", "--retry", "5", "--retry-all-errors", "--retry-delay", "2",
+           url, "-o", str(parcial)]
     if token:
         cmd[1:1] = ["-H", f"Authorization: Bearer {token}"]
     subprocess.run(cmd, check=True)  # -f: falha explícita em HTTP 4xx/5xx (fail-fast)
+    if not parquet_completo(parcial):
+        parcial.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"[subset] shard {i} baixou sem os magics PAR1 nas pontas — resposta truncada "
+            f"ou não-parquet. Não vale a pena seguir: o prep leria um shard incompleto e "
+            f"o corpus sairia menor sem erro. URL: {url}")
+    os.replace(parcial, dest)
     return dest
 
 

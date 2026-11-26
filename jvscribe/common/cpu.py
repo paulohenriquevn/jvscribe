@@ -191,7 +191,7 @@ def medicao_de_tempo_e_confiavel(carga: float | None = None) -> bool:
 # decisão de SEGURANÇA replicada, a mesma classe do `LIMIAR_LOAD` em três arquivos.
 
 ALVO_RNF01 = 3.0
-"""RTFx mínimo do pipeline completo de tempo real (`PRD.md` § 6, RNF-01)."""
+"""RTFx mínimo do pipeline completo de tempo real (RNF-01)."""
 
 
 def rtfx_combinado(*taxas: float) -> float:

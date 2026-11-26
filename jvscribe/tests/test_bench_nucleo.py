@@ -8,7 +8,7 @@ isso não cabe em teste unitário; mas o que **decide o veredito** cabe, e não 
   último minuto para julgar RNF-04.
 - `medir()` — a ordem round-robin, que é o que impede a flutuação de carga de viciar um
   candidato. O projeto já declarou vencedor de corrida única **três vezes** e errou nas três
-  (`CLAUDE.md`, disciplina de medição § 3).
+  (disciplina de medição do projeto — nunca concluir de uma corrida).
 - `montar_configs()` — o contrato de que o baseline é o primeiro, do qual `relatar()` depende.
 
 O que estes testes NÃO cobrem, e é honesto dizer: nenhum deles prova que o benchmark mede a

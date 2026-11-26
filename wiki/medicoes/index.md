@@ -23,6 +23,14 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 | [m6-topologia-de-cpu.md](m6-topologia-de-cpu.md) | CPU híbrida, `perf`, e o limite do instrumento |
 | [m6-rnf-ao-vivo.md](m6-rnf-ao-vivo.md) | Os critérios de real-time sobre o pipeline completo |
 | [m6-soak-30min-rnf04.md](m6-soak-30min-rnf04.md) | O primeiro soak de 30 min — sem vazamento, estado limitado, RNF-04 indeterminado por carga |
+| [m10-t1-teto-de-cpu.md](m10-t1-teto-de-cpu.md) | O teto em 2 P-cores — o número foi corrigido por m10-t1b |
+| [m10-t1b-latencia-e-teto.md](m10-t1b-latencia-e-teto.md) | 53% do custo do encoder é pago por invocação: latência compra capacidade |
+| [m10-t2-regua-publica.md](m10-t2-regua-publica.md) | 6,06% contra 5,80% publicado — o offset é de artefato, não de régua |
+| [m10-t3-quanto-corpus-pt-existe.md](m10-t3-quanto-corpus-pt-existe.md) | YODAS pt tem 262 h, não 15–25 mil; o volume está no parlamento europeu |
+| [m10-q14-soak-sustentado.md](m10-q14-soak-sustentado.md) | 30 min sem degradação: RNF-04 passa, mas o teto cai de 376M para 294M |
+| [m10-rnf05-carga-concorrente.md](m10-rnf05-carga-concorrente.md) | Softphone custa 16%; com CRM o por-canal vai a 0,98× e o backlog cresce |
+| [m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md](m10-t3-smoke-pipeline-e-qualidade-do-rotulo.md) | A cadeia funciona em shards reais; os dois professores discordam em 22,7% |
+| [m10-t3-fbank-e-storage.md](m10-t3-fbank-e-storage.md) | CutSet e fbank fecham; lilcom contra numpy vale 4,3× e 700 GB em 8.000 h |
 | [composicao-do-erro-e-o-que-cada-remedio-alcanca.md](composicao-do-erro-e-o-que-cada-remedio-alcanca.md) | O erro em três terços — e nenhuma intervenção alcança mais que um |
 | [e0-instrumento-de-confianca.md](e0-instrumento-de-confianca.md) | O portão custa +0,31% — e o desenho que a execução refutou |
 | [e1-portao-de-confianca.md](e1-portao-de-confianca.md) | O portão separa: precisão 55,9% [IC95 49,4; 62,0] contra base 14,3% |
@@ -45,8 +53,8 @@ evidência é defeito de severidade máxima — ver [../disciplina/index.md](../
 
 ## O que continua não medido
 
-- **RNF-04** (estabilidade térmica): nenhuma corrida chegou a 30 min
-- **RNF-05** (carga concorrente): nenhuma teve softphone ativo
+- ~~**RNF-04** (estabilidade térmica)~~ — **MEDIDO em 2026-09-14**: 30 min contínuos, degradação de 2,4%, passa ([m10-q14](m10-q14-soak-sustentado.md))
+- ~~**RNF-05** (carga concorrente)~~ — **EXERCITADO com carga sintética** em 2026-09-14 ([m10-rnf05](m10-rnf05-carga-concorrente.md)). Com softphone **real** em chamada real, continua não medido
 - WER em 8 kHz e em fala espontânea de call center
 - Equivalência batch↔streaming
 - Piso da frota BYOD (Q-01)

@@ -12,3 +12,12 @@ pyarrow>=14.0
 # CONDIÇÕES, e f-string as esconde. Já vinha transitivo (torch, mkdocs, spacy); declarado
 # porque agora é uso direto — depender de dependência-de-dependência quebra em ambiente limpo.
 jinja2>=3.1,<4.0
+
+# Régua PÚBLICA do Open ASR Leaderboard (`common/text.py::normalize_for_leaderboard`). Sem
+# elas o número sai na régua deste projeto, que difere da deles em acento E em dígito — e
+# comparar réguas diferentes com número publicado é o erro que a disciplina proíbe.
+regex>=2023.0
+num2words>=0.5.12
+# `kaldialign.batch_error_rate(merge_compounds=True)` é o contador de erros do leaderboard.
+# `jiwer` acima é o do projeto; os dois coexistem de propósito, um por régua.
+kaldialign>=0.9

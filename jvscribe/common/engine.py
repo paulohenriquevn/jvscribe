@@ -9,7 +9,7 @@ estética: o passo de VALIDAÇÃO existia em apenas 4 dos 13. Os outros nove car
 (modelo, vocabulário) sem conferir se eles combinam — exatamente o defeito que a validação foi
 escrita para impedir, sobrevivendo porque a sequência estava fragmentada.
 
-`CLAUDE.md § O modelo`, fato 3: os dois artefatos deste projeto têm 500 tokens emitíveis cada e
+Fato medido deste projeto: os dois artefatos deste projeto têm 500 tokens emitíveis cada e
 **492 dos 500 ids mapeiam tokens diferentes**. Trocar o `tokens.txt` produz português plausível
 e errado, sem erro nenhum. Por isso o passo não pode ser opcional nem depender de alguém
 lembrar.

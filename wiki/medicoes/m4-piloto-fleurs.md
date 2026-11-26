@@ -8,6 +8,11 @@ timestamp: 2026-07-31T00:00:00Z
 
 # M4 — Piloto FLEURS-only: primeiro WER held-out na recipe REAL do icefall
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual**. Ficam
+> preservados como registro de *como* o número foi produzido: reescrevê-los para os caminhos
+> de hoje documentaria um comando que nunca foi executado.
+
 **Data:** 2026-07-25 · **Custo:** ~$0,22 `[MEDIDO]` (vast.ai RTX 3090, 71 min) · **Status:** pipeline
 validado ponta-a-ponta; WER honesto medido; **NÃO decide o finalista de M4** (1 finalista, dados
 mínimos, sem RTFx).
@@ -74,11 +79,11 @@ averaging cego em runs curtos.
   0 sempre).
 - Custo e throughput reais de um run small nesta GPU.
 
-**NÃO prova (honestidade — `asr-evidence-discipline`):**
+**NÃO prova (honestidade — disciplina de evidência):**
 - **Não decide o finalista de M4.** É 1 finalista (Zipformer-CTC), 1 tamanho, dados mínimos. FastConformer
   não foi treinado. Sem curva WER×RTFx. Sem RTFx (que é medida na CPU-alvo i7-1355U, não nesta GPU —
   seria a falácia §3 #4).
-- **Não é o WER de produção.** 96,52% é o piso de um modelo faminto de dados, não o alvo (PRD § 7).
+- **Não é o WER de produção.** 96,52% é o piso de um modelo faminto de dados, não o alvo de produção.
 - **Não valida a supervisão fonética** (não foi construída neste run; a ablação é de M5 com corpus grande).
 
 ## Próximo passo real (M5, não este piloto)

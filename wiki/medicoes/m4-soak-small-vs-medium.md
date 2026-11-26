@@ -8,6 +8,11 @@ timestamp: 2026-07-31T00:00:00Z
 
 # Soak RNF-04 + carga RNF-05: small vs medium — o tamanho por medição
 
+> ⚠️ **Proveniência histórica.** Os caminhos e comandos citados abaixo são da árvore de
+> diretórios vigente na data desta medição e **não resolvem no repositório atual**. Ficam
+> preservados como registro de *como* o número foi produzido: reescrevê-los para os caminhos
+> de hoje documentaria um comando que nunca foi executado.
+
 **Data:** 2026-07-28 · **Máquina:** i7-1355U de referência (esta) · **Modelos:** Zipformer-CTC
 small (22M) e medium (64M), int8, ambos SEM cabeça de fonema (decisão de TAMANHO isolada) ·
 **Harness:** `soak_harness.py` (reusa `make_session` de `bench_rtfx.py`) · **Afinidade:**

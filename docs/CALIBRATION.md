@@ -150,4 +150,4 @@ tensores de estado. Ver `docs/ARCHITECTURE.md`.
 | Profile por operador e prior art | `wiki/medicoes/m6-profile-por-operador.md` |
 | Topologia, afinidade e o limite do instrumento | `wiki/medicoes/m6-topologia-de-cpu.md` |
 | Envelope medido ao vivo | `wiki/medicoes/m6-rnf-ao-vivo.md` |
-| Critérios RNF-01..08 | `PRD.md` § 6 |
+| Critérios de real-time (RNF) | `ROADMAP.md` § Success criteria |

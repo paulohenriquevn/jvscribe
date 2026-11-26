@@ -130,7 +130,7 @@ guarda, asserte a **intenção** — o mesmo objeto, o comportamento observável
 | Como o modelo e o motor funcionam | [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) |
 | Calibrar ao trocar de CPU | [`../docs/CALIBRATION.md`](../docs/CALIBRATION.md) |
 | Base de conhecimento (OKF) | [`../wiki/index.md`](../wiki/index.md) |
-| Retomar o treino | `models/current/finetune/README.md` |
+| Retomar o treino | [`../wiki/treino/retomar-o-treino.md`](../wiki/treino/retomar-o-treino.md) |
 
 > Os patchers do icefall ancoram em trechos literais do upstream e param de casar a partir de
 > `693d84a` (2024-10-21, Consistency-Regularized CTC). A revisão testada é **`f84270c`** —

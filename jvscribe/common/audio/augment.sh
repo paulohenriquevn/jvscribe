@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cadeia de augmentação telefônica 8 kHz (M1 — T2.1).
 #
-# Degrada um WAV para o canal de call center brasileiro (PRD.md § 4, § 7.1):
+# Degrada um WAV para o canal de call center brasileiro:
 #   1. reamostra 16k→8k
 #   2. filtro de banda telefônica 300-3400 Hz (onde vivem as fricativas some)
 #   3. G.711 a-law round-trip (encode → decode) — a degradação do codec
@@ -10,7 +10,7 @@
 # cobriria o resample (blueprint Corner4/Q3, ADR do plano). Determinístico e
 # reprodutível.
 #
-# Uso: ./scripts/telephone_augment.sh <input.wav> <output.wav>
+# Uso: ./jvscribe/common/audio/augment.sh <input.wav> <output.wav>
 #
 # Fail-fast (error-handling.md § 2): input ausente ou sox ausente → exit não-zero
 # com mensagem clara, nunca silêncio.

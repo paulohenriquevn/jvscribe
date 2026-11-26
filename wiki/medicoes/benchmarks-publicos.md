@@ -29,7 +29,7 @@ anteriores saíram de uma `norm()` LOCAL do próprio script, que **preservava ac
 acento errado contava como palavra inteira errada. Δ = **−0,31 p.p.**
 
 > ⚠️ **O RTFx desta tabela não vale como medição.** Ambos os valores foram obtidos com a
-> máquina sob carga (load 1,7–5,1 durante a re-medição) — `asr-evidence-discipline.md` § 5:
+> máquina sob carga (load 1,7–5,1 durante a re-medição) — a disciplina de evidência (§ 5):
 > "máquina sob carga não mede". WER é determinístico e não sofre com isso; RTFx sofre. Para
 > RTFx use `jvscribe/bench/runtime_bench.py` (pareado, round-robin) em máquina ociosa.
 

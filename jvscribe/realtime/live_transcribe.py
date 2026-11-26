@@ -3,7 +3,7 @@
 
 O que faz: captura simultaneamente o microfone (atendente) e o loopback da placa (cliente),
 transcreve os dois em tempo real com um motor `StreamingCTC` por canal, e imprime o diálogo
-rotulado — ao mesmo tempo em que mede os critérios de real-time do `PRD.md § 6`.
+rotulado — ao mesmo tempo em que mede os critérios de real-time (RNF-01..05).
 
 **Por que não há diarização aqui.** No caso 1:1 — o dominante — ela não precisa existir: o
 mic É o atendente por construção e o loopback É o cliente. Roteamento de stream custa zero e
@@ -41,7 +41,7 @@ from streaming import StreamingCTC  # noqa: E402
 # mic e loopback são papéis fixos por construção da captura — ver o docstring.
 FALANTES = {"mic": "ATENDENTE", "loopback": "CLIENTE"}
 
-# Limiares do PRD § 6. Mudá-los aqui sem mudar o PRD é falsificar evidência.
+# Limiares de RNF. Mudá-los aqui sem mudar o requisito é falsificar evidência.
 ALVO_RTFX = 3.0        # RNF-01 — pipeline completo
 ALVO_P99_MS = 500.0    # RNF-02 — fim da fala → texto disponível
 ALVO_BACKLOG_PCT = 0.1  # RNF-03 — backlog = 0 em 99,9% das amostras
@@ -138,7 +138,7 @@ class Criterio:
 
 @dataclass
 class MetricasRNF:
-    """Acumula as amostras de decode e traduz em veredito contra o `PRD.md § 6`."""
+    """Acumula as amostras de decode e traduz em veredito contra os critérios de real-time (RNF-01..05)."""
 
     audio_total_s: float = 0.0
     wall_total_s: float = 0.0
@@ -374,7 +374,7 @@ def main() -> int:
     from dual_capture import DualCapture
 
     # Resolve E valida o par (modelo, vocabulário) — trocar o tokens.txt produz português
-    # PLAUSÍVEL e errado, sem erro nenhum (CLAUDE.md § O modelo, fato 3). A sequência vem do
+    # PLAUSÍVEL e errado, sem erro nenhum (fato medido deste projeto). A sequência vem do
     # kernel: estava remontada à mão em treze entrypoints, e por isso a validação existia em
     # apenas quatro deles.
     modelo, tokens = resolver(a.model, a.tokens)

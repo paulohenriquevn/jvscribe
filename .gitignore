@@ -83,3 +83,6 @@ code-review-output/
 # rotacionavel (audit-trail-rotation.md), nao faz parte do produto.
 deadcode-output/
 .coverage
+
+# Personal tooling, never versioned
+.claude/

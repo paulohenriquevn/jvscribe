@@ -106,7 +106,7 @@ Reporta **10,5× de speedup e 2,78× menos memória**. Mas:
 
 **Nosso `ctc_output` custa 0,3%** e o decode é greedy (`argmax` do numpy). Por Amdahl, speedup
 infinito de 0,3% rende ~0. **FLToP só passa a valer se migrarmos para beam search + LM** —
-que é uma alavanca de WER listada no `CLAUDE.md`, não de latência.
+que é uma alavanca de WER, não de latência.
 
 ### Blank layer-skipping — `arXiv:2305.11558` + recipe do icefall
 
@@ -157,7 +157,7 @@ Ganho combinado, medido de ponta a ponta em `StreamingCTC.update()`:
 | Blank layer-skipping | **~0%** | — não há joiner em CTC puro |
 
 **A única alavanca de ordem de grandeza é treinar com `--causal 1`.** E ela não custa
-acurácia: `arXiv:2506.14434` — já citado no PRD — mostra um único Zipformer servindo os dois
+acurácia: `arXiv:2506.14434` — já citado na pesquisa de arquitetura — mostra um único Zipformer servindo os dois
 modos via chunked attention masking com right-context dinâmico, com **−7,9% de WER relativo**.
 
 Isso é trabalho de treino, não de runtime. O `m6-streaming-causal-blueprint.md` já previa;

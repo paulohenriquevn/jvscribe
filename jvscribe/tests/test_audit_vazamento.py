@@ -2,8 +2,8 @@
 
 `audit/` responde à pergunta que decide se um WER publicado vale alguma coisa: *o test set foi
 contaminado pelo treino?* Um **falso negativo** aqui não faz nada falhar — ele deixa o número
-subir e ninguém descobre. É a falácia § 3 #10 (`PRD.md` § 7.3, invariante), e o projeto já a
-declarou como inegociável.
+subir e ninguém descobre. É a falácia § 3 #10, e o projeto já a
+declarou como invariante inegociável: pseudo-label nunca entra no test set.
 
 `[MEDIDO]` 2026-07-31: as duas funções puras destes módulos tinham **0 teste** e a cobertura do
 domínio era 26,9%. A lógica já estava extraída (`speaker_key`, `path_tokens`, `find_leaks`) —

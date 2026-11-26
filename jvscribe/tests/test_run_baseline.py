@@ -47,7 +47,7 @@ def test_baseline_report_has_ci_and_provenance():
 
 
 def test_testset_rejects_pseudolabel():
-    # Negative: manifesto com pseudo-label é rejeitado (invariante PRD § 7.3).
+    # Negative: manifesto com pseudo-label é rejeitado (invariante do projeto).
     manifest = [
         {"audio_path": "a.wav", "reference": "ok", "pseudo_label": True},
     ]

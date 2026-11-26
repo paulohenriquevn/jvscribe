@@ -13,7 +13,7 @@ timestamp: 2026-07-31T00:00:00Z
 - Status: aceito
 - Data: 2026-07-31
 - Decisor: dono do projeto
-- Protocolo: [`portao-de-confianca-plan.md`](../../knowledge-base/plans/portao-de-confianca-plan.md)
+- Protocolo: pré-registro com kill criteria em [`post-decode-budget.md`](../../docs/paper/post-decode-budget.md) § 8
 
 ## Contexto
 

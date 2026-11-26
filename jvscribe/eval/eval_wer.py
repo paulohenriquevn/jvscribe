@@ -1,14 +1,14 @@
 """WER com intervalo de confiança 95% via bootstrap (M1 — T3.1).
 
-Calcula WER reusando `jiwer` (Não-Reinvente — `.claude/rules/parsimony-ladder.md`
-rung 4; mesma lib de `moonshine/scripts/eval-librispeech.py:57`), normaliza com o
+Calcula WER reusando `jiwer` (Não-Reinvente, rung 4;
+mesma lib de `moonshine/scripts/eval-librispeech.py:57`), normaliza com o
 normalizador PT-BR próprio, e reporta o IC 95% reamostrando as utterances com
 reposição (blueprint ADR D3).
 
 O IC ataca o risco 1 do ROADMAP (20 min de áudio → IC largo): a régua SEMPRE
 reporta a incerteza, nunca um ponto isolado (falácia § 3 #12).
 
-Determinístico: seed fixa → resultado reprodutível (`.claude/rules/testing.md` § 6).
+Determinístico: seed fixa → resultado reprodutível (determinismo exigido pelos testes).
 
 Uso como lib:
     from eval_wer import wer_with_ci
